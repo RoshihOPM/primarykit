@@ -1,6 +1,6 @@
 Verify your email address
 
 Open the following link to verify your email address:
-{{ action_url }}
+{% autoescape off %}{{ action_url }}{% endautoescape %}
 
 If you did not register, you can ignore this message.
