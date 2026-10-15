@@ -254,3 +254,106 @@ def test_owner_can_revoke_pending_invitation_and_recipient_cannot_accept():
         == 400
     )
     assert not Membership.objects.filter(organization_id=org_id, user=recipient).exists()
+
+
+def test_second_owner_allows_safe_transfer_of_ownership():
+    (owner, api, org_id), (_, _, _), (recipient, recipient_api) = setup_organizations()
+    invited = api.post(
+        reverse("org-invitations", kwargs={"org_id": org_id}),
+        {"invitee": str(recipient.pk), "role": "admin"},
+        format="json",
+    )
+    assert invited.status_code == 201
+    accepted = recipient_api.post(
+        reverse("org-invitation-accept", kwargs={"invitation_id": invited.data["id"]})
+    )
+    assert accepted.status_code == 200
+    new_owner = Membership.objects.get(organization_id=org_id, user=recipient)
+    old_owner = Membership.objects.get(organization_id=org_id, user=owner)
+    promote = api.patch(
+        reverse("org-member-detail", kwargs={"org_id": org_id, "member_id": new_owner.pk}),
+        {"role": "owner"},
+        format="json",
+    )
+    assert promote.status_code == 200
+    self_deactivate = api.delete(
+        reverse("org-member-detail", kwargs={"org_id": org_id, "member_id": old_owner.pk})
+    )
+    assert self_deactivate.status_code == 204
+    old_owner.refresh_from_db()
+    new_owner.refresh_from_db()
+    assert not old_owner.is_active
+    assert new_owner.is_active and new_owner.role == "owner"
+    assert api.get(reverse("org-detail", kwargs={"pk": org_id})).status_code == 404
+    assert recipient_api.get(reverse("org-detail", kwargs={"pk": org_id})).status_code == 200
+
+
+def test_invitation_to_disabled_or_unverified_account_is_rejected():
+    (_, owner_api, org_id), (_, _, _), (invitee, _) = setup_organizations()
+    invitee.email_verified = False
+    invitee.save(update_fields=["email_verified"])
+    url = reverse("org-invitations", kwargs={"org_id": org_id})
+    rejected = owner_api.post(url, {"invitee": str(invitee.pk), "role": "member"}, format="json")
+    assert rejected.status_code == 400
+    invitee.email_verified = True
+    invitee.is_active = False
+    invitee.save(update_fields=["email_verified", "is_active"])
+    rejected = owner_api.post(url, {"invitee": str(invitee.pk), "role": "member"}, format="json")
+    assert rejected.status_code == 400
+    assert not Invitation.objects.filter(organization_id=org_id, invitee=invitee).exists()
+
+
+def test_membership_and_branch_assignment_cannot_cross_tenants():
+    (owner, owner_api, first_id), (other_owner, other_api, second_id), _ = setup_organizations()
+    invitee, invitee_api = account("cross-tenant@example.test")
+    pending = owner_api.post(
+        reverse("org-invitations", kwargs={"org_id": first_id}),
+        {"invitee": str(invitee.pk), "role": "member"},
+        format="json",
+    )
+    assert pending.status_code == 201
+    joined = invitee_api.post(
+        reverse("org-invitation-accept", kwargs={"invitation_id": pending.data["id"]})
+    )
+    assert joined.status_code == 200
+    target = Membership.objects.get(organization_id=first_id, user=invitee)
+    foreign = other_api.post(
+        reverse("org-branches", kwargs={"org_id": second_id}),
+        {"code": "foreign", "name": "Foreign"},
+        format="json",
+    )
+    assert foreign.status_code == 201
+    wrong_org_member = reverse(
+        "org-member-detail", kwargs={"org_id": second_id, "member_id": target.pk}
+    )
+    assert other_api.patch(wrong_org_member, {"role": "admin"}).status_code == 400
+    rejected = other_api.put(
+        reverse(
+            "org-member-branches",
+            kwargs={"org_id": second_id, "member_id": target.pk},
+        ),
+        {"branch_ids": [foreign.data["id"]]},
+        format="json",
+    )
+    assert rejected.status_code == 400
+    rejected = owner_api.put(
+        reverse(
+            "org-member-branches",
+            kwargs={"org_id": first_id, "member_id": target.pk},
+        ),
+        {"branch_ids": [foreign.data["id"]]},
+        format="json",
+    )
+    assert rejected.status_code == 400
+    assert not BranchAccess.objects.filter(membership=target).exists()
+    target.refresh_from_db()
+    assert target.role == "member"
+
+
+def test_duplicate_pending_invite_does_not_create_second_invitation():
+    (_, api, org_id), _, (invitee, _) = setup_organizations()
+    url = reverse("org-invitations", kwargs={"org_id": org_id})
+    payload = {"invitee": str(invitee.pk), "role": "member"}
+    assert api.post(url, payload, format="json").status_code == 201
+    assert api.post(url, payload, format="json").status_code == 400
+    assert Invitation.objects.filter(organization_id=org_id, invitee=invitee).count() == 1
