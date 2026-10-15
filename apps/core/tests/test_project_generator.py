@@ -41,6 +41,7 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
     assert not (target / ".git").exists()
     assert not (target / ".env").exists()
     assert (target / ".env.example").exists()
+    assert (target / "compose.seaweedfs.yaml").exists() == ("storage" in apps)
 
     metadata = json.loads((target / "primarykit-origin.json").read_text())
     assert set(metadata["included_apps"]) == {"core", "users", "notifications"} | apps

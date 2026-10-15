@@ -127,3 +127,14 @@ uv run python scripts/new_project.py ../automarket --name automarket --apps rbac
 The generator copies Django Core, Users, Notifications, optional apps, adjusts
 `INSTALLED_APPS`, URL routing, GitHub Actions migrations and `uv.lock` root name.
 See [project generator documentation](docs/project-generator.md).
+
+## SeaweedFS — recommended self-hosted S3
+
+For projects using the `storage` module, PrimaryKit provides a single-node SeaweedFS 4.48 S3 gateway, persistent Docker volume, and optional Compose overlay:
+
+```bash
+cp .env.example .env
+docker compose -f compose.yaml -f compose.seaweedfs.yaml up -d --build
+```
+
+It creates the configured private bucket automatically. Replace sample S3 access/secret keys before production and protect the SeaweedFS data volume with backups. Storage is only accessible on the internal Compose network. See [Storage architecture](docs/storage-architecture.md).
