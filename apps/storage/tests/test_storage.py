@@ -26,14 +26,22 @@ def private_disk(tmp_path, settings):
         "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
     }
     settings.STORAGE_MAX_FILE_BYTES = 10 * 1024 * 1024
-    settings.STORAGE_ALLOWED_MIME_TYPES = ["image/png", "image/jpeg", "image/webp", "application/pdf"]
+    settings.STORAGE_ALLOWED_MIME_TYPES = [
+        "image/png",
+        "image/jpeg",
+        "image/webp",
+        "application/pdf",
+    ]
     return tmp_path
 
 
 def user(email, *, admin=False):
     return User.objects.create_user(
-        email=email, password="long-test-password-456",
-        email_verified=True, is_superuser=admin, is_staff=admin,
+        email=email,
+        password="long-test-password-456",
+        email_verified=True,
+        is_superuser=admin,
+        is_staff=admin,
     )
 
 
@@ -66,7 +74,9 @@ def test_upload_and_authorized_private_download(private_disk):
     assert download["Cache-Control"] == "private, no-store"
     assert download["X-Content-Type-Options"] == "nosniff"
     assert "attachment" in download["Content-Disposition"]
-    assert AuditEvent.objects.filter(action="storage.file.uploaded", target_id=str(file.pk)).exists()
+    assert AuditEvent.objects.filter(
+        action="storage.file.uploaded", target_id=str(file.pk)
+    ).exists()
 
 
 def test_idor_and_list_scoping(private_disk):
@@ -74,14 +84,18 @@ def test_idor_and_list_scoping(private_disk):
     stranger = user("other@example.com")
     staff = user("admin@example.com", admin=True)
     owner_client = client_for(owner)
-    created = owner_client.post(reverse("stored-files-list"), {"file": png_upload()}, format="multipart")
+    created = owner_client.post(
+        reverse("stored-files-list"), {"file": png_upload()}, format="multipart"
+    )
     pk = created.data["id"]
     other_client = client_for(stranger)
     assert other_client.get(reverse("stored-files-list")).data["count"] == 0
     assert other_client.get(reverse("stored-files-detail", kwargs={"pk": pk})).status_code == 404
     assert other_client.get(reverse("stored-files-download", kwargs={"pk": pk})).status_code == 404
     assert other_client.delete(reverse("stored-files-detail", kwargs={"pk": pk})).status_code == 404
-    assert client_for(staff).get(reverse("stored-files-detail", kwargs={"pk": pk})).status_code == 200
+    assert (
+        client_for(staff).get(reverse("stored-files-detail", kwargs={"pk": pk})).status_code == 200
+    )
 
 
 @pytest.mark.parametrize(
@@ -96,7 +110,9 @@ def test_idor_and_list_scoping(private_disk):
 def test_disallowed_files_rejected(private_disk, filename, content):
     member = user(f"member-{filename.replace('.', '_')}@example.com")
     response = client_for(member).post(
-        reverse("stored-files-list"), {"file": png_upload(filename, content)}, format="multipart",
+        reverse("stored-files-list"),
+        {"file": png_upload(filename, content)},
+        format="multipart",
     )
     assert response.status_code == 400
     assert StoredFile.objects.count() == 0
@@ -107,7 +123,9 @@ def test_reject_large_upload(private_disk, settings):
     settings.STORAGE_MAX_FILE_BYTES = 16
     owner = user("large@example.com")
     response = client_for(owner).post(
-        reverse("stored-files-list"), {"file": png_upload()}, format="multipart",
+        reverse("stored-files-list"),
+        {"file": png_upload()},
+        format="multipart",
     )
     assert response.status_code == 400
     assert not StoredFile.objects.exists()
@@ -131,10 +149,14 @@ def test_soft_delete_hides_file_and_leaves_blob_for_retention(private_disk):
 
 def test_failed_metadata_write_cleans_up_blob(private_disk):
     member = user("rollback@example.com")
-    with patch("apps.storage.services.record_audit_event", side_effect=RuntimeError("audit offline")):
+    with patch(
+        "apps.storage.services.record_audit_event", side_effect=RuntimeError("audit offline")
+    ):
         with pytest.raises(RuntimeError):
             client_for(member).post(
-                reverse("stored-files-list"), {"file": png_upload()}, format="multipart",
+                reverse("stored-files-list"),
+                {"file": png_upload()},
+                format="multipart",
             )
     assert StoredFile.objects.count() == 0
     assert list(private_disk.rglob("*.png")) == []

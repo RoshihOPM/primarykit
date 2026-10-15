@@ -17,17 +17,6 @@ jobs:
         run: uv sync --locked --all-groups
       - name: Ruff lint
         run: uv run ruff check .
-      - name: Bootstrap formatting snapshot
-        run: |
-          uv run ruff format .
-          python - <<'PY'
-          import base64
-          from pathlib import Path
-          for path in ["apps/storage/admin.py", "apps/storage/tests/test_storage.py"]:
-              print("FMT_START:" + path)
-              print(base64.b64encode(Path(path).read_bytes()).decode())
-              print("FMT_END:" + path)
-          PY
       - name: Ruff format
         run: uv run ruff format --check .
       - name: Generate project-specific migrations for tests
