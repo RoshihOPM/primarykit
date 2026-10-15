@@ -2,8 +2,8 @@
 
 from django.db import transaction
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework import generics, status
-from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -220,7 +220,7 @@ class MyInvitationsView(APIView):
     def get(self, request):
         invites = Invitation.objects.filter(
             invitee=request.user, state=Invitation.State.PENDING,
-            expires_at__gt=__import__("django.utils.timezone", fromlist=["now"]).now(),
+            expires_at__gt=timezone.now(),
             organization__is_active=True,
         ).select_related("organization")
         return Response(InvitationSerializer(invites, many=True).data)

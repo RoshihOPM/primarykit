@@ -11,8 +11,8 @@ from pathlib import Path
 SOURCE_ROOT = Path(__file__).resolve().parents[1]
 
 REQUIRED_APPS = frozenset({"core", "users", "notifications"})
-OPTIONAL_APPS = frozenset({"rbac", "audit", "storage", "catalog", "inventory"})
-MIGRATION_APPS = ("users", "audit", "storage", "catalog", "inventory")
+OPTIONAL_APPS = frozenset({"rbac", "audit", "storage", "catalog", "inventory", "organizations"})
+MIGRATION_APPS = ("users", "audit", "storage", "catalog", "inventory", "organizations")
 
 URL_ROWS = {
     "rbac": '    path("api/v1/admin/rbac/", include("apps.rbac.urls")),\n',
@@ -20,6 +20,7 @@ URL_ROWS = {
     "storage": '    path("api/v1/", include("apps.storage.urls")),\n',
     "catalog": '    path("api/v1/catalog/", include("apps.catalog.urls")),\n',
     "inventory": '    path("api/v1/inventory/", include("apps.inventory.urls")),\n',
+    "organizations": '    path("api/v1/", include("apps.organizations.urls")),\n',
 }
 
 
@@ -97,7 +98,7 @@ def create_project(
         migrations = " ".join(a for a in MIGRATION_APPS if a in selected)
         workflow = target / ".github" / "workflows" / "ci.yaml"
         raw = workflow.read_text(encoding="utf-8")
-        phrase = "makemigrations users audit storage catalog inventory --noinput"
+        phrase = "makemigrations users audit storage catalog inventory organizations --noinput"
         if raw.count(phrase) != 2:
             raise RuntimeError("CI migration template has changed")
         raw = raw.replace(phrase, f"makemigrations {migrations} --noinput")
