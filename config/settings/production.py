@@ -28,12 +28,12 @@ if base.env.bool("DJANGO_TRUST_PROXY_SSL_HEADER", default=False):
 
 # Production mail transport may never be the console backend (tokens would leak to logs).
 smtp_host = base.env("SMTP_HOST", default="")
-if AUTH_EMAIL_FLOWS_ENABLED:
+if base.AUTH_EMAIL_FLOWS_ENABLED:
     if not smtp_host:
         raise ImproperlyConfigured("SMTP_HOST is required for email account workflows.")
-    if DEFAULT_FROM_EMAIL.endswith("example.test>"):
+    if base.DEFAULT_FROM_EMAIL.endswith("example.test>"):
         raise ImproperlyConfigured("Configure DEFAULT_FROM_EMAIL for production.")
-    for setting_value in (AUTH_VERIFICATION_URL, AUTH_PASSWORD_RESET_URL):
+    for setting_value in (base.AUTH_VERIFICATION_URL, base.AUTH_PASSWORD_RESET_URL):
         address = urlsplit(setting_value)
         if address.scheme != "https" or not address.hostname or address.username:
             raise ImproperlyConfigured("Email action URLs must use an HTTPS origin.")
