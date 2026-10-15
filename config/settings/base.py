@@ -2,6 +2,7 @@ from datetime import timedelta
 from pathlib import Path
 
 import environ
+from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 
@@ -30,6 +31,7 @@ INSTALLED_APPS = [
     "apps.rbac",
     "apps.notifications",
     "apps.audit",
+    "apps.storage",
 ]
 
 MIDDLEWARE = [
@@ -89,6 +91,43 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+MEDIA_ROOT = BASE_DIR / "media"
+STORAGE_MAX_FILE_BYTES = env.int("STORAGE_MAX_FILE_BYTES", default=10 * 1024 * 1024)
+STORAGE_ALLOWED_MIME_TYPES = ("image/jpeg", "image/png", "image/webp", "application/pdf")
+STORAGE_BACKEND = env("STORAGE_BACKEND", default="local")
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+        "OPTIONS": {"location": str(MEDIA_ROOT), "base_url": None},
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
+if STORAGE_BACKEND == "s3":
+    bucket = env("S3_BUCKET", default="")
+    if not bucket:
+        raise ImproperlyConfigured("S3_BUCKET is required for S3 storage.")
+    options = {
+        "bucket_name": bucket,
+        "region_name": env("S3_REGION", default="us-east-1"),
+        "endpoint_url": env("S3_ENDPOINT_URL", default=None),
+        "addressing_style": env("S3_ADDRESSING_STYLE", default="path"),
+        "querystring_auth": True,
+        "default_acl": None,
+        "file_overwrite": False,
+    }
+    if env("S3_ACCESS_KEY_ID", default=""):
+        options["access_key"] = env("S3_ACCESS_KEY_ID")
+        options["secret_key"] = env("S3_SECRET_ACCESS_KEY")
+    STORAGES["default"] = {
+        "BACKEND": "storages.backends.s3.S3Storage",
+        "OPTIONS": options,
+    }
+elif STORAGE_BACKEND != "local":
+    raise ImproperlyConfigured("STORAGE_BACKEND must be local or s3.")
+
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [

@@ -13,7 +13,7 @@ Python 3.13 · Django 6.1 · Django REST Framework · PostgreSQL 17 · uv · Doc
 1. Скопируйте `.env.example` в `.env` и измените значения по необходимости.
 2. Запустите `docker compose up --build -d`.
 3. **Для нового проекта один раз** сгенерируйте миграцию пользователя:
-   `docker compose exec api python manage.py makemigrations users`
+   `docker compose exec api python manage.py makemigrations users audit storage`
 4. Выполните `docker compose exec api python manage.py migrate`.
 5. Проверьте `http://localhost:8000/health/live/` и `http://localhost:8000/health/ready/`.
 6. Создайте администратора: `docker compose exec api python manage.py createsuperuser`.
@@ -26,7 +26,7 @@ Python 3.13 · Django 6.1 · Django REST Framework · PostgreSQL 17 · uv · Doc
 cp .env.example .env
 docker compose up -d db
 uv sync --locked
-uv run python manage.py makemigrations users
+uv run python manage.py makemigrations users audit storage
 uv run python manage.py migrate
 uv run python manage.py runserver
 ```
@@ -61,7 +61,7 @@ uv run pytest
 
 ## Что будет позже
 
-API регистрации/JWT, RBAC, storage, audit, notifications, wallets, chats, payments. Эти функции **ещё не реализованы**.
+Wallets, chats, payments, catalog, inventory. Эти функции реализуются поэтапно; актуальный состав — ниже.
 
 Соглашения по переносимым модулям — в [docs/architecture.md](docs/architecture.md).
 ## Architecture and Agent Skills
@@ -104,3 +104,16 @@ See [audit architecture and limitations](docs/audit-architecture.md).
 
 **Migration setup for new project:** `python manage.py makemigrations users audit`
 before `migrate`, and **commit generated migrations in that project**.
+
+## Private Storage
+
+A secure owner-scoped upload/download API is available at `/api/v1/files/` with
+PDF/PNG/JPEG/WebP magic-byte verification, safe random object keys, read-only
+metadata and no public storage URLs. See [storage architecture](docs/storage-architecture.md).
+
+Use `STORAGE_BACKEND=local` for development. Production requires an explicitly
+persistent local volume (`STORAGE_ALLOW_LOCAL_PRODUCTION=true`) or
+`STORAGE_BACKEND=s3` and an installed `django-storages[s3]` backend (e.g.
+`uv add 'django-storages[s3]'` in the generated project). S3-compatible
+SeaweedFS/MinIO endpoints are supported by the backend but require a live provider
+integration test in each deployment.
