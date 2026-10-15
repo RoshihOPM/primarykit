@@ -86,8 +86,8 @@ def create_project(
         if raw.count(phrase) != 2:
             raise RuntimeError("CI migration template has changed")
         raw = raw.replace(phrase, f"makemigrations {migrations} --noinput")
-        start_marker = "      # PRIMARYKIT-GENERATOR-SMOKE-START\\n"
-        end_marker = "      # PRIMARYKIT-GENERATOR-SMOKE-END\\n"
+        start_marker = "      # PRIMARYKIT-GENERATOR-SMOKE-START\n"
+        end_marker = "      # PRIMARYKIT-GENERATOR-SMOKE-END\n"
         if raw.count(start_marker) != 1 or raw.count(end_marker) != 1:
             raise RuntimeError("Missing generator CI smoke test markers")
         start = raw.index(start_marker)
