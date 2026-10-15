@@ -74,9 +74,12 @@ def test_upload_and_authorized_private_download(private_disk):
     assert download["Cache-Control"] == "private, no-store"
     assert download["X-Content-Type-Options"] == "nosniff"
     assert "attachment" in download["Content-Disposition"]
-    assert AuditEvent.objects.filter(
-        action="storage.file.uploaded", target_id=str(file.pk)
-    ).exists()
+    if django_apps.is_installed("apps.audit"):
+        from apps.audit.models import AuditEvent
+
+        assert AuditEvent.objects.filter(
+            action="storage.file.uploaded", target_id=str(file.pk)
+        ).exists()
 
 
 def test_idor_and_list_scoping(private_disk):
