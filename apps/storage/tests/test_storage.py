@@ -1,10 +1,8 @@
 import hashlib
-from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import override_settings
 from django.urls import reverse
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken

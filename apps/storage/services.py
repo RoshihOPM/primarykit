@@ -43,7 +43,7 @@ def validate_upload(upload):
     max_size = settings.STORAGE_MAX_FILE_BYTES
     if not 0 < upload.size <= max_size:
         raise InvalidUpload("File is empty or exceeds the configured upload limit.")
-    filename = upload.name.replace("\\", "/").rsplit("/", maxsplit=1)[-1]
+    filename = (upload.name or "").replace("\\", "/").rsplit("/", maxsplit=1)[-1]
     filename = filename.replace("\x00", "").replace("\r", "").replace("\n", "").strip()
     if not filename or len(filename) > 255:
         raise InvalidUpload("Invalid original file name.")

@@ -13,6 +13,7 @@ urlpatterns = [
     path("api/v1/", include("apps.users.urls")),
     path("api/v1/admin/rbac/", include("apps.rbac.urls")),
     path("api/v1/admin/audit/", include("apps.audit.urls")),
+    path("api/v1/", include("apps.storage.urls")),
 ]
 
 if settings.DEBUG:

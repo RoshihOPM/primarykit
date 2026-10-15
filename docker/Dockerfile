@@ -22,7 +22,7 @@ CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
 FROM base AS production
 COPY . .
 RUN useradd --create-home --uid 10001 app \
-    && mkdir -p /app/staticfiles \
+    && mkdir -p /app/staticfiles /app/media \
     && chown -R app:app /app
 USER app
 EXPOSE 8000

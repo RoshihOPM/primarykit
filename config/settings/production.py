@@ -59,3 +59,16 @@ if smtp_host:
     }
 else:
     MAILERS = {"default": {"BACKEND": "django.core.mail.backends.dummy.EmailBackend"}}
+
+# Require explicit opt-in for a single-instance persistent local media volume.
+if base.STORAGE_BACKEND == "local" and not base.env.bool(
+    "STORAGE_ALLOW_LOCAL_PRODUCTION", default=False
+):
+    raise ImproperlyConfigured(
+        "Configure STORAGE_BACKEND=s3, or explicitly enable persistent local storage."
+    )
+if base.STORAGE_BACKEND == "s3":
+    s3_endpoint = base.env("S3_ENDPOINT_URL", default="")
+    if s3_endpoint and urlsplit(s3_endpoint).scheme != "https":
+        if not base.env.bool("S3_ALLOW_INSECURE_ENDPOINT", default=False):
+            raise ImproperlyConfigured("S3 endpoint must use HTTPS in production.")
