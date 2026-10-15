@@ -25,7 +25,7 @@ Python 3.13 · Django 6.1 · Django REST Framework · PostgreSQL 17 · uv · Doc
 ```bash
 cp .env.example .env
 docker compose up -d db
-uv sync
+uv sync --locked
 uv run python manage.py makemigrations users
 uv run python manage.py migrate
 uv run python manage.py runserver
