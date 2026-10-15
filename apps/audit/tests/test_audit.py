@@ -1,4 +1,5 @@
 import pytest
+from django.apps import apps as django_apps
 from django.contrib.auth.models import Group
 from django.core.exceptions import ValidationError
 from django.db import transaction
@@ -146,6 +147,7 @@ def test_admin_filtered_log_does_not_expose_other_actions():
     assert api.get(reverse("audit-events-list"), {"actor": "not-a-uuid"}).status_code == 400
 
 
+@pytest.mark.skipif(not django_apps.is_installed("apps.rbac"), reason="RBAC not selected")
 def test_role_mutation_is_audited():
     admin = make_user(superuser=True, name="admin")
     api = api_for(admin)

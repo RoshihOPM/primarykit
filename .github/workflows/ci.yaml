@@ -25,6 +25,16 @@ jobs:
         run: uv run python manage.py check --settings=config.settings.test
       - name: Tests
         run: uv run pytest
+      # PRIMARYKIT-GENERATOR-SMOKE-START
+      - name: Generated project smoke test
+        run: |
+          uv run python scripts/new_project.py /tmp/primarykit-client --name client-backend --apps audit
+          cd /tmp/primarykit-client
+          uv sync --locked --all-groups
+          uv run python manage.py makemigrations users audit --noinput --settings=config.settings.test
+          uv run python manage.py check --settings=config.settings.test
+          uv run pytest
+      # PRIMARYKIT-GENERATOR-SMOKE-END
       - name: Validate Docker Compose configurations
         run: |
           cp .env.example .env
