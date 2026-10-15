@@ -37,12 +37,12 @@ def _preserve_owner(organization, member, *, new_role=None, deactivate=False):
 @transaction.atomic
 def create_organization(*, actor, slug, name):
     organization = Organization.objects.create(slug=slug, name=name)
-    Membership.objects.create(
-        user=actor, organization=organization, role=Membership.Role.OWNER
-    )
+    Membership.objects.create(user=actor, organization=organization, role=Membership.Role.OWNER)
     record_audit_event(
-        actor=actor, action="organizations.created",
-        target_type="organizations.Organization", target_id=organization.pk,
+        actor=actor,
+        action="organizations.created",
+        target_type="organizations.Organization",
+        target_id=organization.pk,
     )
     return organization
 
@@ -51,9 +51,11 @@ def create_organization(*, actor, slug, name):
 def update_membership(*, actor, organization, membership_id, new_role=None, deactivate=False):
     org = Organization.objects.select_for_update().get(pk=organization.pk)
     manager = get_active_membership(user=actor, organization=org)
-    member = Membership.objects.select_for_update().filter(
-        organization=org, pk=membership_id, is_active=True
-    ).first()
+    member = (
+        Membership.objects.select_for_update()
+        .filter(organization=org, pk=membership_id, is_active=True)
+        .first()
+    )
     if not member:
         raise ValidationError({"member": "Active membership does not exist."})
     _can_manage(manager, member.role, new_role)
@@ -82,9 +84,11 @@ def update_membership(*, actor, organization, membership_id, new_role=None, deac
 def set_branch_access(*, actor, organization, membership_id, branch_ids):
     org = Organization.objects.select_for_update().get(pk=organization.pk)
     manager = get_active_membership(user=actor, organization=org)
-    member = Membership.objects.select_for_update().filter(
-        pk=membership_id, organization=org, is_active=True
-    ).first()
+    member = (
+        Membership.objects.select_for_update()
+        .filter(pk=membership_id, organization=org, is_active=True)
+        .first()
+    )
     if member is None:
         raise ValidationError({"member": "Active membership does not exist."})
     _can_manage(manager, member.role)
@@ -98,8 +102,10 @@ def set_branch_access(*, actor, organization, membership_id, branch_ids):
         [BranchAccess(membership=member, branch=branch) for branch in branches]
     )
     record_audit_event(
-        actor=actor, action="organizations.branches.assigned",
-        target_type="organizations.Membership", target_id=member.pk,
+        actor=actor,
+        action="organizations.branches.assigned",
+        target_type="organizations.Membership",
+        target_id=member.pk,
         changes={"branch_count": len(branches)},
     )
     return member
@@ -119,8 +125,10 @@ def create_invitation(*, actor, organization, invitee, role):
         raise ValidationError({"invitee": "User is already a member."})
     # Remove expired pending invitations under organization row lock.
     Invitation.objects.filter(
-        organization=org, invitee=invitee, state=Invitation.State.PENDING,
-        expires_at__lte=timezone.now()
+        organization=org,
+        invitee=invitee,
+        state=Invitation.State.PENDING,
+        expires_at__lte=timezone.now(),
     ).update(state=Invitation.State.REVOKED)
     if Invitation.objects.filter(
         organization=org, invitee=invitee, state=Invitation.State.PENDING
@@ -130,8 +138,10 @@ def create_invitation(*, actor, organization, invitee, role):
         organization=org, invitee=invitee, invited_by=actor, role=role
     )
     record_audit_event(
-        actor=actor, action="organizations.invitation.created",
-        target_type="organizations.Invitation", target_id=invite.pk,
+        actor=actor,
+        action="organizations.invitation.created",
+        target_type="organizations.Invitation",
+        target_id=invite.pk,
     )
     return invite
 
@@ -144,14 +154,14 @@ def accept_invitation(*, actor, invitation_id):
     org = Organization.objects.select_for_update().get(pk=invitation.organization_id)
     invitation = Invitation.objects.select_for_update().get(pk=invitation.pk)
     if (
-        not org.is_active or invitation.state != Invitation.State.PENDING
+        not org.is_active
+        or invitation.state != Invitation.State.PENDING
         or invitation.expires_at <= timezone.now()
-        or not actor.is_active or not actor.email_verified
+        or not actor.is_active
+        or not actor.email_verified
     ):
         raise ValidationError({"invitation": "Invitation is no longer valid."})
-    membership = Membership.objects.select_for_update().filter(
-        organization=org, user=actor
-    ).first()
+    membership = Membership.objects.select_for_update().filter(organization=org, user=actor).first()
     if membership and membership.is_active:
         raise ValidationError({"invitation": "Already a member."})
     if membership:
@@ -159,13 +169,13 @@ def accept_invitation(*, actor, invitation_id):
         membership.is_active = True
         membership.save(update_fields=("role", "is_active", "updated_at"))
     else:
-        membership = Membership.objects.create(
-            organization=org, user=actor, role=invitation.role
-        )
+        membership = Membership.objects.create(organization=org, user=actor, role=invitation.role)
     invitation.state = Invitation.State.ACCEPTED
     invitation.save(update_fields=("state", "updated_at"))
     record_audit_event(
-        actor=actor, action="organizations.invitation.accepted",
-        target_type="organizations.Invitation", target_id=invitation.pk,
+        actor=actor,
+        action="organizations.invitation.accepted",
+        target_type="organizations.Invitation",
+        target_id=invitation.pk,
     )
     return membership

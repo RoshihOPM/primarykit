@@ -37,9 +37,7 @@ class MemberRoleSerializer(serializers.Serializer):
 
 
 class BranchAccessSerializer(serializers.Serializer):
-    branch_ids = serializers.ListField(
-        child=serializers.UUIDField(), allow_empty=True
-    )
+    branch_ids = serializers.ListField(child=serializers.UUIDField(), allow_empty=True)
 
     def validate_branch_ids(self, values):
         if len(values) != len(set(values)):

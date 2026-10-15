@@ -47,7 +47,8 @@ def test_cross_company_org_and_branch_idor():
     (owner1, api1, org1), (_, api2, org2), (_, stranger) = setup_organizations()
     created = api1.post(
         reverse("org-branches", kwargs={"org_id": org1}),
-        {"code": "central", "name": "Central", "organization": org2}, format="json",
+        {"code": "central", "name": "Central", "organization": org2},
+        format="json",
     )
     assert created.status_code == 201, created.data
     branch = Branch.objects.get(pk=created.data["id"])
@@ -55,38 +56,49 @@ def test_cross_company_org_and_branch_idor():
     assert stranger.get(reverse("org-detail", kwargs={"pk": org1})).status_code == 404
     assert api2.get(reverse("org-detail", kwargs={"pk": org1})).status_code == 404
     assert api2.get(reverse("org-branches", kwargs={"org_id": org1})).status_code == 404
-    assert api2.get(
-        reverse("org-branch-detail", kwargs={"org_id": org2, "branch_id": branch.pk})
-    ).status_code == 404
-    assert api2.patch(
-        reverse("org-detail", kwargs={"pk": org1}), {"name": "Hacked"}
-    ).status_code == 404
-    assert api1.get(reverse("org-branch-detail", kwargs={
-        "org_id": org1, "branch_id": branch.pk
-    })).status_code == 200
+    assert (
+        api2.get(
+            reverse("org-branch-detail", kwargs={"org_id": org2, "branch_id": branch.pk})
+        ).status_code
+        == 404
+    )
+    assert (
+        api2.patch(reverse("org-detail", kwargs={"pk": org1}), {"name": "Hacked"}).status_code
+        == 404
+    )
+    assert (
+        api1.get(
+            reverse("org-branch-detail", kwargs={"org_id": org1, "branch_id": branch.pk})
+        ).status_code
+        == 200
+    )
 
 
 def test_invitation_requires_explicit_acceptance_and_is_person_bound():
     (owner, api, org_id), (_, other_api, _), (candidate, candidate_api) = setup_organizations()
     create_url = reverse("org-invitations", kwargs={"org_id": org_id})
-    response = api.post(
-        create_url, {"invitee": str(candidate.pk), "role": "member"}, format="json"
-    )
+    response = api.post(create_url, {"invitee": str(candidate.pk), "role": "member"}, format="json")
     assert response.status_code == 201, response.data
     inv_id = response.data["id"]
     assert not Membership.objects.filter(organization_id=org_id, user=candidate).exists()
-    assert other_api.post(
-        reverse("org-invitation-accept", kwargs={"invitation_id": inv_id})
-    ).status_code == 400
+    assert (
+        other_api.post(
+            reverse("org-invitation-accept", kwargs={"invitation_id": inv_id})
+        ).status_code
+        == 400
+    )
     assert candidate_api.get(reverse("org-my-invitations")).data[0]["id"] == inv_id
     accepted = candidate_api.post(
         reverse("org-invitation-accept", kwargs={"invitation_id": inv_id})
     )
     assert accepted.status_code == 200
     assert accepted.data["role"] == "member"
-    assert candidate_api.post(
-        reverse("org-invitation-accept", kwargs={"invitation_id": inv_id})
-    ).status_code == 400
+    assert (
+        candidate_api.post(
+            reverse("org-invitation-accept", kwargs={"invitation_id": inv_id})
+        ).status_code
+        == 400
+    )
     assert candidate_api.get(reverse("org-detail", kwargs={"pk": org_id})).status_code == 200
 
 
@@ -94,23 +106,30 @@ def test_member_branch_grants_and_cross_org_denial():
     (owner, api, org_id), (_, api2, org2), (member, member_api) = setup_organizations()
     local = api.post(
         reverse("org-branches", kwargs={"org_id": org_id}),
-        {"code": "local", "name": "Local"}, format="json",
+        {"code": "local", "name": "Local"},
+        format="json",
     ).data["id"]
     other = api.post(
         reverse("org-branches", kwargs={"org_id": org_id}),
-        {"code": "other", "name": "Other"}, format="json",
+        {"code": "other", "name": "Other"},
+        format="json",
     ).data["id"]
     foreign = api2.post(
         reverse("org-branches", kwargs={"org_id": org2}),
-        {"code": "foreign", "name": "Foreign"}, format="json",
+        {"code": "foreign", "name": "Foreign"},
+        format="json",
     ).data["id"]
     invitation = api.post(
         reverse("org-invitations", kwargs={"org_id": org_id}),
-        {"invitee": str(member.pk), "role": "member"}, format="json",
+        {"invitee": str(member.pk), "role": "member"},
+        format="json",
     ).data["id"]
-    assert member_api.post(
-        reverse("org-invitation-accept", kwargs={"invitation_id": invitation})
-    ).status_code == 200
+    assert (
+        member_api.post(
+            reverse("org-invitation-accept", kwargs={"invitation_id": invitation})
+        ).status_code
+        == 200
+    )
     mid = str(Membership.objects.get(organization_id=org_id, user=member).pk)
     assert member_api.get(reverse("org-branches", kwargs={"org_id": org_id})).data == []
     grant_url = reverse("org-member-branches", kwargs={"org_id": org_id, "member_id": mid})
@@ -118,12 +137,18 @@ def test_member_branch_grants_and_cross_org_denial():
     assert not BranchAccess.objects.filter(membership_id=mid).exists()
     assert api.put(grant_url, {"branch_ids": [local]}, format="json").status_code == 204
     assert len(member_api.get(reverse("org-branches", kwargs={"org_id": org_id})).data) == 1
-    assert member_api.get(
-        reverse("org-branch-detail", kwargs={"org_id": org_id, "branch_id": other})
-    ).status_code == 404
-    assert member_api.get(
-        reverse("org-branch-detail", kwargs={"org_id": org_id, "branch_id": local})
-    ).status_code == 200
+    assert (
+        member_api.get(
+            reverse("org-branch-detail", kwargs={"org_id": org_id, "branch_id": other})
+        ).status_code
+        == 404
+    )
+    assert (
+        member_api.get(
+            reverse("org-branch-detail", kwargs={"org_id": org_id, "branch_id": local})
+        ).status_code
+        == 200
+    )
 
 
 def test_last_owner_cannot_leave_or_demote_self():
@@ -140,12 +165,13 @@ def test_admin_cannot_elevate_privileges_or_remove_owner():
     (owner, api, org_id), (_, _, _), (candidate, member_api) = setup_organizations()
     invitation = api.post(
         reverse("org-invitations", kwargs={"org_id": org_id}),
-        {"invitee": str(candidate.pk), "role": "admin"}, format="json",
+        {"invitee": str(candidate.pk), "role": "admin"},
+        format="json",
     )
     assert invitation.status_code == 201
-    member_api.post(reverse("org-invitation-accept", kwargs={
-        "invitation_id": invitation.data["id"]
-    }))
+    member_api.post(
+        reverse("org-invitation-accept", kwargs={"invitation_id": invitation.data["id"]})
+    )
     member = Membership.objects.get(organization_id=org_id, user=candidate)
     first = Membership.objects.get(organization_id=org_id, user=owner)
     url = reverse("org-member-detail", kwargs={"org_id": org_id, "member_id": first.pk})
@@ -153,26 +179,35 @@ def test_admin_cannot_elevate_privileges_or_remove_owner():
     assert member_api.delete(url).status_code == 403
     own_url = reverse("org-member-detail", kwargs={"org_id": org_id, "member_id": member.pk})
     assert member_api.patch(own_url, {"role": "owner"}, format="json").status_code == 403
-    assert member_api.post(
-        reverse("org-invitations", kwargs={"org_id": org_id}),
-        {"invitee": str(owner.pk), "role": "owner"}, format="json",
-    ).status_code == 400
+    assert (
+        member_api.post(
+            reverse("org-invitations", kwargs={"org_id": org_id}),
+            {"invitee": str(owner.pk), "role": "owner"},
+            format="json",
+        ).status_code
+        == 400
+    )
 
 
 def test_org_manager_cannot_manage_roles_or_other_members():
     (owner, api, org_id), (_, _, _), (manager, manager_api) = setup_organizations()
     response = api.post(
         reverse("org-invitations", kwargs={"org_id": org_id}),
-        {"invitee": str(manager.pk), "role": "manager"}, format="json",
+        {"invitee": str(manager.pk), "role": "manager"},
+        format="json",
     )
-    manager_api.post(reverse("org-invitation-accept", kwargs={
-        "invitation_id": response.data["id"]
-    }))
+    manager_api.post(
+        reverse("org-invitation-accept", kwargs={"invitation_id": response.data["id"]})
+    )
     assert manager_api.get(reverse("org-members", kwargs={"org_id": org_id})).status_code == 403
-    assert manager_api.post(
-        reverse("org-invitations", kwargs={"org_id": org_id}),
-        {"invitee": str(owner.pk), "role": "member"}, format="json",
-    ).status_code == 403
+    assert (
+        manager_api.post(
+            reverse("org-invitations", kwargs={"org_id": org_id}),
+            {"invitee": str(owner.pk), "role": "member"},
+            format="json",
+        ).status_code
+        == 403
+    )
 
 
 def test_expired_invitation_cannot_be_accepted():
@@ -183,12 +218,16 @@ def test_expired_invitation_cannot_be_accepted():
     (_, api, org_id), (_, _, _), (candidate, recipient) = setup_organizations()
     result = api.post(
         reverse("org-invitations", kwargs={"org_id": org_id}),
-        {"invitee": str(candidate.pk), "role": "member"}, format="json",
+        {"invitee": str(candidate.pk), "role": "member"},
+        format="json",
     )
     inv = Invitation.objects.get(pk=result.data["id"])
     inv.expires_at = timezone.now() - timedelta(minutes=1)
     inv.save(update_fields=["expires_at"])
-    assert recipient.post(
-        reverse("org-invitation-accept", kwargs={"invitation_id": inv.pk})
-    ).status_code == 400
+    assert (
+        recipient.post(
+            reverse("org-invitation-accept", kwargs={"invitation_id": inv.pk})
+        ).status_code
+        == 400
+    )
     assert not Membership.objects.filter(organization_id=org_id, user=candidate).exists()

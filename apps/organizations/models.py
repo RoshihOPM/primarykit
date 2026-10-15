@@ -45,9 +45,7 @@ class Membership(UUIDTimestampedModel):
                 fields=("organization", "user"), name="org_membership_org_user_uniq"
             )
         ]
-        indexes = [
-            models.Index(fields=["user", "is_active"], name="org_member_user_active_idx")
-        ]
+        indexes = [models.Index(fields=["user", "is_active"], name="org_member_user_active_idx")]
 
 
 class Branch(UUIDTimestampedModel):
@@ -60,9 +58,7 @@ class Branch(UUIDTimestampedModel):
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(
-                fields=("organization", "code"), name="org_branch_code_uniq"
-            )
+            models.UniqueConstraint(fields=("organization", "code"), name="org_branch_code_uniq")
         ]
         ordering = ("code",)
 
@@ -71,15 +67,11 @@ class BranchAccess(models.Model):
     membership = models.ForeignKey(
         Membership, on_delete=models.CASCADE, related_name="branch_access"
     )
-    branch = models.ForeignKey(
-        Branch, on_delete=models.CASCADE, related_name="member_access"
-    )
+    branch = models.ForeignKey(Branch, on_delete=models.CASCADE, related_name="member_access")
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(
-                fields=("membership", "branch"), name="org_branch_access_uniq"
-            )
+            models.UniqueConstraint(fields=("membership", "branch"), name="org_branch_access_uniq")
         ]
 
 

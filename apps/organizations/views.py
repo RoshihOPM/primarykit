@@ -39,7 +39,8 @@ class OrganizationListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         return Organization.objects.filter(
-            is_active=True, memberships__user=self.request.user,
+            is_active=True,
+            memberships__user=self.request.user,
             memberships__is_active=True,
         ).distinct()
 
@@ -60,7 +61,8 @@ class OrganizationDetailView(generics.RetrieveUpdateAPIView):
 
     def get_queryset(self):
         return Organization.objects.filter(
-            is_active=True, memberships__user=self.request.user,
+            is_active=True,
+            memberships__user=self.request.user,
             memberships__is_active=True,
         )
 
@@ -76,8 +78,10 @@ class OrganizationDetailView(generics.RetrieveUpdateAPIView):
         )
         org = serializer.save()
         record_audit_event(
-            actor=self.request.user, action="organizations.updated",
-            target_type="organizations.Organization", target_id=org.pk,
+            actor=self.request.user,
+            action="organizations.updated",
+            target_type="organizations.Organization",
+            target_id=org.pk,
         )
 
 
@@ -104,8 +108,10 @@ class BranchListCreateView(APIView):
         serializer.is_valid(raise_exception=True)
         branch = serializer.save(organization=org)
         record_audit_event(
-            actor=request.user, action="organizations.branch.created",
-            target_type="organizations.Branch", target_id=branch.pk,
+            actor=request.user,
+            action="organizations.branch.created",
+            target_type="organizations.Branch",
+            target_id=branch.pk,
         )
         return Response(BranchSerializer(branch).data, status=201)
 
@@ -128,8 +134,10 @@ class BranchDetailView(APIView):
         serializer.is_valid(raise_exception=True)
         branch = serializer.save()
         record_audit_event(
-            actor=request.user, action="organizations.branch.updated",
-            target_type="organizations.Branch", target_id=branch.pk,
+            actor=request.user,
+            action="organizations.branch.updated",
+            target_type="organizations.Branch",
+            target_id=branch.pk,
         )
         return Response(BranchSerializer(branch).data)
 
@@ -140,9 +148,7 @@ class MemberListView(APIView):
     def get(self, request, org_id):
         org, _ = organization_for(request, org_id)
         require_org_role(user=request.user, organization=org, roles=ADMIN_ROLES)
-        members = Membership.objects.filter(
-            organization=org, is_active=True
-        ).order_by("created_at")
+        members = Membership.objects.filter(organization=org, is_active=True).order_by("created_at")
         return Response(MembershipSerializer(members, many=True).data)
 
 
@@ -154,7 +160,9 @@ class MemberDetailView(APIView):
         serializer = MemberRoleSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         member = update_membership(
-            actor=request.user, organization=org, membership_id=member_id,
+            actor=request.user,
+            organization=org,
+            membership_id=member_id,
             new_role=serializer.validated_data["role"],
         )
         return Response(MembershipSerializer(member).data)
@@ -173,23 +181,25 @@ class BranchGrantsView(APIView):
     def get(self, request, org_id, member_id):
         org, _ = organization_for(request, org_id)
         require_org_role(user=request.user, organization=org, roles=ADMIN_ROLES)
-        member = get_object_or_404(
-            Membership, pk=member_id, organization=org, is_active=True
-        )
-        return Response({
-            "branch_ids": list(
-                BranchAccess.objects.filter(membership=member).values_list(
-                    "branch_id", flat=True
+        member = get_object_or_404(Membership, pk=member_id, organization=org, is_active=True)
+        return Response(
+            {
+                "branch_ids": list(
+                    BranchAccess.objects.filter(membership=member).values_list(
+                        "branch_id", flat=True
+                    )
                 )
-            )
-        })
+            }
+        )
 
     def put(self, request, org_id, member_id):
         org, _ = organization_for(request, org_id)
         serializer = BranchAccessSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         set_branch_access(
-            actor=request.user, organization=org, membership_id=member_id,
+            actor=request.user,
+            organization=org,
+            membership_id=member_id,
             branch_ids=serializer.validated_data["branch_ids"],
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -219,7 +229,8 @@ class MyInvitationsView(APIView):
 
     def get(self, request):
         invites = Invitation.objects.filter(
-            invitee=request.user, state=Invitation.State.PENDING,
+            invitee=request.user,
+            state=Invitation.State.PENDING,
             expires_at__gt=timezone.now(),
             organization__is_active=True,
         ).select_related("organization")
