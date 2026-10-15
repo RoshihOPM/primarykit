@@ -119,7 +119,8 @@ REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {
     "account_registration": "3/hour",
     "account_refresh": "30/min",
     "account_password": "5/hour",
-    "account_email": "3/hour",
+    "account_email_request": "3/hour",
+    "account_email_confirm": "10/min",
 }
 
 
