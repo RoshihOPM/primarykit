@@ -47,9 +47,12 @@ def test_no_rbac_admin_access_for_non_superusers(identities):
         assert client.get(reverse("rbac-roles-list")).status_code == 403
         assert client.post(reverse("rbac-roles-list"), {"name": "Admin"}).status_code == 403
         assert client.get(reverse("rbac-permissions-list")).status_code == 403
-        assert client.put(
-            reverse("rbac-user-roles", kwargs={"user_id": normal.pk}), {"role_ids": []}
-        ).status_code == 403
+        assert (
+            client.put(
+                reverse("rbac-user-roles", kwargs={"user_id": normal.pk}), {"role_ids": []}
+            ).status_code
+            == 403
+        )
 
 
 @override_settings(RBAC_ASSIGNABLE_PERMISSIONS=[PERMISSION_CODE])
@@ -58,7 +61,8 @@ def test_role_creation_assignment_and_permissions(identities):
     client = as_user(admin)
     permission = Permission.objects.get(content_type__app_label="auth", codename="view_group")
     response = client.post(
-        reverse("rbac-roles-list"), {"name": "Reader", "permission_codes": [PERMISSION_CODE]},
+        reverse("rbac-roles-list"),
+        {"name": "Reader", "permission_codes": [PERMISSION_CODE]},
         format="json",
     )
     assert response.status_code == 201, response.data
@@ -74,7 +78,9 @@ def test_role_creation_assignment_and_permissions(identities):
     assert assign.status_code == 204
     normal.refresh_from_db()
     assert normal.has_perm(PERMISSION_CODE)
-    assert as_user(normal).get(reverse("rbac-roles-detail", kwargs={"pk": role_id})).status_code == 403
+    assert (
+        as_user(normal).get(reverse("rbac-roles-detail", kwargs={"pk": role_id})).status_code == 403
+    )
     assert client.get(reverse("rbac-user-roles", kwargs={"user_id": normal.pk})).data["roles"] == [
         {"id": role_id, "name": "Reader"}
     ]
@@ -93,7 +99,8 @@ def test_role_permissions_default_deny_and_mass_assignment(identities):
     assert response.status_code == 400
     assert not Group.objects.filter(name="Escalator").exists()
     result = client.post(
-        reverse("rbac-roles-list"), {"name": "Safe", "is_superuser": True},
+        reverse("rbac-roles-list"),
+        {"name": "Safe", "is_superuser": True},
         format="json",
     )
     assert result.status_code == 201
