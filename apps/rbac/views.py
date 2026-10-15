@@ -66,8 +66,11 @@ class RoleViewSet(viewsets.ModelViewSet):
             changes["permission_codes"] = {"before": old_codes, "after": new_codes}
         if changes:
             record_audit_event(
-                actor=self.request.user, action="rbac.role.updated",
-                target_type="auth.Group", target_id=role.pk, changes=changes,
+                actor=self.request.user,
+                action="rbac.role.updated",
+                target_type="auth.Group",
+                target_id=role.pk,
+                changes=changes,
             )
 
     def perform_destroy(self, instance):
@@ -77,8 +80,10 @@ class RoleViewSet(viewsets.ModelViewSet):
         role_name = instance.name
         instance.delete()
         record_audit_event(
-            actor=self.request.user, action="rbac.role.deleted",
-            target_type="auth.Group", target_id=role_id,
+            actor=self.request.user,
+            action="rbac.role.deleted",
+            target_type="auth.Group",
+            target_id=role_id,
             changes={"name": role_name},
         )
 
@@ -115,8 +120,10 @@ class UserRolesView(APIView):
         after = sorted(user.groups.values_list("pk", flat=True))
         if before != after:
             record_audit_event(
-                actor=request.user, action="rbac.user.roles.changed",
-                target_type="users.User", target_id=user.pk,
+                actor=request.user,
+                action="rbac.user.roles.changed",
+                target_type="users.User",
+                target_id=user.pk,
                 changes={"role_ids": {"before": before, "after": after}},
             )
         return Response(status=status.HTTP_204_NO_CONTENT)

@@ -49,7 +49,9 @@ class RegisterSerializer(serializers.Serializer):
                 user = User.objects.create_user(email_verified=False, **validated_data)
                 send_verification_email(user)
                 record_audit_event(
-                    actor=None, action="users.registered", target_type="users.User",
+                    actor=None,
+                    action="users.registered",
+                    target_type="users.User",
                     target_id=user.pk,
                 )
                 return user
