@@ -17,6 +17,7 @@ from .serializers import (
     ChangePasswordSerializer,
     EmailTokenObtainPairSerializer,
     LogoutSerializer,
+    PasswordBoundTokenRefreshSerializer,
     RegisterSerializer,
     UserProfileUpdateSerializer,
     UserReadSerializer,
@@ -50,6 +51,7 @@ class LoginView(TokenObtainPairView):
 
 
 class RefreshView(TokenRefreshView):
+    serializer_class = PasswordBoundTokenRefreshSerializer
     throttle_classes = [AccountRateThrottle]
     throttle_scope = "account_refresh"
 
