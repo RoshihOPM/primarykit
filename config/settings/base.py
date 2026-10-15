@@ -1,9 +1,8 @@
 from datetime import timedelta
 from pathlib import Path
 
-from django.core.exceptions import ImproperlyConfigured
-
 import environ
+from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 
