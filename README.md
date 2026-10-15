@@ -82,3 +82,9 @@ Core now exposes opt-in `SoftDeleteModel` and `SoftDeleteUUIDTimestampedModel` w
 The endpoints include JWT login/refresh/logout, account profile, password change, optional registration, and superuser administration.
 Authentication changes must pass the [.agents security-review skill](.agents/skills/security-review/SKILL.md).
 Public registration is off by default. **Do not deploy public authentication without shared-cache / edge-layer brute-force controls.**
+
+## RBAC module
+
+RBAC reuses Django Groups and Permissions (no duplicate role model). An active superuser manages roles and assignments at `/api/v1/admin/rbac/`. Default `RBAC_ASSIGNABLE_PERMISSIONS = []` denies permission grants until the new project sets an allowlist.
+
+See [RBAC architecture and object scoping](docs/rbac-architecture.md). The built-in owner-only scoping helper prevents IDOR for explicitly configured views; arbitrary per-object ACL and multi-tenant role grants are **not included**.

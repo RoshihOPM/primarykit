@@ -11,6 +11,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("health/", include("apps.core.urls")),
     path("api/v1/", include("apps.users.urls")),
+    path("api/v1/admin/rbac/", include("apps.rbac.urls")),
 ]
 
 if settings.DEBUG:

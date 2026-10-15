@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "apps.core",
     "apps.users",
+    "apps.rbac",
 ]
 
 MIDDLEWARE = [
@@ -101,6 +102,7 @@ REST_FRAMEWORK = {
     "EXCEPTION_HANDLER": "apps.core.exceptions.api_exception_handler",
 }
 ALLOW_PUBLIC_REGISTRATION = env.bool("ALLOW_PUBLIC_REGISTRATION", default=False)
+RBAC_ASSIGNABLE_PERMISSIONS = []  # Populate in the generated project.
 REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {
     "account_login": "5/min",
     "account_registration": "3/hour",
