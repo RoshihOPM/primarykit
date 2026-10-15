@@ -43,7 +43,8 @@ urlpatterns = [
     ),
     path(
         "organizations/<uuid:org_id>/invitations/<uuid:invitation_id>/",
-        InvitationDetailView.as_view(), name="org-invitation-detail",
+        InvitationDetailView.as_view(),
+        name="org-invitation-detail",
     ),
     path("invitations/mine/", MyInvitationsView.as_view(), name="org-my-invitations"),
     path(
