@@ -114,11 +114,14 @@ def test_missing_role_and_atomic_replacement(identities):
     client = as_user(admin)
     first = Group.objects.create(name="first")
     second = Group.objects.create(name="second")
-    assert client.put(
-        reverse("rbac-user-roles", kwargs={"user_id": normal.pk}),
-        {"role_ids": [first.pk, second.pk]},
-        format="json",
-    ).status_code == 204
+    assert (
+        client.put(
+            reverse("rbac-user-roles", kwargs={"user_id": normal.pk}),
+            {"role_ids": [first.pk, second.pk]},
+            format="json",
+        ).status_code
+        == 204
+    )
     invalid = client.put(
         reverse("rbac-user-roles", kwargs={"user_id": normal.pk}),
         {"role_ids": [first.pk, 999999999]},
@@ -127,11 +130,14 @@ def test_missing_role_and_atomic_replacement(identities):
     assert invalid.status_code == 400
     normal.refresh_from_db()
     assert set(normal.groups.values_list("pk", flat=True)) == {first.pk, second.pk}
-    assert client.put(
-        reverse("rbac-user-roles", kwargs={"user_id": normal.pk}),
-        {"role_ids": [second.pk]},
-        format="json",
-    ).status_code == 204
+    assert (
+        client.put(
+            reverse("rbac-user-roles", kwargs={"user_id": normal.pk}),
+            {"role_ids": [second.pk]},
+            format="json",
+        ).status_code
+        == 204
+    )
     assert list(normal.groups.values_list("pk", flat=True)) == [second.pk]
 
 
