@@ -81,3 +81,20 @@ global catalog/inventory endpoints to ordinary tenant users.
   signup. Applications can additionally require staff or paid onboarding.
 - Schema changes and generated migrations belong to each newly generated client
   repository. PostgreSQL is required for production and concurrency review.
+
+
+### Verification and CI
+
+The source test suite verifies cross-organization object lookup, foreign-branch
+assignment rejection, owner handover/last-owner safeguards, replayed or expired
+invitations, administrator privilege restrictions and membership revocation.
+GitHub Actions also generates and tests an **organizations-only** client project
+to ensure this app doesn't accidentally depend on RBAC, Audit, Catalog or Inventory.
+
+### Production readiness
+
+Organizations creation is authenticated but not quota-limited in this baseline;
+public deployments should add per-account creation quotas and abuse protection.
+The module deliberately does **not** provide an invitation email dispatch or a
+public signup-by-invitation workflow. Frontends should show invitations only to
+the logged-in, already verified recipient.

@@ -41,6 +41,13 @@ jobs:
           uv run python manage.py makemigrations users catalog inventory --noinput --settings=config.settings.test
           uv run python manage.py check --settings=config.settings.test
           uv run pytest
+          cd -
+          uv run python scripts/new_project.py /tmp/primarykit-org-client --name org-client --apps organizations
+          cd /tmp/primarykit-org-client
+          uv sync --locked --all-groups
+          uv run python manage.py makemigrations users organizations --noinput --settings=config.settings.test
+          uv run python manage.py check --settings=config.settings.test
+          uv run pytest
       # PRIMARYKIT-GENERATOR-SMOKE-END
       - name: Validate Docker Compose configurations
         run: |
