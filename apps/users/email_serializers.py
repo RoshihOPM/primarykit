@@ -1,3 +1,4 @@
+import binascii
 import uuid
 
 from django.conf import settings
@@ -18,7 +19,7 @@ def get_token_user(uid):
     """No user identity is returned to unauthenticated callers."""
     try:
         pk = uuid.UUID(force_str(urlsafe_base64_decode(uid)))
-    except (ValueError, TypeError, UnicodeDecodeError, OverflowError):
+    except (ValueError, TypeError, UnicodeDecodeError, OverflowError, binascii.Error):
         return None
     return User.objects.filter(pk=pk).first()
 

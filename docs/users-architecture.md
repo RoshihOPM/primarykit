@@ -2,11 +2,12 @@
 
 ## Goals and non-goals
 
-PrimaryKit users provides email-based identity, public-registration toggle, JWT login/refresh/logout, own profile, password change and superuser-only user administration. It does NOT yet implement email verification, password recovery, MFA, invitations, social login, organizations or full RBAC. These require follow-up designs; do not deploy public registration without sufficient abuse controls.
+PrimaryKit users provides email-based identity, public-registration toggle, JWT login/refresh/logout, own profile, password change and superuser-only user administration. Email verification and password reset are in the separate [email workflow module](email-notifications.md). MFA, invitations, social login and tenant-scoped RBAC remain out of scope. Do not deploy public registration without abuse controls.
 
 ## Data
 
 - `users.User` inherits Django `AbstractUser`, uses UUID primary key and canonical casefolded email.
+- Unverified registrations are prevented from using JWT/session APIs until email ownership has been confirmed. Superusers created via `createsuperuser` are explicitly marked verified.
 - PostgreSQL/SQLite case-insensitive uniqueness constraint: `UniqueConstraint(Lower("email"))`. Keep it when creating a new project. Switching an existing project requires an explicit uniqueness audit and migration.
 - `is_staff`, `is_superuser`, groups and permissions use Django auth; no public API writes these fields.
 - `password` is hashed by Django; no custom password crypto.

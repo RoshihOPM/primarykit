@@ -1,3 +1,5 @@
+from urllib.parse import urlsplit
+
 from django.core.exceptions import ImproperlyConfigured
 
 from . import base
@@ -25,8 +27,6 @@ if base.env.bool("DJANGO_TRUST_PROXY_SSL_HEADER", default=False):
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 # Production mail transport may never be the console backend (tokens would leak to logs).
-from urllib.parse import urlsplit  # noqa: E402
-
 smtp_host = base.env("SMTP_HOST", default="")
 if AUTH_EMAIL_FLOWS_ENABLED:
     if not smtp_host:

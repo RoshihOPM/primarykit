@@ -17,6 +17,7 @@ def create_user(email="user@example.com", *, is_staff=False, is_superuser=False)
         password=PASSWORD,
         is_staff=is_staff,
         is_superuser=is_superuser,
+        email_verified=True,
     )
 
 
@@ -26,7 +27,7 @@ def bearer_client(user):
     return client
 
 
-@override_settings(ALLOW_PUBLIC_REGISTRATION=True)
+@override_settings(ALLOW_PUBLIC_REGISTRATION=True, AUTH_EMAIL_FLOWS_ENABLED=True)
 def test_register_validates_password_and_restricts_privilege(client):
     invalid = client.post(
         reverse("auth-register"),

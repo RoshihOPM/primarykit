@@ -88,3 +88,9 @@ Public registration is off by default. **Do not deploy public authentication wit
 RBAC reuses Django Groups and Permissions (no duplicate role model). An active superuser manages roles and assignments at `/api/v1/admin/rbac/`. Default `RBAC_ASSIGNABLE_PERMISSIONS = []` denies permission grants until the new project sets an allowlist.
 
 See [RBAC architecture and object scoping](docs/rbac-architecture.md). The built-in owner-only scoping helper prevents IDOR for explicitly configured views; arbitrary per-object ACL and multi-tenant role grants are **not included**.
+
+## Notifications and account recovery
+
+[Email notifications, verification and password reset](docs/email-notifications.md).
+
+`apps/notifications` provides reusable Django 6.1 MAILERS-based templated email. `users` issues signed, expiring single-use verification/password-reset tokens. **Email flows are disabled by default**. Configure the mailer, frontend callback URLs, and registration settings before enabling public signups; use shared rate limits and email-abuse protections in production.

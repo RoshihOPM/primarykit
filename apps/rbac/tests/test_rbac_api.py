@@ -21,7 +21,7 @@ PERMISSION_CODE = "auth.view_group"
 
 
 def user(email, **kwargs):
-    return User.objects.create_user(email=email, password="a-strong-password-123", **kwargs)
+    return User.objects.create_user(email=email, password="a-strong-password-123", email_verified=True, **kwargs)
 
 
 def as_user(member):
