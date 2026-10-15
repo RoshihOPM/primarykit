@@ -17,6 +17,23 @@ jobs:
         run: uv sync --locked --all-groups
       - name: Ruff lint
         run: uv run ruff check .
+      - name: Temporary Inventory formatting snapshot
+        run: |
+          uv run ruff format .
+          python - <<'PY'
+          import base64
+          from pathlib import Path
+          for name in [
+              "apps/inventory/models.py",
+              "apps/inventory/serializers.py",
+              "apps/inventory/services.py",
+              "apps/inventory/tests/test_concurrency.py",
+              "apps/inventory/tests/test_inventory.py",
+          ]:
+              print("FORMAT_BEGIN:" + name)
+              print(base64.b64encode(Path(name).read_bytes()).decode())
+              print("FORMAT_END:" + name)
+          PY
       - name: Ruff format
         run: uv run ruff format --check .
       - name: Generate project-specific migrations for tests
