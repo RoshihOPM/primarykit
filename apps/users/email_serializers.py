@@ -1,7 +1,6 @@
 import binascii
 import uuid
 
-from django.conf import settings
 from django.contrib.auth import get_user_model, password_validation
 from django.contrib.auth.tokens import default_token_generator
 from django.db import transaction
