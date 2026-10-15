@@ -16,7 +16,7 @@ from apps.users.models import User
 
 pytestmark = pytest.mark.django_db
 
-PNG = b"\x89PNG\r\n\\x1a\n" + b"\x00" * 24
+PNG = bytes.fromhex("89504e470d0a1a0a") + bytes(24)
 
 
 @pytest.mark.skipif(
