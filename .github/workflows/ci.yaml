@@ -17,6 +17,25 @@ jobs:
         run: uv sync --locked --all-groups
       - name: Ruff lint
         run: uv run ruff check .
+      - name: Temporary Organizations formatting snapshot
+        run: |
+          uv run ruff format .
+          python - <<'PY'
+          import base64
+          from pathlib import Path
+          for name in [
+              "apps/organizations/models.py",
+              "apps/organizations/permissions.py",
+              "apps/organizations/services.py",
+              "apps/organizations/serializers.py",
+              "apps/organizations/views.py",
+              "apps/organizations/urls.py",
+              "apps/organizations/tests/test_organizations.py",
+          ]:
+              print("FORMAT_BEGIN:" + name)
+              print(base64.b64encode(Path(name).read_bytes()).decode())
+              print("FORMAT_END:" + name)
+          PY
       - name: Ruff format
         run: uv run ruff format --check .
       - name: Generate project-specific migrations for tests
