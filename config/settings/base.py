@@ -107,8 +107,6 @@ LOGGING = {
             "format": "%(asctime)s %(levelname)s %(name)s: %(message)s",
         }
     },
-    "handlers": {
-        "console": {"class": "logging.StreamHandler", "formatter": "default"}
-    },
+    "handlers": {"console": {"class": "logging.StreamHandler", "formatter": "default"}},
     "root": {"handlers": ["console"], "level": env("LOG_LEVEL", default="INFO")},
 }
