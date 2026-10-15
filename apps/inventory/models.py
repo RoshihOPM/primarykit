@@ -27,7 +27,9 @@ class StockBalance(UUIDTimestampedModel):
     class Meta:
         constraints = [
             models.UniqueConstraint(fields=("warehouse", "item"), name="inventory_balance_unique"),
-            models.CheckConstraint(condition=Q(on_hand__gte=F("reserved")), name="inventory_reserve_lte_onhand"),
+            models.CheckConstraint(
+                condition=Q(on_hand__gte=F("reserved")), name="inventory_reserve_lte_onhand"
+            ),
         ]
         indexes = [models.Index(fields=["item", "warehouse"], name="inventory_item_warehouse_idx")]
 
@@ -50,7 +52,9 @@ class StockReservation(UUIDTimestampedModel):
 
     class Meta:
         constraints = [
-            models.CheckConstraint(condition=Q(quantity__gt=0), name="inventory_reservation_qty_pos"),
+            models.CheckConstraint(
+                condition=Q(quantity__gt=0), name="inventory_reservation_qty_pos"
+            ),
         ]
 
 
@@ -77,7 +81,9 @@ class ImmutableMovementQuerySet(models.QuerySet):
 
 
 class StockMovement(UUIDTimestampedModel):
-    operation = models.ForeignKey(InventoryOperation, on_delete=models.PROTECT, related_name="movements")
+    operation = models.ForeignKey(
+        InventoryOperation, on_delete=models.PROTECT, related_name="movements"
+    )
     balance = models.ForeignKey(StockBalance, on_delete=models.PROTECT, related_name="movements")
     kind = models.CharField(max_length=20)
     on_hand_delta = models.BigIntegerField(default=0)

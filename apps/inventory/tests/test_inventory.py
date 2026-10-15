@@ -19,8 +19,11 @@ pytestmark = pytest.mark.django_db
 
 def identity(email, *, admin=False):
     member = User.objects.create_user(
-        email=email, password="Inventory-long-password-312", email_verified=True,
-        is_staff=admin, is_superuser=admin,
+        email=email,
+        password="Inventory-long-password-312",
+        email_verified=True,
+        is_staff=admin,
+        is_superuser=admin,
     )
     api = APIClient()
     api.credentials(HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(member).access_token}")
@@ -34,7 +37,13 @@ def stock():
     source = Warehouse.objects.create(code="main", name="Main")
     destination = Warehouse.objects.create(code="branch", name="Branch")
     admin, client = identity("inventory-admin@example.com", admin=True)
-    return {"item": item, "source": source, "destination": destination, "admin": admin, "api": client}
+    return {
+        "item": item,
+        "source": source,
+        "destination": destination,
+        "admin": admin,
+        "api": client,
+    }
 
 
 def command(stock, kind, *, key, quantity=None, warehouse=None, destination=None, reservation=None):
@@ -60,7 +69,10 @@ def test_receive_and_issue_cannot_overdraw(stock):
     received = command(stock, "receive", key="receive-0001", quantity=10, warehouse=warehouse)
     assert received.status_code == 200, received.data
     assert balance(warehouse).on_hand == 10
-    assert command(stock, "issue", key="issue-00001", quantity=7, warehouse=warehouse).status_code == 200
+    assert (
+        command(stock, "issue", key="issue-00001", quantity=7, warehouse=warehouse).status_code
+        == 200
+    )
     failed = command(stock, "issue", key="issue-00002", quantity=4, warehouse=warehouse)
     assert failed.status_code == 400, failed.data
     assert balance(warehouse).on_hand == 3
@@ -78,17 +90,26 @@ def test_reserve_release_consume_and_no_double_close(stock):
     assert balance(source).on_hand == 10
     assert balance(source).reserved == 6
     assert balance(source).available == 4
-    assert command(stock, "issue", key="issue-00001", quantity=5, warehouse=source).status_code == 400
+    assert (
+        command(stock, "issue", key="issue-00001", quantity=5, warehouse=source).status_code == 400
+    )
     consumed = command(stock, "consume", key="consume-0001", reservation=reservation_id)
     assert consumed.status_code == 200, consumed.data
     assert balance(source).on_hand == 4
     assert balance(source).reserved == 0
     assert StockReservation.objects.get(pk=reservation_id).status == "consumed"
-    assert command(stock, "consume", key="consume-0002", reservation=reservation_id).status_code == 400
+    assert (
+        command(stock, "consume", key="consume-0002", reservation=reservation_id).status_code == 400
+    )
     release_attempt = command(stock, "release", key="release-0001", reservation=reservation_id)
     assert release_attempt.status_code == 400
     held = command(stock, "reserve", key="reserve-0002", quantity=2, warehouse=source)
-    assert command(stock, "release", key="release-0002", reservation=held.data["reservation_id"]).status_code == 200
+    assert (
+        command(
+            stock, "release", key="release-0002", reservation=held.data["reservation_id"]
+        ).status_code
+        == 200
+    )
     assert balance(source).on_hand == 4
     assert balance(source).reserved == 0
 
@@ -97,7 +118,12 @@ def test_transfer_creates_two_ledger_movements(stock):
     source, dest = stock["source"], stock["destination"]
     command(stock, "receive", key="receive-0001", quantity=12, warehouse=source)
     transferred = command(
-        stock, "transfer", key="transfer-0001", quantity=5, warehouse=source, destination=dest,
+        stock,
+        "transfer",
+        key="transfer-0001",
+        quantity=5,
+        warehouse=source,
+        destination=dest,
     )
     assert transferred.status_code == 200, transferred.data
     assert balance(source).on_hand == 7
@@ -105,9 +131,17 @@ def test_transfer_creates_two_ledger_movements(stock):
     movement_rows = StockMovement.objects.filter(operation_id=transferred.data["operation_id"])
     assert movement_rows.count() == 2
     assert set(movement_rows.values_list("on_hand_delta", flat=True)) == {-5, 5}
-    assert command(
-        stock, "transfer", key="transfer-0002", quantity=8, warehouse=source, destination=dest,
-    ).status_code == 400
+    assert (
+        command(
+            stock,
+            "transfer",
+            key="transfer-0002",
+            quantity=8,
+            warehouse=source,
+            destination=dest,
+        ).status_code
+        == 400
+    )
     assert balance(dest).on_hand == 5
 
 
@@ -129,40 +163,69 @@ def test_invalid_operation_shapes_and_over_reserved(stock):
     source = stock["source"]
     url = reverse("inventory-operations-list")
     api = stock["api"]
-    assert api.post(url, {"kind": "receive", "idempotency_key": "missing-0001"}, format="json").status_code == 400
-    assert command(stock, "issue", key="issue-00001", quantity=1, warehouse=source).status_code == 400
-    assert command(
-        stock, "transfer", key="transfer-0001", quantity=1, warehouse=source, destination=source,
-    ).status_code == 400
+    assert (
+        api.post(
+            url, {"kind": "receive", "idempotency_key": "missing-0001"}, format="json"
+        ).status_code
+        == 400
+    )
+    assert (
+        command(stock, "issue", key="issue-00001", quantity=1, warehouse=source).status_code == 400
+    )
+    assert (
+        command(
+            stock,
+            "transfer",
+            key="transfer-0001",
+            quantity=1,
+            warehouse=source,
+            destination=source,
+        ).status_code
+        == 400
+    )
     command(stock, "receive", key="receive-0001", quantity=2, warehouse=source)
-    assert command(stock, "reserve", key="reserve-0001", quantity=3, warehouse=source).status_code == 400
+    assert (
+        command(stock, "reserve", key="reserve-0001", quantity=3, warehouse=source).status_code
+        == 400
+    )
     assert StockReservation.objects.count() == 0
 
 
 def test_non_admin_denied_every_inventory_endpoint(stock):
     _, viewer = identity("warehouse-viewer@example.com")
     for name in (
-        "inventory-warehouses-list", "inventory-balances-list",
-        "inventory-reservations-list", "inventory-operations-list",
+        "inventory-warehouses-list",
+        "inventory-balances-list",
+        "inventory-reservations-list",
+        "inventory-operations-list",
     ):
         assert viewer.get(reverse(name)).status_code == 403
-    assert viewer.post(
-        reverse("inventory-operations-list"),
-        {"kind": "receive", "idempotency_key": "evil-00001", "quantity": 100},
-        format="json",
-    ).status_code == 403
+    assert (
+        viewer.post(
+            reverse("inventory-operations-list"),
+            {"kind": "receive", "idempotency_key": "evil-00001", "quantity": 100},
+            format="json",
+        ).status_code
+        == 403
+    )
 
 
 def test_warehouse_and_ledger_cannot_be_mutated_by_api(stock):
     api = stock["api"]
     created = api.post(
-        reverse("inventory-warehouses-list"), {"code": "new", "name": "New"}, format="json",
+        reverse("inventory-warehouses-list"),
+        {"code": "new", "name": "New"},
+        format="json",
     )
     assert created.status_code == 201
-    assert api.patch(
-        reverse("inventory-warehouses-detail", kwargs={"pk": created.data["id"]}),
-        {"name": "Changed"}, format="json",
-    ).status_code == 200
+    assert (
+        api.patch(
+            reverse("inventory-warehouses-detail", kwargs={"pk": created.data["id"]}),
+            {"name": "Changed"},
+            format="json",
+        ).status_code
+        == 200
+    )
     command(stock, "receive", key="receive-0001", quantity=10, warehouse=stock["source"])
     stored = StockMovement.objects.first()
     with pytest.raises(DjangoValidationError):
@@ -172,7 +235,11 @@ def test_warehouse_and_ledger_cannot_be_mutated_by_api(stock):
         stored.save()
     with pytest.raises(DjangoValidationError):
         StockMovement.objects.all().update(on_hand_delta=222)
-    assert api.patch(
-        reverse("inventory-balances-detail", kwargs={"pk": balance(stock["source"]).pk}),
-        {"on_hand": 1000}, format="json",
-    ).status_code == 405
+    assert (
+        api.patch(
+            reverse("inventory-balances-detail", kwargs={"pk": balance(stock["source"]).pk}),
+            {"on_hand": 1000},
+            format="json",
+        ).status_code
+        == 405
+    )

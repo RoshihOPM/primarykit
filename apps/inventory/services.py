@@ -65,7 +65,9 @@ def _execute_locked(operation, data, actor):
         if kind == "transfer":
             destination = data["destination"]
             if not destination.is_active or destination.pk == warehouse.pk:
-                raise ValidationError({"destination": "Destination must be a different active warehouse."})
+                raise ValidationError(
+                    {"destination": "Destination must be a different active warehouse."}
+                )
             pairs.append((destination, item))
         locked = _locked_balances(pairs)
         balance = locked[(warehouse.pk, item.pk)]

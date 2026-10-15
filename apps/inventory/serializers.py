@@ -40,10 +40,14 @@ class StockCommandSerializer(serializers.Serializer):
     kind = serializers.ChoiceField(choices=KINDS)
     idempotency_key = serializers.CharField(max_length=128, min_length=8, trim_whitespace=True)
     warehouse = serializers.PrimaryKeyRelatedField(queryset=Warehouse.objects.all(), required=False)
-    destination = serializers.PrimaryKeyRelatedField(queryset=Warehouse.objects.all(), required=False)
+    destination = serializers.PrimaryKeyRelatedField(
+        queryset=Warehouse.objects.all(), required=False
+    )
     item = serializers.PrimaryKeyRelatedField(queryset=CatalogItem.objects.all(), required=False)
     quantity = serializers.IntegerField(min_value=1, max_value=10**12, required=False)
-    reservation = serializers.PrimaryKeyRelatedField(queryset=StockReservation.objects.all(), required=False)
+    reservation = serializers.PrimaryKeyRelatedField(
+        queryset=StockReservation.objects.all(), required=False
+    )
 
     def validate(self, attrs):
         kind = attrs["kind"]

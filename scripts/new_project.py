@@ -74,7 +74,7 @@ def create_project(
     if target.exists():
         raise FileExistsError(f"Destination already exists: {target}")
 
-    selected = REQUIRED_APPS | set(optional_apps)
+    selected = set(REQUIRED_APPS) | set(optional_apps)
     if "inventory" in selected:
         selected.add("catalog")
     target.parent.mkdir(parents=True, exist_ok=True)

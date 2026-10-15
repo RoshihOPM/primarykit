@@ -37,8 +37,11 @@ def test_two_writers_cannot_overdraw_the_same_stock():
             execute_stock_operation(
                 actor=actor,
                 data={
-                    "kind": "issue", "idempotency_key": f"concurrent-issue-{number}",
-                    "warehouse": warehouse, "item": item, "quantity": 4,
+                    "kind": "issue",
+                    "idempotency_key": f"concurrent-issue-{number}",
+                    "warehouse": warehouse,
+                    "item": item,
+                    "quantity": 4,
                 },
             )
             return "success"
