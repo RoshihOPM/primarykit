@@ -28,7 +28,7 @@ Random keys are `private/<uuid4>` and never include client filenames.
 
 ## Storage backends
 
-Django 6.1 `STORAGES` is the switchboard. `STORAGE_BACKEND=local` uses a private media folder, which the server must not expose publicly. `STORAGE_BACKEND=s3` uses `storages.backends.s3.S3Storage` with a private bucket, file-overwrite disabled and no public ACL. Install `django-storages[s3]` in generated projects that need S3 (e.g., `uv add 'django-storages[s3]'`). Supports AWS S3 and compatible SeaweedFS/MinIO implementations via a configured endpoint. Test S3-compatible providers against actual integration tests.
+Django 6.1 `STORAGES` is the switchboard. `STORAGE_BACKEND=local` uses a private media folder, which the server must not expose publicly. `STORAGE_BACKEND=s3` uses `storages.backends.s3.S3Storage` with a private bucket, file-overwrite disabled and no public ACL. The starter now includes `django-storages[s3]` and Boto3 in `uv.lock`. **SeaweedFS 4.48** is the default self-hosted S3 provider. It is enabled via an optional Compose overlay; AWS S3 is still supported by changing the endpoint and credentials.
 
 Do not configure a public bucket or Nginx static media alias. Django serves authorized streams; very large downloads would need a presigned URL or proxy acceleration after verifying ownership.
 
@@ -50,3 +50,36 @@ Deletion updates metadata and audit together, but deliberately does not delete t
 ## Migrations
 
 At project creation: `makemigrations users audit storage`, `migrate`; commit generated migrations in the new project's Git.
+
+## SeaweedFS single-node S3 via Docker Compose
+
+The source and projects including Storage contain `compose.seaweedfs.yaml`. SeaweedFS is a **local/private S3 provider**, not a public object URL or hosted service. It runs `weed mini`, initializes the configured `S3_BUCKET` using the supplied credentials, and persists blobs in the `seaweedfs_data` Docker volume.
+
+For development:
+
+```bash
+cp .env.example .env
+docker compose -f compose.yaml -f compose.seaweedfs.yaml up -d --build
+docker compose -f compose.yaml -f compose.seaweedfs.yaml exec api python manage.py makemigrations users audit storage
+docker compose -f compose.yaml -f compose.seaweedfs.yaml exec api python manage.py migrate
+```
+
+For production (with unique credentials, configured Django secret, database backup, TLS reverse proxy and media backup):
+
+```bash
+docker compose -f compose.prod.yaml -f compose.seaweedfs.yaml up -d --build
+```
+
+**Do not expose SeaweedFS port 8333** publicly: the Compose overlay only exposes it inside the application network. Django uses `http://seaweedfs:8333` as a trusted in-cluster endpoint. HTTP is explicitly permitted by `S3_ALLOW_INSECURE_ENDPOINT=true` for this *internal* path only; use HTTPS/mTLS for external or multi-host traffic. Production refuses the development credentials in `.env.example`; replace them with unique secrets.
+
+`weed mini` is a **single-node** storage installation. It is not multi-node HA or automatic replication. Back up the persistent volume and rehearse restores. A multi-node SeaweedFS cluster can replace the container later while Django continues using `django-storages` and S3. The application does not provide a bucket-facing endpoint to end users.
+
+To run real S3 integration tests on the Compose network, ensure migrations exist then execute:
+
+```bash
+docker compose -f compose.yaml -f compose.seaweedfs.yaml exec -T -e PRIMARYKIT_SEAWEEDFS_INTEGRATION=1 api uv run pytest --ds=config.settings.postgres_test apps/storage/tests/test_seaweedfs_integration.py
+```
+
+The provider-specific smoke test covers actual bucket connectivity, upload, download, owner-only access and soft deletion. Normal SQLite and PostgreSQL unit tests still use the private filesystem fixture.
+
+The project generator removes `compose.seaweedfs.yaml` if you do not select `storage`. Without this overlay, `docker compose up` still uses private local media by default, so optional modules and small projects remain lightweight.

@@ -78,6 +78,8 @@ def create_project(
         shutil.copytree(root, target, ignore=_ignore_excluded)
         for module in OPTIONAL_APPS - set(optional_apps):
             shutil.rmtree(target / "apps" / module)
+        if "storage" not in optional_apps:
+            (target / "compose.seaweedfs.yaml").unlink()
 
         # Generator remains with the source catalog only, not in client projects.
         shutil.rmtree(target / "scripts")
@@ -129,7 +131,12 @@ def create_project(
             "```\n\n"
             "Commit the generated migrations to **this project's Git repository**.\n"
             "Configure SMTP, object storage, secrets and reverse proxy before production.\n"
-            "See docs/architecture.md and AGENTS.md for conventions.\n",
+            + (
+                "SeaweedFS: docker compose -f compose.yaml -f compose.seaweedfs.yaml up -d --build\n"
+                if "storage" in selected
+                else ""
+            )
+            + "See docs/architecture.md and AGENTS.md for conventions.\n",
             encoding="utf-8",
         )
 

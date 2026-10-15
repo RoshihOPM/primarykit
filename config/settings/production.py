@@ -70,6 +70,11 @@ if (
         "Configure STORAGE_BACKEND=s3, or explicitly enable persistent local storage."
     )
 if base.STORAGE_BACKEND == "s3":
+    if (
+        base.env("S3_ACCESS_KEY_ID", default="") == "primarykit-dev"
+        or base.env("S3_SECRET_ACCESS_KEY", default="") == "primarykit-dev-secret-change-me"
+    ):
+        raise ImproperlyConfigured("Replace SeaweedFS development S3 credentials in production.")
     s3_endpoint = base.env("S3_ENDPOINT_URL", default="")
     if s3_endpoint and urlsplit(s3_endpoint).scheme != "https":
         if not base.env.bool("S3_ALLOW_INSECURE_ENDPOINT", default=False):
