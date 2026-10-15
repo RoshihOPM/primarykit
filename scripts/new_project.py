@@ -173,7 +173,10 @@ def main():
         optional_apps=set(args.apps),
         git_init=args.git_init,
     )
-    print(f"Created {target} with apps: {', '.join(sorted(REQUIRED_APPS | set(args.apps) | ({"catalog"} if "inventory" in args.apps else set())))}")
+    copied = set(REQUIRED_APPS) | set(args.apps)
+    if "inventory" in copied:
+        copied.add("catalog")
+    print(f"Created {target} with apps: {', '.join(sorted(copied))}")
     print("Next: copy .env.example to .env, run uv sync --locked, generate migrations and test.")
 
 
