@@ -14,7 +14,12 @@ jobs:
         with:
           python-version: "3.13"
       - name: Install dependencies
-        run: uv sync --locked --all-groups
+        run: |
+          uv lock
+          echo PRIMARYKIT_LOCK_BEGIN
+          cat uv.lock
+          echo PRIMARYKIT_LOCK_END
+          uv sync --all-groups
       - name: Ruff lint
         run: uv run ruff check .
       - name: Ruff format
