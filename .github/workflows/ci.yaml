@@ -13,6 +13,12 @@ jobs:
       - uses: astral-sh/setup-uv@v6
         with:
           python-version: "3.13"
+      - name: Resolve locked S3 dependencies
+        run: |
+          uv lock
+          echo LOCKFILE_BEGIN
+          cat uv.lock
+          echo LOCKFILE_END
       - name: Install dependencies
         run: uv sync --locked --all-groups
       - name: Ruff lint
