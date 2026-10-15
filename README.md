@@ -138,3 +138,10 @@ docker compose -f compose.yaml -f compose.seaweedfs.yaml up -d --build
 ```
 
 It creates the configured private bucket automatically. Replace sample S3 access/secret keys before production and protect the SeaweedFS data volume with backups. Storage is only accessible on the internal Compose network. See [Storage architecture](docs/storage-architecture.md).
+
+## Catalog
+
+Optional `catalog` includes categories, items/SKUs and typed attributes (text,
+integer, decimal, boolean). Authenticated users may read active items; only active
+superusers may create or edit. Prices and quantities belong in separate modules.
+See [catalog architecture](docs/catalog-architecture.md).
