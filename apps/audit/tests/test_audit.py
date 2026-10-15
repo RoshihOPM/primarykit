@@ -1,8 +1,8 @@
 import pytest
 from django.contrib.auth.models import Group
 from django.core.exceptions import ValidationError
-from django.db.models.deletion import ProtectedError
 from django.db import transaction
+from django.db.models.deletion import ProtectedError
 from django.urls import reverse
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
