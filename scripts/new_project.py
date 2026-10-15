@@ -136,7 +136,7 @@ def create_project(
                 if "storage" in selected
                 else ""
             )
-            "See docs/architecture.md and AGENTS.md for conventions.\n",
+            + "See docs/architecture.md and AGENTS.md for conventions.\n",
             encoding="utf-8",
         )
 
