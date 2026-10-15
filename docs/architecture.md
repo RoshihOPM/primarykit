@@ -38,7 +38,7 @@ PrimaryKit предназначен для **копирования исходн
 
 ## Дальнейшие шаги
 
-- Зафиксировать `uv.lock` после первого разрешения зависимостей в окружении с доступом к PyPI, перевести Docker/CI на `uv sync --locked`.
+- `uv.lock` хранится в репозитории. При изменении `pyproject.toml` выполняйте `uv lock` и коммитьте lockfile. Docker/CI используют `uv sync --locked`.
 - Добавить отдельную проверку Compose + PostgreSQL и production `check --deploy`.
 - Реализовать Users API, JWT, RBAC, Storage, Audit.
 - После стабилизации Apps — генератор выбора и копирования модулей.
