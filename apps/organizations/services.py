@@ -185,9 +185,11 @@ def accept_invitation(*, actor, invitation_id):
 def revoke_invitation(*, actor, organization, invitation_id):
     org = Organization.objects.select_for_update().get(pk=organization.pk)
     manager = get_active_membership(user=actor, organization=org)
-    invite = Invitation.objects.select_for_update().filter(
-        organization=org, pk=invitation_id, state=Invitation.State.PENDING
-    ).first()
+    invite = (
+        Invitation.objects.select_for_update()
+        .filter(organization=org, pk=invitation_id, state=Invitation.State.PENDING)
+        .first()
+    )
     if invite is None:
         raise ValidationError({"invitation": "Pending invitation does not exist."})
     _can_manage(manager, invite.role, invite.role)

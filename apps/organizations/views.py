@@ -230,9 +230,7 @@ class InvitationDetailView(APIView):
 
     def delete(self, request, org_id, invitation_id):
         org, _ = organization_for(request, org_id)
-        revoke_invitation(
-            actor=request.user, organization=org, invitation_id=invitation_id
-        )
+        revoke_invitation(actor=request.user, organization=org, invitation_id=invitation_id)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

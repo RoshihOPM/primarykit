@@ -17,11 +17,13 @@ def test_concurrent_owner_demotions_cannot_leave_company_ownerless():
     if connection.vendor != "postgresql":
         pytest.skip("Requires real PostgreSQL row locking")
     first = User.objects.create_user(
-        email="owner-one@concurrent.test", password="Long-test-password-887",
+        email="owner-one@concurrent.test",
+        password="Long-test-password-887",
         email_verified=True,
     )
     second = User.objects.create_user(
-        email="owner-two@concurrent.test", password="Long-test-password-888",
+        email="owner-two@concurrent.test",
+        password="Long-test-password-888",
         email_verified=True,
     )
     org = Organization.objects.create(name="Test", slug="test-concurrent")
@@ -34,7 +36,9 @@ def test_concurrent_owner_demotions_cannot_leave_company_ownerless():
         barrier.wait(timeout=10)
         try:
             update_membership(
-                actor=actor, organization=org, membership_id=member_id,
+                actor=actor,
+                organization=org,
+                membership_id=member_id,
                 new_role="member",
             )
             return "changed"
@@ -50,6 +54,9 @@ def test_concurrent_owner_demotions_cannot_leave_company_ownerless():
         ]
         outcomes = [future.result() for future in futures]
     assert sorted(outcomes) == ["changed", "rejected"]
-    assert Membership.objects.filter(
-        organization=org, role=Membership.Role.OWNER, is_active=True
-    ).count() == 1
+    assert (
+        Membership.objects.filter(
+            organization=org, role=Membership.Role.OWNER, is_active=True
+        ).count()
+        == 1
+    )
