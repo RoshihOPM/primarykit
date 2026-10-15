@@ -12,7 +12,9 @@ from scripts.new_project import create_project
         {"audit"},
         {"storage"},
         {"rbac"},
-        {"audit", "storage", "rbac"},
+        {"catalog"},
+        {"catalog", "storage"},
+        {"audit", "storage", "rbac", "catalog"},
     ],
 )
 def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
@@ -21,7 +23,7 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
     assert (target / "apps" / "core").exists()
     assert (target / "apps" / "users").exists()
     assert (target / "apps" / "notifications").exists()
-    for app in ("rbac", "audit", "storage"):
+    for app in ("rbac", "audit", "storage", "catalog"):
         assert (target / "apps" / app).exists() == (app in apps)
 
     settings = (target / "config/settings/base.py").read_text()
@@ -30,6 +32,7 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
         ("rbac", "api/v1/admin/rbac/"),
         ("audit", "api/v1/admin/audit/"),
         ("storage", 'include("apps.storage.urls")'),
+        ("catalog", 'include("apps.catalog.urls")'),
     ):
         assert (f'"apps.{app}"' in settings) == (app in apps)
         assert (prefix in urls) == (app in apps)
@@ -47,7 +50,10 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
     assert set(metadata["included_apps"]) == {"core", "users", "notifications"} | apps
     workflows = (target / ".github/workflows/ci.yaml").read_text()
     migration_apps = (
-        "users" + (" audit" if "audit" in apps else "") + (" storage" if "storage" in apps else "")
+        "users"
+        + (" audit" if "audit" in apps else "")
+        + (" storage" if "storage" in apps else "")
+        + (" catalog" if "catalog" in apps else "")
     )
     assert workflows.count(f"makemigrations {migration_apps} --noinput") == 2
 

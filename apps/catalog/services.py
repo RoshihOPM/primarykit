@@ -1,6 +1,5 @@
 """Normalize and validate category-specific attribute values."""
 
-import math
 from decimal import Decimal, InvalidOperation
 
 from rest_framework.exceptions import ValidationError
