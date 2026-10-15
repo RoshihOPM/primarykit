@@ -159,3 +159,17 @@ uv run python scripts/new_project.py ../warehouse-api --name warehouse-api --app
 ```
 
 See [inventory architecture and transaction guarantees](docs/inventory-architecture.md).
+
+## Organizations / Memberships
+
+Optional `organizations` enables company-scoped membership, branches and invitation
+acceptance. Django Groups are global and MUST NOT be treated as tenant roles.
+
+```bash
+uv run python scripts/new_project.py ../b2b-api --name b2b-api --apps organizations audit --git-init
+```
+
+See [organizations architecture, API, security and migration notes](docs/organizations-architecture.md).
+
+**Important:** Catalog, Inventory and Storage are not yet tenant-scoped by this
+module. They require separate migration and authorization work.

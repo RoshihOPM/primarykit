@@ -14,9 +14,11 @@ from scripts.new_project import create_project
         {"rbac"},
         {"catalog"},
         {"inventory"},
+        {"organizations"},
+        {"organizations", "audit"},
         {"inventory", "audit"},
         {"catalog", "storage"},
-        {"audit", "storage", "rbac", "catalog", "inventory"},
+        {"audit", "storage", "rbac", "catalog", "inventory", "organizations"},
     ],
 )
 def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
@@ -26,7 +28,7 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
     assert (target / "apps" / "users").exists()
     assert (target / "apps" / "notifications").exists()
     selected = apps | ({"catalog"} if "inventory" in apps else set())
-    for app in ("rbac", "audit", "storage", "catalog", "inventory"):
+    for app in ("rbac", "audit", "storage", "catalog", "inventory", "organizations"):
         assert (target / "apps" / app).exists() == (app in selected)
 
     settings = (target / "config/settings/base.py").read_text()
@@ -37,6 +39,7 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
         ("storage", 'include("apps.storage.urls")'),
         ("catalog", 'include("apps.catalog.urls")'),
         ("inventory", 'include("apps.inventory.urls")'),
+        ("organizations", 'include("apps.organizations.urls")'),
     ):
         assert (f'"apps.{app}"' in settings) == (app in selected)
         assert (prefix in urls) == (app in selected)
@@ -59,6 +62,7 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
         + (" storage" if "storage" in apps else "")
         + (" catalog" if "catalog" in selected else "")
         + (" inventory" if "inventory" in selected else "")
+        + (" organizations" if "organizations" in selected else "")
     )
     assert workflows.count(f"makemigrations {migration_apps} --noinput") == 2
 

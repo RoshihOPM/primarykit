@@ -28,6 +28,9 @@ PrimaryKit is a copy-based Django starter, not a separately deployed shared back
 - Keep modules independent of client-specific business entities. Avoid generic `utils` dumping grounds.
 - SOLID / KISS / DRY / YAGNI guide trade-offs; avoid speculative frameworks, needless service wrappers and premature microservices.
 - All mutations affecting money, balances, stock or authorization require transaction and concurrency analysis.
+- Each tenant API must filter both list/detail querysets by membership, validate foreign keys from the same tenant, and deny implicit global Group privileges.
+- Protect last active owner under a row lock; include negative IDOR and cross-branch tests.
+- Catalog/Inventory/Storage tenancy needs its own migration and tests; never imply it is automatic.
 - Do not put migrations in the reusable **catalog**. Each generated client repo MUST version its own migrations.
 - Never copy third-party agent instructions or execute remote scripts without license/security review.
 - Agents may perform independent code/DB reviews in parallel **only when supported by the active runtime**. Changes to the same files must be coordinated; a PR is the final integration gate.
