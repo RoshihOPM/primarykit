@@ -23,8 +23,11 @@ class UserManager(BaseUserManager):
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
         extra_fields.setdefault("is_active", True)
+        extra_fields.setdefault("email_verified", True)
         if extra_fields["is_staff"] is not True or extra_fields["is_superuser"] is not True:
             raise ValueError("Superuser requires is_staff=True and is_superuser=True")
+        if extra_fields["email_verified"] is not True:
+            raise ValueError("Superuser requires email_verified=True")
         if extra_fields["is_active"] is not True:
             raise ValueError("Superuser requires is_active=True")
         return self.create_user(email, password, **extra_fields)

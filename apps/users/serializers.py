@@ -2,19 +2,21 @@ from django.contrib.auth.password_validation import validate_password
 from django.db import IntegrityError, transaction
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
+from rest_framework.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenRefreshSerializer
 from rest_framework_simplejwt.settings import api_settings
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.utils import get_md5_hash_password
 
+from .email_services import send_verification_email
 from .models import User
 
 
 class UserReadSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ("id", "email", "first_name", "last_name", "date_joined")
+        fields = ("id", "email", "email_verified", "first_name", "last_name", "date_joined")
         read_only_fields = fields
 
 
@@ -42,7 +44,9 @@ class RegisterSerializer(serializers.Serializer):
     def create(self, validated_data):
         try:
             with transaction.atomic():
-                return User.objects.create_user(**validated_data)
+                user = User.objects.create_user(email_verified=False, **validated_data)
+                send_verification_email(user)
+                return user
         except IntegrityError as exc:
             raise serializers.ValidationError(
                 _("Unable to register with supplied details.")
@@ -52,7 +56,12 @@ class RegisterSerializer(serializers.Serializer):
 class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         attrs[self.username_field] = User.objects.normalize_identity(attrs[self.username_field])
-        return super().validate(attrs)
+        tokens = super().validate(attrs)
+        if not self.user.email_verified:
+            raise AuthenticationFailed(
+                self.error_messages["no_active_account"], code="no_active_account"
+            )
+        return tokens
 
 
 class PasswordBoundTokenRefreshSerializer(TokenRefreshSerializer):
@@ -65,6 +74,9 @@ class PasswordBoundTokenRefreshSerializer(TokenRefreshSerializer):
             user = User.objects.get(pk=user_id, is_active=True)
         except (TokenError, KeyError, ValueError, User.DoesNotExist) as exc:
             raise InvalidToken(_("Token is invalid or expired.")) from exc
+
+        if not user.email_verified:
+            raise InvalidToken(_("Token is invalid or expired."))
 
         if api_settings.CHECK_REVOKE_TOKEN and refresh.get(
             api_settings.REVOKE_TOKEN_CLAIM

@@ -7,10 +7,10 @@ from .models import User
 @admin.register(User)
 class EmailUserAdmin(UserAdmin):
     ordering = ("email",)
-    list_display = ("email", "is_staff", "is_active", "is_superuser")
+    list_display = ("email", "email_verified", "is_staff", "is_active", "is_superuser")
     search_fields = ("email",)
     fieldsets = (
-        (None, {"fields": ("email", "password")}),
+        (None, {"fields": ("email", "password", "email_verified")}),
         (
             "Permissions",
             {"fields": ("is_active", "is_staff", "is_superuser", "groups", "user_permissions")},

@@ -19,8 +19,9 @@ Act as a defensive security reviewer. Read AGENTS.md and the affected serializer
 8. Review abuse: registration/reset/login/message/upload throttling and *shared cache or edge controls* in multi-worker production. DRF built-in throttling by itself is not a strong brute-force defense.
 9. Review file operations: content and size limits, extension/MIME validation, object-level authorization on download, private storage, presigned URL lifetime and path traversal.
 10. Review operational risks: secrets, security headers, TLS/proxy headers, dependency advisories, minimal privileges, audit events, retention and GDPR/PII policies where applicable.
-11. Add negative tests: user A accessing B's resource, staff elevating roles, cross-tenant list/detail, unauthorized PATCH/DELETE/custom actions, password reset enumeration, token replay, disabled accounts, and concurrent state changes.
-12. Report findings by severity with reproduction conditions, impact, specific file/line and minimal remediation. Never claim a vulnerability is fixed without a passing regression test.
+11. Account recovery: check email ownership proof, token purpose, expiration, single-use, invalidation after password/email changes, username enumeration, mail delivery failures, and HTTPS callback URLs. Never accept a caller-supplied redirect URL without strict validation.
+12. Add negative tests: user A accessing B's resource, staff elevating roles, cross-tenant list/detail, unauthorized PATCH/DELETE/custom actions, password reset enumeration, token replay, disabled accounts, and concurrent state changes.
+13. Report findings by severity with reproduction conditions, impact, specific file/line and minimal remediation. Never claim a vulnerability is fixed without a passing regression test.
 
 ## Exit criteria
 
