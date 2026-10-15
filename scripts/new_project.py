@@ -72,20 +72,12 @@ def create_project(
 
         # Generator remains with the source catalog only, not in client projects.
         shutil.rmtree(target / "scripts")
+        (target / "apps" / "core" / "tests" / "test_project_generator.py").unlink()
         settings = target / "config" / "settings" / "base.py"
         routes = target / "config" / "urls.py"
         for module in OPTIONAL_APPS - set(optional_apps):
             _replace_one(settings, f'    "apps.{module}",\n', "")
             _replace_one(routes, URL_ROWS[module], "")
-
-        # Prevent production S3/local-media requirements if Storage isn't selected.
-        prod = target / "config" / "settings" / "production.py"
-        if "storage" not in optional_apps:
-            _replace_one(
-                prod,
-                'if "apps.storage" in base.INSTALLED_APPS and base.STORAGE_BACKEND == "local"',
-                'if False and base.STORAGE_BACKEND == "local"',
-            )
 
         migrations = " ".join(a for a in MIGRATION_APPS if a in selected)
         workflow = target / ".github" / "workflows" / "ci.yaml"
@@ -93,7 +85,14 @@ def create_project(
         phrase = "makemigrations users audit storage --noinput"
         if raw.count(phrase) != 2:
             raise RuntimeError("CI migration template has changed")
-        workflow.write_text(raw.replace(phrase, f"makemigrations {migrations} --noinput"), encoding="utf-8")
+        raw = raw.replace(phrase, f"makemigrations {migrations} --noinput")
+        start_marker = "      # PRIMARYKIT-GENERATOR-SMOKE-START\\n"
+        end_marker = "      # PRIMARYKIT-GENERATOR-SMOKE-END\\n"
+        if raw.count(start_marker) != 1 or raw.count(end_marker) != 1:
+            raise RuntimeError("Missing generator CI smoke test markers")
+        start = raw.index(start_marker)
+        end = raw.index(end_marker, start) + len(end_marker)
+        workflow.write_text(raw[:start] + raw[end:], encoding="utf-8")
 
         # uv.lock's only virtual root package entry has to match pyproject.name.
         _replace_one(target / "pyproject.toml", 'name = "primarykit"', f'name = "{name}"')

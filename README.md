@@ -117,3 +117,13 @@ persistent local volume (`STORAGE_ALLOW_LOCAL_PRODUCTION=true`) or
 `uv add 'django-storages[s3]'` in the generated project). S3-compatible
 SeaweedFS/MinIO endpoints are supported by the backend but require a live provider
 integration test in each deployment.
+
+## Create an independent backend project
+
+```bash
+uv run python scripts/new_project.py ../automarket --name automarket --apps rbac audit storage --git-init
+```
+
+The generator copies Django Core, Users, Notifications, optional apps, adjusts
+`INSTALLED_APPS`, URL routing, GitHub Actions migrations and `uv.lock` root name.
+See [project generator documentation](docs/project-generator.md).

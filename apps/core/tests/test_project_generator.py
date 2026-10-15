@@ -31,12 +31,13 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
         ("audit", "api/v1/admin/audit/"),
         ("storage", 'include("apps.storage.urls")'),
     ):
-        assert f'"apps.{app}"' in settings == (app in apps)
-        assert prefix in urls == (app in apps)
+        assert (f'"apps.{app}"' in settings) == (app in apps)
+        assert (prefix in urls) == (app in apps)
 
     assert 'name = "demo-api"' in (target / "pyproject.toml").read_text()
     assert 'name = "demo-api"' in (target / "uv.lock").read_text()
     assert not (target / "scripts").exists()
+    assert not (target / "apps/core/tests/test_project_generator.py").exists()
     assert not (target / ".git").exists()
     assert not (target / ".env").exists()
     assert (target / ".env.example").exists()

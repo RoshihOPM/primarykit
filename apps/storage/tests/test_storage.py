@@ -2,12 +2,12 @@ import hashlib
 from unittest.mock import patch
 
 import pytest
+from django.apps import apps as django_apps
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from apps.audit.models import AuditEvent
 from apps.storage.models import StoredFile
 from apps.users.models import User
 
@@ -144,7 +144,10 @@ def test_soft_delete_hides_file_and_leaves_blob_for_retention(private_disk):
     assert path.exists()
     assert api.get(reverse("stored-files-download", kwargs={"pk": file.pk})).status_code == 404
     assert api.delete(reverse("stored-files-detail", kwargs={"pk": file.pk})).status_code == 404
-    assert AuditEvent.objects.filter(action="storage.file.deleted", target_id=str(file.pk)).exists()
+    if django_apps.is_installed("apps.audit"):
+        from apps.audit.models import AuditEvent
+
+        assert AuditEvent.objects.filter(action="storage.file.deleted", target_id=str(file.pk)).exists()
 
 
 def test_failed_metadata_write_cleans_up_blob(private_disk):
