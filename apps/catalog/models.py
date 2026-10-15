@@ -25,9 +25,7 @@ class AttributeDefinition(UUIDTimestampedModel):
         DECIMAL = "decimal", "Decimal"
         BOOLEAN = "boolean", "Boolean"
 
-    category = models.ForeignKey(
-        Category, related_name="definitions", on_delete=models.PROTECT
-    )
+    category = models.ForeignKey(Category, related_name="definitions", on_delete=models.PROTECT)
     code = models.SlugField(max_length=80)
     data_type = models.CharField(max_length=12, choices=DataType.choices)
     required = models.BooleanField(default=False)
@@ -35,14 +33,14 @@ class AttributeDefinition(UUIDTimestampedModel):
     class Meta:
         ordering = ("code",)
         constraints = [
-            models.UniqueConstraint(fields=("category", "code"), name="catalog_attribute_code_uniq"),
+            models.UniqueConstraint(
+                fields=("category", "code"), name="catalog_attribute_code_uniq"
+            ),
         ]
 
 
 class CatalogItem(UUIDTimestampedModel):
-    category = models.ForeignKey(
-        Category, related_name="items", on_delete=models.PROTECT
-    )
+    category = models.ForeignKey(Category, related_name="items", on_delete=models.PROTECT)
     sku = models.CharField(max_length=80, unique=True)
     name = models.CharField(max_length=200)
     description = models.TextField(blank=True)
@@ -54,7 +52,9 @@ class CatalogItem(UUIDTimestampedModel):
         constraints = [
             models.UniqueConstraint(Lower("sku"), name="catalog_sku_case_insensitive_uniq"),
         ]
-        indexes = [models.Index(fields=["category", "is_active"], name="catalog_category_active_idx")]
+        indexes = [
+            models.Index(fields=["category", "is_active"], name="catalog_category_active_idx")
+        ]
 
     def save(self, *args, **kwargs):
         self.sku = self.sku.strip().upper()

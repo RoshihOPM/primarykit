@@ -39,7 +39,11 @@ def validate_attributes(category, supplied):
                 parsed = Decimal(str(value))
             except InvalidOperation as exc:
                 raise ValidationError({"attributes": f"{code} must be a decimal."}) from exc
-            if not parsed.is_finite() or len(parsed.as_tuple().digits) > 24 or abs(parsed.as_tuple().exponent) > 8:
+            if (
+                not parsed.is_finite()
+                or len(parsed.as_tuple().digits) > 24
+                or abs(parsed.as_tuple().exponent) > 8
+            ):
                 raise ValidationError({"attributes": f"{code} is outside supported precision."})
             normalized[code] = str(parsed)
         else:
