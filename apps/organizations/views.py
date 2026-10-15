@@ -27,6 +27,7 @@ from .services import (
     create_invitation,
     create_organization,
     set_branch_access,
+    revoke_invitation,
     update_membership,
 )
 
@@ -222,6 +223,17 @@ class InvitationListCreateView(APIView):
             actor=request.user, organization=org, **serializer.validated_data
         )
         return Response(InvitationSerializer(invite).data, status=201)
+
+
+class InvitationDetailView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def delete(self, request, org_id, invitation_id):
+        org, _ = organization_for(request, org_id)
+        revoke_invitation(
+            actor=request.user, organization=org, invitation_id=invitation_id
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class MyInvitationsView(APIView):

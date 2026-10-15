@@ -231,3 +231,22 @@ def test_expired_invitation_cannot_be_accepted():
         == 400
     )
     assert not Membership.objects.filter(organization_id=org_id, user=candidate).exists()
+
+
+def test_owner_can_revoke_pending_invitation_and_recipient_cannot_accept():
+    (_, api, org_id), (_, api_other, _), (recipient, recipient_api) = setup_organizations()
+    created = api.post(
+        reverse("org-invitations", kwargs={"org_id": org_id}),
+        {"invitee": str(recipient.pk), "role": "member"}, format="json",
+    )
+    assert created.status_code == 201
+    invitation_id = created.data["id"]
+    url = reverse("org-invitation-detail", kwargs={
+        "org_id": org_id, "invitation_id": invitation_id
+    })
+    assert api_other.delete(url).status_code == 404
+    assert api.delete(url).status_code == 204
+    assert recipient_api.post(
+        reverse("org-invitation-accept", kwargs={"invitation_id": invitation_id})
+    ).status_code == 400
+    assert not Membership.objects.filter(organization_id=org_id, user=recipient).exists()

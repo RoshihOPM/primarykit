@@ -47,6 +47,7 @@ cross-organization access** through this app.
 | PATCH/DELETE | /api/v1/organizations/{uuid}/members/{uuid}/ | Owner/admin (owner safeguards) |
 | GET/PUT | /api/v1/organizations/{uuid}/members/{uuid}/branches/ | Owner/admin |
 | GET/POST | /api/v1/organizations/{uuid}/invitations/ | Owner/admin |
+| DELETE | /api/v1/organizations/{uuid}/invitations/{uuid}/ | Owner/admin (role restrictions apply) |
 | GET | /api/v1/invitations/mine/ | Authenticated invitee |
 | POST | /api/v1/invitations/{uuid}/accept/ | Exact invited account only |
 
