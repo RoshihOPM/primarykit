@@ -169,7 +169,9 @@ def test_change_password_invalidates_existing_tokens(client):
     )
     assert response.status_code == 204, response.content
     assert api.get(reverse("users-me")).status_code == 401
-    assert client.post(reverse("auth-refresh"), {"refresh": login.data["refresh"]}).status_code == 401
+    assert (
+        client.post(reverse("auth-refresh"), {"refresh": login.data["refresh"]}).status_code == 401
+    )
     assert (
         client.post(
             reverse("auth-login"),
