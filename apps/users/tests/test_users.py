@@ -24,3 +24,10 @@ def test_email_is_unique():
     User.objects.create_user(email="same@example.com", password="test-password-123")
     with pytest.raises(IntegrityError):
         User.objects.create_user(email="same@example.com", password="test-password-123")
+
+
+@pytest.mark.django_db
+def test_case_insensitive_email_uniqueness():
+    User.objects.create_user(email="Case@Example.COM", password="test-password-123")
+    with pytest.raises(IntegrityError):
+        User.objects.create_user(email="case@example.com", password="test-password-123")
