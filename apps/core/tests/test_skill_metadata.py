@@ -10,6 +10,7 @@ SKILLS = [
     "system-architect",
     "database-architect",
     "feature-delivery",
+    "security-review",
 ]
 
 

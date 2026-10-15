@@ -75,3 +75,10 @@ API регистрации/JWT, RBAC, storage, audit, notifications, wallets, ch
 Agent Skills: `.agents/skills/system-architect/`, `.agents/skills/database-architect/`, `.agents/skills/feature-delivery/`. These are guidance files, **not** a deployed multi-agent runner. The catalog/inventory modules remain future work.
 
 Core now exposes opt-in `SoftDeleteModel` and `SoftDeleteUUIDTimestampedModel` with separate active/unfiltered managers; see the documented caveats about cascades, uniqueness, and bulk operations.
+
+## Users API v0.1 and security
+
+[Users API, authorization model and deployment limitations](docs/users-architecture.md).
+The endpoints include JWT login/refresh/logout, account profile, password change, optional registration, and superuser administration.
+Authentication changes must pass the [.agents security-review skill](.agents/skills/security-review/SKILL.md).
+Public registration is off by default. **Do not deploy public authentication without shared-cache / edge-layer brute-force controls.**

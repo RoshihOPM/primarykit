@@ -4,10 +4,17 @@ from django.contrib.auth.base_user import BaseUserManager
 class UserManager(BaseUserManager):
     use_in_migrations = True
 
-    def create_user(self, email, password=None, **extra_fields):
+    def normalize_identity(self, email):
         if not email:
             raise ValueError("Email is required")
-        user = self.model(email=self.normalize_email(email), **extra_fields)
+        return self.normalize_email(email.strip()).casefold()
+
+    def get_by_natural_key(self, username):
+        """Use the same canonicalization for login and registration."""
+        return self.get(**{self.model.USERNAME_FIELD: self.normalize_identity(username)})
+
+    def create_user(self, email, password=None, **extra_fields):
+        user = self.model(email=self.normalize_identity(email), **extra_fields)
         user.set_password(password)
         user.save(using=self._db)
         return user
@@ -18,4 +25,6 @@ class UserManager(BaseUserManager):
         extra_fields.setdefault("is_active", True)
         if extra_fields["is_staff"] is not True or extra_fields["is_superuser"] is not True:
             raise ValueError("Superuser requires is_staff=True and is_superuser=True")
+        if extra_fields["is_active"] is not True:
+            raise ValueError("Superuser requires is_active=True")
         return self.create_user(email, password, **extra_fields)
