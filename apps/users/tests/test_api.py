@@ -53,7 +53,9 @@ def test_register_validates_password_and_restricts_privilege(client):
 
 
 def test_registration_disabled_by_default(client):
-    response = client.post(reverse("auth-register"), {"email": "x@example.com", "password": PASSWORD})
+    response = client.post(
+        reverse("auth-register"), {"email": "x@example.com", "password": PASSWORD}
+    )
     assert response.status_code == 403
 
 
@@ -75,8 +77,12 @@ def test_login_and_profile_roundtrip(client):
 
 def test_login_does_not_expose_identity(client):
     create_user()
-    wrong_password = client.post(reverse("auth-login"), {"email": "user@example.com", "password": "wrong"})
-    missing_user = client.post(reverse("auth-login"), {"email": "absent@example.com", "password": "wrong"})
+    wrong_password = client.post(
+        reverse("auth-login"), {"email": "user@example.com", "password": "wrong"}
+    )
+    missing_user = client.post(
+        reverse("auth-login"), {"email": "absent@example.com", "password": "wrong"}
+    )
     assert wrong_password.status_code == 401
     assert missing_user.status_code == 401
     assert wrong_password.data == missing_user.data
@@ -86,7 +92,10 @@ def test_inactive_user_cannot_login_or_use_tokens(client):
     user = create_user()
     user.is_active = False
     user.save(update_fields=["is_active"])
-    assert client.post(reverse("auth-login"), {"email": user.email, "password": PASSWORD}).status_code == 401
+    assert (
+        client.post(reverse("auth-login"), {"email": user.email, "password": PASSWORD}).status_code
+        == 401
+    )
     assert bearer_client(user).get(reverse("users-me")).status_code == 401
 
 
@@ -105,19 +114,27 @@ def test_admin_user_operations_protect_against_idor_and_privilege_escalation():
         api = bearer_client(member)
         assert api.get(reverse("admin-users-list")).status_code == 403
         assert api.get(reverse("admin-users-detail", kwargs={"pk": other.pk})).status_code == 403
-        assert api.patch(
-            reverse("admin-users-detail", kwargs={"pk": other.pk}), {"is_active": False}
-        ).status_code == 403
+        assert (
+            api.patch(
+                reverse("admin-users-detail", kwargs={"pk": other.pk}), {"is_active": False}
+            ).status_code
+            == 403
+        )
 
     admin = bearer_client(superuser)
     assert admin.get(reverse("admin-users-list")).status_code == 200
-    assert admin.patch(
-        reverse("admin-users-detail", kwargs={"pk": customer.pk}),
-        {"is_staff": True, "is_superuser": True, "is_active": False},
-    ).status_code == 200
+    assert (
+        admin.patch(
+            reverse("admin-users-detail", kwargs={"pk": customer.pk}),
+            {"is_staff": True, "is_superuser": True, "is_active": False},
+        ).status_code
+        == 200
+    )
     customer.refresh_from_db()
     assert not customer.is_active and not customer.is_staff and not customer.is_superuser
-    response = admin.patch(reverse("admin-users-detail", kwargs={"pk": superuser.pk}), {"is_active": False})
+    response = admin.patch(
+        reverse("admin-users-detail", kwargs={"pk": superuser.pk}), {"is_active": False}
+    )
     assert response.status_code == 400
 
 
@@ -127,7 +144,9 @@ def test_logout_revokes_refresh_token(client):
     api = APIClient()
     api.credentials(HTTP_AUTHORIZATION=f"Bearer {login.data['access']}")
     assert api.post(reverse("auth-logout"), {"refresh": login.data["refresh"]}).status_code == 204
-    assert client.post(reverse("auth-refresh"), {"refresh": login.data["refresh"]}).status_code == 401
+    assert (
+        client.post(reverse("auth-refresh"), {"refresh": login.data["refresh"]}).status_code == 401
+    )
 
 
 def test_cannot_revoke_someone_elses_refresh_token(client):
@@ -151,7 +170,10 @@ def test_change_password_invalidates_existing_tokens(client):
     assert response.status_code == 204, response.content
     assert api.get(reverse("users-me")).status_code == 401
     assert client.post(reverse("auth-refresh"), {"refresh": login.data["refresh"]}).status_code == 401
-    assert client.post(
-        reverse("auth-login"),
-        {"email": user.email, "password": "Stronger-New-Password-783"},
-    ).status_code == 200
+    assert (
+        client.post(
+            reverse("auth-login"),
+            {"email": user.email, "password": "Stronger-New-Password-783"},
+        ).status_code
+        == 200
+    )
