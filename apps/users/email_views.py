@@ -33,7 +33,7 @@ class EmailFlowView(APIView):
     permission_classes = (AllowAny,)
     authentication_classes = ()
     throttle_classes = (AccountRateThrottle,)
-    throttle_scope = "account_email"
+    throttle_scope = "account_email_request"
 
     def initial(self, request, *args, **kwargs):
         if not settings.AUTH_EMAIL_FLOWS_ENABLED:
@@ -56,6 +56,8 @@ class ResendVerificationView(EmailFlowView):
 
 
 class VerifyEmailView(EmailFlowView):
+    throttle_scope = "account_email_confirm"
+
     def post(self, request):
         serializer = VerifyEmailSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -78,6 +80,8 @@ class PasswordResetRequestView(EmailFlowView):
 
 
 class PasswordResetConfirmView(EmailFlowView):
+    throttle_scope = "account_email_confirm"
+
     def post(self, request):
         serializer = PasswordResetConfirmSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
