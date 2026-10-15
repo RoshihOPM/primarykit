@@ -1,4 +1,5 @@
 import pytest
+from django.db import IntegrityError
 
 from apps.users.models import User
 
@@ -21,5 +22,5 @@ def test_create_superuser():
 @pytest.mark.django_db
 def test_email_is_unique():
     User.objects.create_user(email="same@example.com", password="test-password-123")
-    with pytest.raises(Exception):
+    with pytest.raises(IntegrityError):
         User.objects.create_user(email="same@example.com", password="test-password-123")
