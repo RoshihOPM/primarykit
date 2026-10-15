@@ -111,9 +111,7 @@ AUTH_PASSWORD_RESET_URL = env(
 )
 PASSWORD_RESET_TIMEOUT = env.int("PASSWORD_RESET_TIMEOUT", default=3600)
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="PrimaryKit <no-reply@example.test>")
-MAILERS = {
-    "default": {"BACKEND": "django.core.mail.backends.console.EmailBackend"}
-}
+MAILERS = {"default": {"BACKEND": "django.core.mail.backends.console.EmailBackend"}}
 
 RBAC_ASSIGNABLE_PERMISSIONS = []  # Populate in the generated project.
 REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {
