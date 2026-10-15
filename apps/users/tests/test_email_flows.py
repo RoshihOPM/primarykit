@@ -93,9 +93,7 @@ def test_registration_sends_one_use_email_and_login_requires_verification(client
 
 @override_settings(ALLOW_PUBLIC_REGISTRATION=True, **MAIL_ENABLED)
 def test_registration_fails_closed_when_mailer_cannot_send(client):
-    with override_settings(
-        MAILERS={"default": {"BACKEND": "django.core.mail.backends.dummy.EmailBackend"}}
-    ):
+    with patch("apps.notifications.services.send_mail", return_value=0):
         result = client.post(
             reverse("auth-register"), {"email": "undelivered@example.com", "password": PASSWORD}
         )
@@ -226,7 +224,7 @@ def test_password_reset_does_not_verify_an_unverified_email(client):
 def test_password_reset_token_expires(client):
     member = user()
     token = default_token_generator.make_token(member)
-    now = timezone.now()
+    now = timezone.now().replace(tzinfo=None)
     with patch.object(default_token_generator, "_now", return_value=now + timedelta(hours=2)):
         from django.utils.encoding import force_bytes
         from django.utils.http import urlsafe_base64_encode
