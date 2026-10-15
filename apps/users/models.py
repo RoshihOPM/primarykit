@@ -30,7 +30,10 @@ class User(AbstractUser):
             if previous is not None and previous != self.email:
                 self.email_verified = False
                 if kwargs.get("update_fields") is not None:
-                    kwargs["update_fields"] = set(kwargs["update_fields"]) | {"email", "email_verified"}
+                    kwargs["update_fields"] = set(kwargs["update_fields"]) | {
+                        "email",
+                        "email_verified",
+                    }
         return super().save(*args, **kwargs)
 
     def __str__(self):

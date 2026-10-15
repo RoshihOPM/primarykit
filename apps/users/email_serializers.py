@@ -43,8 +43,10 @@ class VerifyEmailSerializer(TokenConfirmSerializer):
     def validate(self, attrs):
         attrs = super().validate(attrs)
         user = attrs["user"]
-        if not user.is_active or user.email_verified or not email_verification_token.check_token(
-            user, attrs["token"]
+        if (
+            not user.is_active
+            or user.email_verified
+            or not email_verification_token.check_token(user, attrs["token"])
         ):
             raise serializers.ValidationError(_("Invalid or expired confirmation link."))
         return attrs
@@ -52,8 +54,10 @@ class VerifyEmailSerializer(TokenConfirmSerializer):
     @transaction.atomic
     def save(self):
         user = User.objects.select_for_update().get(pk=self.validated_data["user"].pk)
-        if not user.is_active or user.email_verified or not email_verification_token.check_token(
-            user, self.validated_data["token"]
+        if (
+            not user.is_active
+            or user.email_verified
+            or not email_verification_token.check_token(user, self.validated_data["token"])
         ):
             raise serializers.ValidationError(_("Invalid or expired confirmation link."))
         user.email_verified = True

@@ -68,19 +68,27 @@ def test_registration_sends_one_use_email_and_login_requires_verification(client
     assert len(mail.outbox) == 1
     assert not member.is_staff
     assert not member.is_superuser
-    assert client.post(
-        reverse("auth-login"), {"email": member.email, "password": PASSWORD}
-    ).status_code == 401
+    assert (
+        client.post(
+            reverse("auth-login"), {"email": member.email, "password": PASSWORD}
+        ).status_code
+        == 401
+    )
     assert auth_client(member).get(reverse("users-me")).status_code == 401
 
     tokens = credentials_from_email()
-    assert client.post(reverse("auth-email-verify"), {**tokens, "is_staff": True}).status_code == 204
+    assert (
+        client.post(reverse("auth-email-verify"), {**tokens, "is_staff": True}).status_code == 204
+    )
     member.refresh_from_db()
     assert member.email_verified
     assert client.post(reverse("auth-email-verify"), tokens).status_code == 400
-    assert client.post(
-        reverse("auth-login"), {"email": member.email, "password": PASSWORD}
-    ).status_code == 200
+    assert (
+        client.post(
+            reverse("auth-login"), {"email": member.email, "password": PASSWORD}
+        ).status_code
+        == 200
+    )
 
 
 @override_settings(ALLOW_PUBLIC_REGISTRATION=True, **MAIL_ENABLED)
@@ -108,7 +116,12 @@ def test_verification_reissue_uses_generic_response_and_invalidates_used_token(c
     assert len(mail.outbox) == 1
 
     tokens = credentials_from_email()
-    assert client.post(reverse("auth-email-verify"), {"uid": tokens["uid"], "token": "bad"}).status_code == 400
+    assert (
+        client.post(
+            reverse("auth-email-verify"), {"uid": tokens["uid"], "token": "bad"}
+        ).status_code
+        == 400
+    )
     assert client.post(reverse("auth-email-verify"), tokens).status_code == 204
     member.refresh_from_db()
     assert member.email_verified
@@ -126,9 +139,12 @@ def test_verification_link_cannot_be_used_for_another_account(client):
     from django.utils.http import urlsafe_base64_encode
 
     other_uid = urlsafe_base64_encode(force_bytes(other.pk))
-    assert client.post(
-        reverse("auth-email-verify"), {"uid": other_uid, "token": original["token"]}
-    ).status_code == 400
+    assert (
+        client.post(
+            reverse("auth-email-verify"), {"uid": other_uid, "token": original["token"]}
+        ).status_code
+        == 400
+    )
 
 
 @override_settings(**MAIL_ENABLED)
@@ -146,25 +162,41 @@ def test_password_reset_is_single_use_and_revokes_existing_tokens(client):
     assert len(mail.outbox) == 1
 
     fields = credentials_from_email()
-    assert client.post(
-        reverse("auth-password-reset-confirm"), {**fields, "new_password": "short"}
-    ).status_code == 400
+    assert (
+        client.post(
+            reverse("auth-password-reset-confirm"), {**fields, "new_password": "short"}
+        ).status_code
+        == 400
+    )
     done = client.post(
         reverse("auth-password-reset-confirm"),
         {**fields, "new_password": "New-password-for-testing-632"},
     )
     assert done.status_code == 204, done.content
-    assert client.post(
-        reverse("auth-password-reset-confirm"),
-        {**fields, "new_password": "another-new-password-781"},
-    ).status_code == 400
+    assert (
+        client.post(
+            reverse("auth-password-reset-confirm"),
+            {**fields, "new_password": "another-new-password-781"},
+        ).status_code
+        == 400
+    )
     assert api.get(reverse("users-me")).status_code == 401
-    assert client.post(reverse("auth-refresh"), {"refresh": login.data["refresh"]}).status_code == 401
-    assert client.post(reverse("auth-login"), {"email": member.email, "password": PASSWORD}).status_code == 401
-    assert client.post(
-        reverse("auth-login"),
-        {"email": member.email, "password": "New-password-for-testing-632"},
-    ).status_code == 200
+    assert (
+        client.post(reverse("auth-refresh"), {"refresh": login.data["refresh"]}).status_code == 401
+    )
+    assert (
+        client.post(
+            reverse("auth-login"), {"email": member.email, "password": PASSWORD}
+        ).status_code
+        == 401
+    )
+    assert (
+        client.post(
+            reverse("auth-login"),
+            {"email": member.email, "password": "New-password-for-testing-632"},
+        ).status_code
+        == 200
+    )
 
 
 @override_settings(**MAIL_ENABLED)
@@ -172,15 +204,22 @@ def test_password_reset_does_not_verify_an_unverified_email(client):
     member = user(verified=False)
     client.post(reverse("auth-password-reset-request"), {"email": member.email})
     fields = credentials_from_email()
-    assert client.post(
-        reverse("auth-password-reset-confirm"),
-        {**fields, "new_password": "Different-long-password-931"},
-    ).status_code == 204
+    assert (
+        client.post(
+            reverse("auth-password-reset-confirm"),
+            {**fields, "new_password": "Different-long-password-931"},
+        ).status_code
+        == 204
+    )
     member.refresh_from_db()
     assert not member.email_verified
-    assert client.post(
-        reverse("auth-login"), {"email": member.email, "password": "Different-long-password-931"}
-    ).status_code == 401
+    assert (
+        client.post(
+            reverse("auth-login"),
+            {"email": member.email, "password": "Different-long-password-931"},
+        ).status_code
+        == 401
+    )
 
 
 @override_settings(**MAIL_ENABLED, PASSWORD_RESET_TIMEOUT=3600)

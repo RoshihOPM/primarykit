@@ -27,8 +27,16 @@ urlpatterns = [
     path("auth/logout/", LogoutView.as_view(), name="auth-logout"),
     path("auth/email/verify/", VerifyEmailView.as_view(), name="auth-email-verify"),
     path("auth/email/resend/", ResendVerificationView.as_view(), name="auth-email-resend"),
-    path("auth/password/reset/request/", PasswordResetRequestView.as_view(), name="auth-password-reset-request"),
-    path("auth/password/reset/confirm/", PasswordResetConfirmView.as_view(), name="auth-password-reset-confirm"),
+    path(
+        "auth/password/reset/request/",
+        PasswordResetRequestView.as_view(),
+        name="auth-password-reset-request",
+    ),
+    path(
+        "auth/password/reset/confirm/",
+        PasswordResetConfirmView.as_view(),
+        name="auth-password-reset-confirm",
+    ),
     path("users/me/", MeView.as_view(), name="users-me"),
     path("users/me/change-password/", ChangePasswordView.as_view(), name="users-change-password"),
     path("", include(router.urls)),
