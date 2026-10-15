@@ -9,6 +9,8 @@ from django.utils.http import urlsafe_base64_decode
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
+from apps.core.audit import record_audit_event
+
 from .tokens import email_verification_token
 
 User = get_user_model()
@@ -62,6 +64,12 @@ class VerifyEmailSerializer(TokenConfirmSerializer):
             raise serializers.ValidationError(_("Invalid or expired confirmation link."))
         user.email_verified = True
         user.save(update_fields=["email_verified"])
+        record_audit_event(
+            actor=None,
+            action="users.email.verified",
+            target_type="users.User",
+            target_id=user.pk,
+        )
         return user
 
 
@@ -85,4 +93,10 @@ class PasswordResetConfirmSerializer(TokenConfirmSerializer):
             raise serializers.ValidationError(_("Invalid or expired confirmation link."))
         user.set_password(self.validated_data["new_password"])
         user.save(update_fields=["password"])
+        record_audit_event(
+            actor=None,
+            action="users.password.reset",
+            target_type="users.User",
+            target_id=user.pk,
+        )
         return user

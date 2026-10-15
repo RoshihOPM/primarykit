@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.contrib.auth import update_session_auth_hash
+from django.db import transaction
 from django.utils.translation import gettext_lazy as _
 from rest_framework import generics, mixins, status, viewsets
 from rest_framework.exceptions import PermissionDenied, ValidationError
@@ -10,6 +11,7 @@ from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
+from apps.core.audit import record_audit_event
 from apps.notifications.services import NotificationDeliveryError
 
 from .email_views import EmailFlowUnavailable
@@ -94,18 +96,43 @@ class MeView(generics.RetrieveUpdateAPIView):
             return UserProfileUpdateSerializer
         return UserReadSerializer
 
+    @transaction.atomic
+    def perform_update(self, serializer):
+        old = {field: getattr(serializer.instance, field) for field in ("first_name", "last_name")}
+        user = serializer.save()
+        changed = {
+            field: {"before": old[field], "after": getattr(user, field)}
+            for field in old
+            if old[field] != getattr(user, field)
+        }
+        if changed:
+            record_audit_event(
+                actor=user,
+                action="users.profile.updated",
+                target_type="users.User",
+                target_id=user.pk,
+                changes=changed,
+            )
+
 
 class ChangePasswordView(APIView):
     permission_classes = [IsAuthenticated]
     throttle_classes = [AccountRateThrottle]
     throttle_scope = "account_password"
 
+    @transaction.atomic
     def post(self, request):
         serializer = ChangePasswordSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
         user = request.user
         user.set_password(serializer.validated_data["new_password"])
         user.save(update_fields=["password"])
+        record_audit_event(
+            actor=user,
+            action="users.password.changed",
+            target_type="users.User",
+            target_id=user.pk,
+        )
         # Keeps a legitimate existing Django admin session alive.
         if request.auth is None:
             update_session_auth_hash(request, user)
@@ -126,3 +153,22 @@ class AdminUserViewSet(
         if self.action == "partial_update":
             return AdminUserUpdateSerializer
         return UserReadSerializer
+
+    @transaction.atomic
+    def perform_update(self, serializer):
+        fields = ("first_name", "last_name", "is_active")
+        previous = {field: getattr(serializer.instance, field) for field in fields}
+        user = serializer.save()
+        changes = {
+            field: {"before": previous[field], "after": getattr(user, field)}
+            for field in fields
+            if previous[field] != getattr(user, field)
+        }
+        if changes:
+            record_audit_event(
+                actor=self.request.user,
+                action="users.admin.updated",
+                target_type="users.User",
+                target_id=user.pk,
+                changes=changes,
+            )

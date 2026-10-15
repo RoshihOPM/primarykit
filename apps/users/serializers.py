@@ -9,6 +9,8 @@ from rest_framework_simplejwt.settings import api_settings
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.utils import get_md5_hash_password
 
+from apps.core.audit import record_audit_event
+
 from .email_services import send_verification_email
 from .models import User
 
@@ -46,6 +48,12 @@ class RegisterSerializer(serializers.Serializer):
             with transaction.atomic():
                 user = User.objects.create_user(email_verified=False, **validated_data)
                 send_verification_email(user)
+                record_audit_event(
+                    actor=None,
+                    action="users.registered",
+                    target_type="users.User",
+                    target_id=user.pk,
+                )
                 return user
         except IntegrityError as exc:
             raise serializers.ValidationError(
