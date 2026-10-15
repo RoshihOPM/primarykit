@@ -1,8 +1,8 @@
 """Require verified email for both API token and session authentication."""
 
 from django.conf import settings
-from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.authentication import SessionAuthentication
+from rest_framework.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
 
