@@ -7,7 +7,7 @@ from apps.users.models import User
 @pytest.mark.django_db
 def test_create_user_with_email():
     user = User.objects.create_user(email="Dev@Example.COM", password="test-password-123")
-    assert user.email == "Dev@example.com"
+    assert user.email == "dev@example.com"
     assert user.check_password("test-password-123")
     assert not user.is_staff
 

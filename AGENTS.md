@@ -10,7 +10,7 @@ PrimaryKit is a copy-based Django starter, not a separately deployed shared back
 4. Apply changes in a branch; never silently change production resources or merge into main.
 5. Run: `uv sync --locked --all-groups`, `uv run ruff check .`, `uv run ruff format --check .`, `uv run python manage.py check --settings=config.settings.test`, and `uv run pytest`.
 6. For DB changes, run PostgreSQL integration tests and review migrations in a *generated client project*. Never regenerate or reset existing client migration histories.
-7. Review for authorization/IDOR, validation, secrets, race conditions, N+1, query plans, transaction boundaries, and backwards compatibility.
+7. Apply security-review skill for API/auth changes; review authorization/IDOR, validation, secrets, race conditions, N+1, query plans, transaction boundaries, and backwards compatibility.
 8. If checks fail, fix the cause and rerun until green; disclose failures not reproducible locally.
 
 ## Applicable skills
@@ -18,6 +18,7 @@ PrimaryKit is a copy-based Django starter, not a separately deployed shared back
 - Architecture, system boundaries or API design: `.agents/skills/system-architect/SKILL.md`
 - Models, SQL, indexes, transactions, schema changes: `.agents/skills/database-architect/SKILL.md`
 - Any non-trivial feature implementation: `.agents/skills/feature-delivery/SKILL.md`
+- Every auth, API permission, user, wallet, tenant, payment, or sensitive-data feature: `.agents/skills/security-review/SKILL.md`
 
 ## Engineering conventions
 
