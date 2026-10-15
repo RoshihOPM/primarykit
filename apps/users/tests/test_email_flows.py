@@ -1,8 +1,8 @@
 """Email verification and password reset security regression tests."""
 
 from datetime import timedelta
-from urllib.parse import parse_qs, urlsplit
 from unittest.mock import patch
+from urllib.parse import parse_qs, urlsplit
 
 import pytest
 from django.contrib.auth.tokens import default_token_generator
