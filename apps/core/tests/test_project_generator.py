@@ -38,8 +38,8 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
         ("catalog", 'include("apps.catalog.urls")'),
         ("inventory", 'include("apps.inventory.urls")'),
     ):
-        assert (f'"apps.{app}"' in settings) == (app in apps)
-        assert (prefix in urls) == (app in apps)
+        assert (f'"apps.{app}"' in settings) == (app in selected)
+        assert (prefix in urls) == (app in selected)
 
     assert 'name = "demo-api"' in (target / "pyproject.toml").read_text()
     assert 'name = "demo-api"' in (target / "uv.lock").read_text()
