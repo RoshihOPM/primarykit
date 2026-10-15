@@ -15,24 +15,6 @@ jobs:
           python-version: "3.13"
       - name: Install dependencies
         run: uv sync --locked --all-groups
-      - name: Bootstrap formatting snapshot
-        run: |
-          uv run ruff format .
-          python - <<'PY'
-          import base64
-          from pathlib import Path
-          for name in [
-              "apps/users/tests/test_email_flows.py",
-              "apps/users/email_serializers.py",
-              "apps/users/urls.py",
-              "apps/users/models.py",
-              "apps/rbac/tests/test_rbac_api.py",
-              "apps/users/authentication.py",
-          ]:
-              print("FORMATTED_START:" + name)
-              print(base64.b64encode(Path(name).read_bytes()).decode())
-              print("FORMATTED_END:" + name)
-          PY
       - name: Ruff lint
         run: uv run ruff check .
       - name: Ruff format
