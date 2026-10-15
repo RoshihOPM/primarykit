@@ -22,8 +22,8 @@ def test_failed_email_delivery_does_not_swallow_error():
     with patch("apps.notifications.services.send_mail", return_value=0):
         with pytest.raises(NotificationDeliveryError):
             send_template_email(
-            recipient="user@example.com",
-            subject="Test",
-            template="notifications/email_verification.txt",
-            context={"action_url": "https://example.test/verify"},
-        )
+                recipient="user@example.com",
+                subject="Test",
+                template="notifications/email_verification.txt",
+                context={"action_url": "https://example.test/verify"},
+            )
