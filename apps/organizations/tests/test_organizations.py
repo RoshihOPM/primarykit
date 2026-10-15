@@ -293,9 +293,10 @@ def test_invitation_to_disabled_or_unverified_account_is_rejected():
     invitee.email_verified = False
     invitee.save(update_fields=["email_verified"])
     url = reverse("org-invitations", kwargs={"org_id": org_id})
-    assert owner_api.post(
+    rejected = owner_api.post(
         url, {"invitee": str(invitee.pk), "role": "member"}, format="json"
-    ).status_code == 400
+    )
+    assert rejected.status_code == 400
     invitee.email_verified = True
     invitee.is_active = False
     invitee.save(update_fields=["email_verified", "is_active"])
@@ -310,12 +311,14 @@ def test_membership_and_branch_assignment_cannot_cross_tenants():
     invitee, invitee_api = account("cross-tenant@example.test")
     pending = owner_api.post(
         reverse("org-invitations", kwargs={"org_id": first_id}),
-        {"invitee": str(invitee.pk), "role": "member"}, format="json",
+        {"invitee": str(invitee.pk), "role": "member"},
+        format="json",
     )
     assert pending.status_code == 201
-    assert invitee_api.post(
+    joined = invitee_api.post(
         reverse("org-invitation-accept", kwargs={"invitation_id": pending.data["id"]})
-    ).status_code == 200
+    )
+    assert joined.status_code == 200
     target = Membership.objects.get(organization_id=first_id, user=invitee)
     foreign = other_api.post(
         reverse("org-branches", kwargs={"org_id": second_id}),
@@ -327,22 +330,24 @@ def test_membership_and_branch_assignment_cannot_cross_tenants():
         "org-member-detail", kwargs={"org_id": second_id, "member_id": target.pk}
     )
     assert other_api.patch(wrong_org_member, {"role": "admin"}).status_code == 400
-    assert other_api.put(
+    rejected = other_api.put(
         reverse(
             "org-member-branches",
             kwargs={"org_id": second_id, "member_id": target.pk},
         ),
         {"branch_ids": [foreign.data["id"]]},
         format="json",
-    ).status_code == 400
-    assert owner_api.put(
+    )
+    assert rejected.status_code == 400
+    rejected = owner_api.put(
         reverse(
             "org-member-branches",
             kwargs={"org_id": first_id, "member_id": target.pk},
         ),
         {"branch_ids": [foreign.data["id"]]},
         format="json",
-    ).status_code == 400
+    )
+    assert rejected.status_code == 400
     assert not BranchAccess.objects.filter(membership=target).exists()
     target.refresh_from_db()
     assert target.role == "member"
