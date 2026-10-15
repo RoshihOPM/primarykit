@@ -90,7 +90,7 @@ def create_project(
         (target / "apps" / "core" / "tests" / "test_project_generator.py").unlink()
         settings = target / "config" / "settings" / "base.py"
         routes = target / "config" / "urls.py"
-        for module in OPTIONAL_APPS - set(optional_apps):
+        for module in OPTIONAL_APPS - selected:
             _replace_one(settings, f'    "apps.{module}",\n', "")
             _replace_one(routes, URL_ROWS[module], "")
 
