@@ -40,6 +40,7 @@ jobs:
           docker compose exec -T api python manage.py makemigrations users --noinput
           docker compose exec -T api python manage.py migrate --noinput
           docker compose exec -T api python manage.py check
+          docker compose exec -T api uv run pytest --ds=config.settings.postgres_test
           curl --fail --retry 12 --retry-connrefused --retry-delay 2 http://127.0.0.1:8000/health/ready/
       - name: Clean containers
         if: always()

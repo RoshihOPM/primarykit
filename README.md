@@ -64,3 +64,14 @@ uv run pytest
 API регистрации/JWT, RBAC, storage, audit, notifications, wallets, chats, payments. Эти функции **ещё не реализованы**.
 
 Соглашения по переносимым модулям — в [docs/architecture.md](docs/architecture.md).
+## Architecture and Agent Skills
+
+- [Core conventions: models, services/selectors and localization](docs/core-conventions.md)
+- [Repository rules for agents](AGENTS.md)
+- [Agent workflow and evaluated external skills](docs/agent-workflow.md)
+- [Modular monolith architecture decision](docs/adr/0001-copy-based-modular-monolith.md)
+- [Catalog / inventory design backlog](docs/module-roadmap.md)
+
+Agent Skills: `.agents/skills/system-architect/`, `.agents/skills/database-architect/`, `.agents/skills/feature-delivery/`. These are guidance files, **not** a deployed multi-agent runner. The catalog/inventory modules remain future work.
+
+Core now exposes opt-in `SoftDeleteModel` and `SoftDeleteUUIDTimestampedModel` with separate active/unfiltered managers; see the documented caveats about cascades, uniqueness, and bulk operations.
