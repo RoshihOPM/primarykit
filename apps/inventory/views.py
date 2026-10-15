@@ -1,6 +1,8 @@
+from django.db import transaction
 from rest_framework import mixins, status, viewsets
 from rest_framework.response import Response
 
+from apps.core.audit import record_audit_event
 from apps.users.permissions import IsActiveSuperuser
 
 from .models import InventoryOperation, StockBalance, StockReservation, Warehouse
@@ -19,6 +21,26 @@ class WarehouseViewSet(viewsets.ModelViewSet):
     serializer_class = WarehouseSerializer
     permission_classes = (IsActiveSuperuser,)
     http_method_names = ("get", "post", "patch", "head", "options")
+
+    @transaction.atomic
+    def perform_create(self, serializer):
+        warehouse = serializer.save()
+        record_audit_event(
+            actor=self.request.user,
+            action="inventory.warehouse.created",
+            target_type="inventory.Warehouse",
+            target_id=warehouse.pk,
+        )
+
+    @transaction.atomic
+    def perform_update(self, serializer):
+        warehouse = serializer.save()
+        record_audit_event(
+            actor=self.request.user,
+            action="inventory.warehouse.updated",
+            target_type="inventory.Warehouse",
+            target_id=warehouse.pk,
+        )
 
 
 class BalanceViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):

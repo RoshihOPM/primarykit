@@ -30,7 +30,7 @@ def _balance_dict(balance):
 def _locked_balances(pairs):
     """Create missing zero rows, then lock in stable UUID order to avoid deadlocks."""
     identifiers = []
-    for warehouse, item in pairs:
+    for warehouse, item in sorted(pairs, key=lambda pair: (str(pair[0].pk), str(pair[1].pk))):
         obj, _ = StockBalance.objects.get_or_create(warehouse=warehouse, item=item)
         identifiers.append(obj.pk)
     rows = list(StockBalance.objects.select_for_update().filter(pk__in=identifiers).order_by("pk"))

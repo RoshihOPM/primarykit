@@ -145,3 +145,17 @@ Optional `catalog` includes categories, items/SKUs and typed attributes (text,
 integer, decimal, boolean). Authenticated users may read active items; only active
 superusers may create or edit. Prices and quantities belong in separate modules.
 See [catalog architecture](docs/catalog-architecture.md).
+
+## Inventory
+
+Optional `inventory` app provides warehouses, receipt/issue/transfer operations,
+stock reservations, transactional balances and an immutable movement ledger.
+Commands use PostgreSQL row locks and idempotency keys. All inventory endpoints
+are restricted to superusers until tenant-scoped permissions are introduced.
+Selecting `inventory` in the project generator automatically includes `catalog`.
+
+```bash
+uv run python scripts/new_project.py ../warehouse-api --name warehouse-api --apps inventory audit --git-init
+```
+
+See [inventory architecture and transaction guarantees](docs/inventory-architecture.md).
