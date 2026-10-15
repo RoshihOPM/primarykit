@@ -2,7 +2,11 @@ from django.contrib.auth.password_validation import validate_password
 from django.db import IntegrityError, transaction
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenRefreshSerializer
+from rest_framework_simplejwt.settings import api_settings
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.utils import get_md5_hash_password
 
 from .models import User
 
@@ -48,6 +52,25 @@ class RegisterSerializer(serializers.Serializer):
 class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         attrs[self.username_field] = User.objects.normalize_identity(attrs[self.username_field])
+        return super().validate(attrs)
+
+
+class PasswordBoundTokenRefreshSerializer(TokenRefreshSerializer):
+    """SimpleJWT 5.5.1 does not compare password revocation during refresh."""
+
+    def validate(self, attrs):
+        try:
+            refresh = RefreshToken(attrs["refresh"])
+            user_id = refresh[api_settings.USER_ID_CLAIM]
+            user = User.objects.get(pk=user_id, is_active=True)
+        except (TokenError, KeyError, ValueError, User.DoesNotExist) as exc:
+            raise InvalidToken(_("Token is invalid or expired.")) from exc
+
+        if api_settings.CHECK_REVOKE_TOKEN and refresh.get(
+            api_settings.REVOKE_TOKEN_CLAIM
+        ) != get_md5_hash_password(user.password):
+            raise InvalidToken(_("Token is invalid or expired."))
+
         return super().validate(attrs)
 
 
