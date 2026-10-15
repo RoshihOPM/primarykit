@@ -1,3 +1,4 @@
+from datetime import timedelta
 from pathlib import Path
 
 import environ
@@ -107,7 +108,6 @@ REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {
     "account_password": "5/hour",
 }
 
-from datetime import timedelta  # noqa: E402
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=5),
