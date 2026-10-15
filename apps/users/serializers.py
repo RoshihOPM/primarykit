@@ -1,7 +1,5 @@
 from django.contrib.auth.password_validation import validate_password
 from django.db import IntegrityError, transaction
-
-from apps.core.audit import record_audit_event
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import AuthenticationFailed
@@ -10,6 +8,8 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, Toke
 from rest_framework_simplejwt.settings import api_settings
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.utils import get_md5_hash_password
+
+from apps.core.audit import record_audit_event
 
 from .email_services import send_verification_email
 from .models import User
