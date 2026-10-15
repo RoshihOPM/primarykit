@@ -94,3 +94,13 @@ See [RBAC architecture and object scoping](docs/rbac-architecture.md). The built
 [Email notifications, verification and password reset](docs/email-notifications.md).
 
 `apps/notifications` provides reusable Django 6.1 MAILERS-based templated email. `users` issues signed, expiring single-use verification/password-reset tokens. **Email flows are disabled by default**. Configure the mailer, frontend callback URLs, and registration settings before enabling public signups; use shared rate limits and email-abuse protections in production.
+
+## Audit Events
+
+Audit logs are written in the same database transaction as identity and RBAC changes.
+The `apps.audit` app exposes read-only, superuser-only endpoints at
+`/api/v1/admin/audit/events/` and an opt-in audit service for other modules.
+See [audit architecture and limitations](docs/audit-architecture.md).
+
+**Migration setup for new project:** `python manage.py makemigrations users audit`
+before `migrate`, and **commit generated migrations in that project**.

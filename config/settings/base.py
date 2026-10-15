@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     "apps.users",
     "apps.rbac",
     "apps.notifications",
+    "apps.audit",
 ]
 
 MIDDLEWARE = [

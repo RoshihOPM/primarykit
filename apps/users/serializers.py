@@ -1,5 +1,7 @@
 from django.contrib.auth.password_validation import validate_password
 from django.db import IntegrityError, transaction
+
+from apps.core.audit import record_audit_event
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import AuthenticationFailed
@@ -46,6 +48,10 @@ class RegisterSerializer(serializers.Serializer):
             with transaction.atomic():
                 user = User.objects.create_user(email_verified=False, **validated_data)
                 send_verification_email(user)
+                record_audit_event(
+                    actor=None, action="users.registered", target_type="users.User",
+                    target_id=user.pk,
+                )
                 return user
         except IntegrityError as exc:
             raise serializers.ValidationError(

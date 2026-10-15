@@ -20,7 +20,7 @@ jobs:
       - name: Ruff format
         run: uv run ruff format --check .
       - name: Generate project-specific migrations for tests
-        run: uv run python manage.py makemigrations users --noinput --settings=config.settings.test
+        run: uv run python manage.py makemigrations users audit --noinput --settings=config.settings.test
       - name: Django checks
         run: uv run python manage.py check --settings=config.settings.test
       - name: Tests
