@@ -93,7 +93,9 @@ def test_rollback_of_audited_operation():
 
 def test_actor_attribution_prevents_accidental_user_deletion():
     member = make_user()
-    record_event(actor=member, action="users.profile.updated", target_type="users.User", target_id=member.pk)
+    record_event(
+        actor=member, action="users.profile.updated", target_type="users.User", target_id=member.pk
+    )
     with pytest.raises(ProtectedError):
         member.delete()
     assert AuditEvent.objects.filter(actor=member).count() == 1
