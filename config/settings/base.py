@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     "apps.core",
     "apps.users",
     "apps.rbac",
+    "apps.notifications",
 ]
 
 MIDDLEWARE = [
@@ -90,8 +91,8 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
-        "rest_framework.authentication.SessionAuthentication",
+        "apps.users.authentication.VerifiedJWTAuthentication",
+        "apps.users.authentication.VerifiedSessionAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
@@ -102,12 +103,25 @@ REST_FRAMEWORK = {
     "EXCEPTION_HANDLER": "apps.core.exceptions.api_exception_handler",
 }
 ALLOW_PUBLIC_REGISTRATION = env.bool("ALLOW_PUBLIC_REGISTRATION", default=False)
+AUTH_EMAIL_FLOWS_ENABLED = env.bool("AUTH_EMAIL_FLOWS_ENABLED", default=False)
+AUTH_REQUIRE_EMAIL_VERIFICATION = True
+AUTH_VERIFICATION_URL = env("AUTH_VERIFICATION_URL", default="http://localhost:3000/verify-email")
+AUTH_PASSWORD_RESET_URL = env(
+    "AUTH_PASSWORD_RESET_URL", default="http://localhost:3000/reset-password"
+)
+PASSWORD_RESET_TIMEOUT = env.int("PASSWORD_RESET_TIMEOUT", default=3600)
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="PrimaryKit <no-reply@example.test>")
+MAILERS = {
+    "default": {"BACKEND": "django.core.mail.backends.console.EmailBackend"}
+}
+
 RBAC_ASSIGNABLE_PERMISSIONS = []  # Populate in the generated project.
 REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {
     "account_login": "5/min",
     "account_registration": "3/hour",
     "account_refresh": "30/min",
     "account_password": "5/hour",
+    "account_email": "3/hour",
 }
 
 

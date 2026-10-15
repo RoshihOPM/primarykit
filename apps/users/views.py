@@ -10,6 +10,9 @@ from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
+from apps.notifications.services import NotificationDeliveryError
+
+from .email_views import EmailFlowUnavailable
 from .models import User
 from .permissions import IsActiveSuperuser
 from .serializers import (
@@ -35,12 +38,17 @@ class RegistrationView(generics.CreateAPIView):
     def initial(self, request, *args, **kwargs):
         if not settings.ALLOW_PUBLIC_REGISTRATION:
             raise PermissionDenied(_("Public registration is disabled."))
+        if not settings.AUTH_EMAIL_FLOWS_ENABLED:
+            raise EmailFlowUnavailable()
         return super().initial(request, *args, **kwargs)
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user = serializer.save()
+        try:
+            user = serializer.save()
+        except NotificationDeliveryError as exc:
+            raise EmailFlowUnavailable() from exc
         return Response(UserReadSerializer(user).data, status=status.HTTP_201_CREATED)
 
 
