@@ -66,7 +66,9 @@ def test_private_s3_upload_download_and_idor():
         assert storage.exists(item.object_key)
         with storage.open(item.object_key, "rb") as reader:
             assert reader.read() == PNG
-        assert other.get(reverse("stored-files-download", kwargs={"pk": item.pk})).status_code == 404
+        assert (
+            other.get(reverse("stored-files-download", kwargs={"pk": item.pk})).status_code == 404
+        )
         response = api.get(reverse("stored-files-download", kwargs={"pk": item.pk}))
         assert response.status_code == 200
         assert b"".join(response.streaming_content) == PNG
