@@ -23,7 +23,7 @@ class AuditEvent(models.Model):
     occurred_at = models.DateTimeField(auto_now_add=True, db_index=True)
     actor = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
+        on_delete=models.PROTECT,
         null=True,
         blank=True,
         related_name="+",

@@ -6,11 +6,11 @@ Provide a **read-only application log of explicitly recorded business changes** 
 
 ## Schema and indexes
 
-`AuditEvent` contains UUID, `occurred_at` UTC, optional FK actor, action code, `target_type`, `target_id` (string), and a bounded sanitized `changes` JSON snapshot. Never store raw request bodies, password hashes, tokens, secrets, credentials, mail links, or full PII.
+`AuditEvent` contains UUID, `occurred_at` UTC, nullable FK actor, action code, `target_type`, `target_id` (string), and a bounded sanitized `changes` JSON snapshot. Never store raw request bodies, password hashes, tokens, secrets, credentials, mail links, or full PII.
 
 Indexes: `occurred_at` (pagination), `(action, -occurred_at)`, `(target_type, target_id, -occurred_at)`.
 
-`actor` is `SET_NULL` after deletion; no implicit user-PII snapshot. Projects with non-deletable compliance actor identifiers should model retention policy explicitly.
+`actor` uses `PROTECT`: ordinary ORM user deletion fails if the user authored an audit event, preserving attribution. Deactivate accounts instead; data erasure and retention requests need an explicit authorized policy, not ad hoc row mutation.
 
 ## Transaction rule
 

@@ -1,6 +1,7 @@
 import pytest
 from django.contrib.auth.models import Group
 from django.core.exceptions import ValidationError
+from django.db.models.deletion import ProtectedError
 from django.db import transaction
 from django.urls import reverse
 from rest_framework.test import APIClient
@@ -88,6 +89,14 @@ def test_rollback_of_audited_operation():
     member.refresh_from_db()
     assert member.first_name == ""
     assert AuditEvent.objects.count() == 0
+
+
+def test_actor_attribution_prevents_accidental_user_deletion():
+    member = make_user()
+    record_event(actor=member, action="users.profile.updated", target_type="users.User", target_id=member.pk)
+    with pytest.raises(ProtectedError):
+        member.delete()
+    assert AuditEvent.objects.filter(actor=member).count() == 1
 
 
 def test_admin_only_read_and_no_write_or_delete():
