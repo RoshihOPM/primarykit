@@ -11,14 +11,15 @@ from pathlib import Path
 SOURCE_ROOT = Path(__file__).resolve().parents[1]
 
 REQUIRED_APPS = frozenset({"core", "users", "notifications"})
-OPTIONAL_APPS = frozenset({"rbac", "audit", "storage", "catalog"})
-MIGRATION_APPS = ("users", "audit", "storage", "catalog")
+OPTIONAL_APPS = frozenset({"rbac", "audit", "storage", "catalog", "inventory"})
+MIGRATION_APPS = ("users", "audit", "storage", "catalog", "inventory")
 
 URL_ROWS = {
     "rbac": '    path("api/v1/admin/rbac/", include("apps.rbac.urls")),\n',
     "audit": '    path("api/v1/admin/audit/", include("apps.audit.urls")),\n',
     "storage": '    path("api/v1/", include("apps.storage.urls")),\n',
     "catalog": '    path("api/v1/catalog/", include("apps.catalog.urls")),\n',
+    "inventory": '    path("api/v1/inventory/", include("apps.inventory.urls")),\n',
 }
 
 
@@ -73,13 +74,15 @@ def create_project(
     if target.exists():
         raise FileExistsError(f"Destination already exists: {target}")
 
-    selected = REQUIRED_APPS | set(optional_apps)
+    selected = set(REQUIRED_APPS) | set(optional_apps)
+    if "inventory" in selected:
+        selected.add("catalog")
     target.parent.mkdir(parents=True, exist_ok=True)
     try:
         shutil.copytree(root, target, ignore=_ignore_excluded)
-        for module in OPTIONAL_APPS - set(optional_apps):
+        for module in OPTIONAL_APPS - selected:
             shutil.rmtree(target / "apps" / module)
-        if "storage" not in optional_apps:
+        if "storage" not in selected:
             (target / "compose.seaweedfs.yaml").unlink()
 
         # Generator remains with the source catalog only, not in client projects.
@@ -87,14 +90,14 @@ def create_project(
         (target / "apps" / "core" / "tests" / "test_project_generator.py").unlink()
         settings = target / "config" / "settings" / "base.py"
         routes = target / "config" / "urls.py"
-        for module in OPTIONAL_APPS - set(optional_apps):
+        for module in OPTIONAL_APPS - selected:
             _replace_one(settings, f'    "apps.{module}",\n', "")
             _replace_one(routes, URL_ROWS[module], "")
 
         migrations = " ".join(a for a in MIGRATION_APPS if a in selected)
         workflow = target / ".github" / "workflows" / "ci.yaml"
         raw = workflow.read_text(encoding="utf-8")
-        phrase = "makemigrations users audit storage catalog --noinput"
+        phrase = "makemigrations users audit storage catalog inventory --noinput"
         if raw.count(phrase) != 2:
             raise RuntimeError("CI migration template has changed")
         raw = raw.replace(phrase, f"makemigrations {migrations} --noinput")
@@ -170,7 +173,10 @@ def main():
         optional_apps=set(args.apps),
         git_init=args.git_init,
     )
-    print(f"Created {target} with apps: {', '.join(sorted(REQUIRED_APPS | set(args.apps)))}")
+    copied = set(REQUIRED_APPS) | set(args.apps)
+    if "inventory" in copied:
+        copied.add("catalog")
+    print(f"Created {target} with apps: {', '.join(sorted(copied))}")
     print("Next: copy .env.example to .env, run uv sync --locked, generate migrations and test.")
 
 

@@ -20,7 +20,7 @@ jobs:
       - name: Ruff format
         run: uv run ruff format --check .
       - name: Generate project-specific migrations for tests
-        run: uv run python manage.py makemigrations users audit storage catalog --noinput --settings=config.settings.test
+        run: uv run python manage.py makemigrations users audit storage catalog inventory --noinput --settings=config.settings.test
       - name: Django checks
         run: uv run python manage.py check --settings=config.settings.test
       - name: Tests
@@ -32,6 +32,13 @@ jobs:
           cd /tmp/primarykit-client
           uv sync --locked --all-groups
           uv run python manage.py makemigrations users audit --noinput --settings=config.settings.test
+          uv run python manage.py check --settings=config.settings.test
+          uv run pytest
+          cd -
+          uv run python scripts/new_project.py /tmp/primarykit-inventory-client --name inventory-client --apps inventory
+          cd /tmp/primarykit-inventory-client
+          uv sync --locked --all-groups
+          uv run python manage.py makemigrations users catalog inventory --noinput --settings=config.settings.test
           uv run python manage.py check --settings=config.settings.test
           uv run pytest
       # PRIMARYKIT-GENERATOR-SMOKE-END
@@ -49,7 +56,7 @@ jobs:
       - name: PostgreSQL integration smoke test
         run: |
           docker compose up -d
-          docker compose exec -T api python manage.py makemigrations users audit storage catalog --noinput
+          docker compose exec -T api python manage.py makemigrations users audit storage catalog inventory --noinput
           docker compose exec -T api python manage.py migrate --noinput
           docker compose exec -T api python manage.py check
           docker compose exec -T api uv run pytest --ds=config.settings.postgres_test
