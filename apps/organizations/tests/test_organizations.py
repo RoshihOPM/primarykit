@@ -293,16 +293,13 @@ def test_invitation_to_disabled_or_unverified_account_is_rejected():
     invitee.email_verified = False
     invitee.save(update_fields=["email_verified"])
     url = reverse("org-invitations", kwargs={"org_id": org_id})
-    rejected = owner_api.post(
-        url, {"invitee": str(invitee.pk), "role": "member"}, format="json"
-    )
+    rejected = owner_api.post(url, {"invitee": str(invitee.pk), "role": "member"}, format="json")
     assert rejected.status_code == 400
     invitee.email_verified = True
     invitee.is_active = False
     invitee.save(update_fields=["email_verified", "is_active"])
-    assert owner_api.post(
-        url, {"invitee": str(invitee.pk), "role": "member"}, format="json"
-    ).status_code == 400
+    rejected = owner_api.post(url, {"invitee": str(invitee.pk), "role": "member"}, format="json")
+    assert rejected.status_code == 400
     assert not Invitation.objects.filter(organization_id=org_id, invitee=invitee).exists()
 
 
