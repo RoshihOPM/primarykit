@@ -61,8 +61,10 @@ else:
     MAILERS = {"default": {"BACKEND": "django.core.mail.backends.dummy.EmailBackend"}}
 
 # Require explicit opt-in for a single-instance persistent local media volume.
-if "apps.storage" in base.INSTALLED_APPS and base.STORAGE_BACKEND == "local" and not base.env.bool(
-    "STORAGE_ALLOW_LOCAL_PRODUCTION", default=False
+if (
+    "apps.storage" in base.INSTALLED_APPS
+    and base.STORAGE_BACKEND == "local"
+    and not base.env.bool("STORAGE_ALLOW_LOCAL_PRODUCTION", default=False)
 ):
     raise ImproperlyConfigured(
         "Configure STORAGE_BACKEND=s3, or explicitly enable persistent local storage."

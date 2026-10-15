@@ -150,7 +150,9 @@ def test_soft_delete_hides_file_and_leaves_blob_for_retention(private_disk):
     if django_apps.is_installed("apps.audit"):
         from apps.audit.models import AuditEvent
 
-        assert AuditEvent.objects.filter(action="storage.file.deleted", target_id=str(file.pk)).exists()
+        assert AuditEvent.objects.filter(
+            action="storage.file.deleted", target_id=str(file.pk)
+        ).exists()
 
 
 def test_failed_metadata_write_cleans_up_blob(private_disk):

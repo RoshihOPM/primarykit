@@ -25,8 +25,15 @@ def _ignore_excluded(directory, names):
     ignored = set()
     for name in names:
         if name in {
-            ".git", ".venv", "__pycache__", ".pytest_cache", ".ruff_cache",
-            "media", "staticfiles", ".idea", ".vscode",
+            ".git",
+            ".venv",
+            "__pycache__",
+            ".pytest_cache",
+            ".ruff_cache",
+            "media",
+            "staticfiles",
+            ".idea",
+            ".vscode",
         }:
             ignored.add(name)
         if name.startswith(".env") and name != ".env.example":
@@ -54,7 +61,9 @@ def create_project(
     if not re.fullmatch(r"[a-z][a-z0-9-]{1,62}", name):
         raise ValueError("Project name must be lowercase kebab-case, 2-63 characters")
     if not set(optional_apps).issubset(OPTIONAL_APPS):
-        raise ValueError("Unknown optional apps: " + ", ".join(sorted(set(optional_apps) - OPTIONAL_APPS)))
+        raise ValueError(
+            "Unknown optional apps: " + ", ".join(sorted(set(optional_apps) - OPTIONAL_APPS))
+        )
 
     target = destination.expanduser().resolve()
     root = SOURCE_ROOT.resolve()
@@ -139,7 +148,9 @@ def create_project(
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Create independent Django backend from PrimaryKit")
+    parser = argparse.ArgumentParser(
+        description="Create independent Django backend from PrimaryKit"
+    )
     parser.add_argument("destination", type=Path, help="New project directory (must not exist)")
     parser.add_argument("--name", required=True, help="New pyproject name, e.g. auto-market")
     parser.add_argument("--apps", nargs="*", choices=sorted(OPTIONAL_APPS), default=[])
