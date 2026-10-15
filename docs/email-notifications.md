@@ -14,6 +14,7 @@ Django **6.1 MAILERS** is used rather than deprecated `EMAIL_BACKEND` configurat
 - `AUTH_VERIFICATION_URL` and `AUTH_PASSWORD_RESET_URL`: **trusted, server-configured frontend callback URLs**. The server appends `uid` and `token` query params. The frontend must POST them to the relevant confirmation API, then remove them from browser history and avoid third-party scripts/referrers on this page.
 - `PASSWORD_RESET_TIMEOUT=3600`: Django token expiration (seconds) shared by verification and password reset.
 - `DEFAULT_FROM_EMAIL`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_USE_TLS` / `SMTP_USE_SSL`: production email configuration. Production rejects enabled email flows without SMTP and HTTPS callback URLs.
+- Email requests have a separate 3/hour throttle scope from token confirmation (10/min); both are per-cache and require shared/edge controls in production.
 - Development: mailer prints links to application console. These links are authentication secrets — **never log real tokens in production**.
 
 ## API
