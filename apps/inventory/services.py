@@ -17,6 +17,7 @@ from .domain import (
     StockRuleViolation,
     require_open_reservation,
     validate_command_shape,
+    validate_command_quantity,
 )
 from .models import (
     InventoryOperation,
@@ -177,6 +178,7 @@ def execute_stock_operation(*, actor, organization, data):
     kind = data["kind"]
     try:
         validate_command_shape(kind, data)
+        validate_command_quantity(kind, data)
     except StockRuleViolation as exc:
         raise ValidationError({"detail": str(exc)}) from exc
     key = data["idempotency_key"]
