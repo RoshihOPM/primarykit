@@ -25,6 +25,10 @@ MIGRATION_APPS = ("users", "audit", "storage", "catalog", "inventory", "organiza
 def _ignore_excluded(directory, names):
     ignored = set()
     for name in names:
+        # Source catalog migrations are transient per-mode CI files. Each copied
+        # client must generate its own schema after CATALOG_MODE/INVENTORY_MODE is pinned.
+        if Path(directory).parent.name == "apps" and name == "migrations":
+            ignored.add(name)
         if name in {
             ".git",
             ".venv",
