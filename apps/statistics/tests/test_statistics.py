@@ -5,7 +5,6 @@ from datetime import date, timedelta
 import pytest
 from django.apps import apps
 from django.conf import settings
-from django.utils import timezone
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
