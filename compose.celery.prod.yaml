@@ -1,0 +1,46 @@
+# Production worker overlay for compose.prod.yaml. Set all credentials and trusted TLS.
+# Uses same locked project dependencies as the production Django API image.
+services:
+  rabbitmq:
+    image: rabbitmq:4.1-management-alpine
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:?Set RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  api:
+    environment:
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL:?Set CELERY_BROKER_URL}
+      CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND:-}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  celery_worker:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: production
+    restart: unless-stopped
+    command: ["celery", "-A", "apps.celery_tasks.celery_app:app", "worker", "--loglevel=INFO", "--concurrency=2"]
+    env_file: .env
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.production
+      DATABASE_URL: postgresql://${POSTGRES_USER:?Set POSTGRES_USER}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:?Set POSTGRES_DB}
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL:?Set CELERY_BROKER_URL}
+      CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND:-}
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+volumes:
+  rabbitmq_data:
