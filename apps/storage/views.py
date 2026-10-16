@@ -6,9 +6,8 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from apps.organizations.scoping import FULL_ACCESS, organization_scope
-
 from .models import StoredFile
+from .policies import resolve_file_scope, visible_files
 from .serializers import StoredFileReadSerializer, StoredFileUploadSerializer
 from .services import InvalidUpload, save_private_file, soft_delete_private_file
 
@@ -29,18 +28,16 @@ class StoredFileViewSet(
         self.get_scope()
 
     def get_scope(self):
-        if not hasattr(self, "_tenant_scope"):
-            self._tenant_scope = organization_scope(
-                user=self.request.user, org_id=self.kwargs["org_id"]
+        if not hasattr(self, "_file_scope"):
+            self._file_scope = resolve_file_scope(
+                user=self.request.user, organization_id=self.kwargs.get("org_id")
             )
-        return self._tenant_scope
+        return self._file_scope
 
     def get_queryset(self):
-        organization, membership = self.get_scope()
-        queryset = super().get_queryset().filter(organization=organization)
-        if membership.role in FULL_ACCESS:
-            return queryset
-        return queryset.filter(owner=self.request.user)
+        return visible_files(
+            queryset=super().get_queryset(), user=self.request.user, scope=self.get_scope()
+        )
 
     def get_serializer_class(self):
         if self.action == "create":
@@ -53,7 +50,7 @@ class StoredFileViewSet(
         try:
             file = save_private_file(
                 owner=request.user,
-                organization=self.get_scope()[0],
+                organization_id=self.get_scope().organization_id,
                 upload=data.validated_data["file"],
             )
         except InvalidUpload as exc:
@@ -79,5 +76,7 @@ class StoredFileViewSet(
 
     def perform_destroy(self, instance):
         soft_delete_private_file(
-            file=instance, actor=self.request.user, organization=self.get_scope()[0]
+            file=instance,
+            actor=self.request.user,
+            organization_id=self.get_scope().organization_id,
         )
