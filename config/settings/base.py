@@ -71,6 +71,9 @@ DATABASES = {
 DATABASES["default"]["CONN_MAX_AGE"] = env.int("DB_CONN_MAX_AGE", default=0)
 DATABASES["default"]["CONN_HEALTH_CHECKS"] = True
 
+CATALOG_MODE = "tenant"  # Choose before initial migration; do not change on existing DBs.
+INVENTORY_MODE = "tenant"  # Generated standalone projects pin an independent schema.
+
 AUTH_USER_MODEL = "users.User"
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},

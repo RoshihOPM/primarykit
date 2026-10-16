@@ -40,8 +40,8 @@ PrimaryKit предназначен для **копирования исходн
 
 - `uv.lock` хранится в репозитории. При изменении `pyproject.toml` выполняйте `uv lock` и коммитьте lockfile. Docker/CI используют `uv sync --locked`.
 - Добавить отдельную проверку Compose + PostgreSQL и production `check --deploy`.
-- Users, RBAC, Notifications, Audit, Storage, Organizations, Catalog and Inventory уже реализованы. В Catalog и Inventory действует ограничение по организации; Storage поддерживает раздельные персональные и корпоративные файлы через политику доступа.
-- Генератор выбора модулей уже реализован; Catalog автоматически подключает Organizations, Inventory — Catalog и Organizations.
+- Users, RBAC, Notifications, Audit, Storage, Organizations, Catalog and Inventory уже реализованы. Catalog и Inventory имеют два режима: standalone (владелец) и tenant (компания/филиалы). Storage поддерживает раздельные персональные и корпоративные файлы через политику доступа.
+- Генератор модулей поддерживает полностью независимые Catalog и Inventory. Для корпоративного комплекта нужно явно выбрать `catalog inventory organizations` и до первой миграции закрепить tenant-режим.
 
 ## DDD и проверяемые границы
 

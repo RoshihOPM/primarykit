@@ -1,8 +1,13 @@
+# ruff: noqa: E402
 import pytest
+from django.conf import settings
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.urls import reverse as django_reverse
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
+
+if settings.INVENTORY_MODE != "tenant":
+    pytest.skip("Tenant-only regression suite", allow_module_level=True)
 
 from apps.catalog.models import CatalogItem, Category
 from apps.inventory.models import (

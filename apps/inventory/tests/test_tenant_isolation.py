@@ -1,10 +1,15 @@
+# ruff: noqa: E402
 """IDOR, confused-deputy, role and branch isolation regression tests."""
 
 import pytest
+from django.conf import settings
 from django.urls import reverse
 from rest_framework.exceptions import NotFound
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
+
+if settings.INVENTORY_MODE != "tenant":
+    pytest.skip("Tenant-only regression suite", allow_module_level=True)
 
 from apps.catalog.models import CatalogItem, Category
 from apps.inventory.models import InventoryOperation, StockBalance, Warehouse

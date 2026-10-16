@@ -24,7 +24,7 @@ uv run python scripts/new_project.py ../crm-api --name crm-api --git-init
 
 Always copied: `core`, `users`, `notifications`. Optional: `rbac`, `audit`, `storage`, `organizations`, `catalog`, `inventory`.
 
-`users` currently depends on `notifications` because account verification uses its email transport. Audit is optional (core facade is a no-op when not installed). Storage depends only on Users and works without Organizations; RBAC depends on Users. Catalog and Inventory depend on Organizations. These dependencies are automatically selected.
+`users` currently depends on `notifications` because account verification uses its email transport. Audit is optional (core facade is a no-op when not installed). Storage depends only on Users and works without Organizations; RBAC depends on Users. Catalog and Inventory work in standalone mode without other business modules. To start in tenant mode, select Organizations alongside Catalog (and Catalog plus Organizations alongside Inventory). The generator pins the schema mode before migrations.
 
 ## What generator does
 
@@ -56,9 +56,9 @@ uv run python manage.py migrate
 uv run pytest
 ```
 
-`--apps inventory` automatically includes `catalog` and `organizations`.
+`--apps inventory` is standalone and has no Catalog/Organizations FKs. Tenant Inventory requires an explicit `--apps inventory catalog organizations` selection.
 `--apps storage` alone creates owner-private `/api/v1/files/` endpoints, without Organizations. If you also select Organizations, the generator adds `/api/v1/organizations/{org_id}/files/`. The two scopes use the same Storage service with separate authorization policies.
-Even `--apps catalog` includes `organizations`. API routes are scoped as
+Standalone `--apps catalog` has no Organizations dependency. Tenant API routes are scoped as
 `/api/v1/organizations/{org_id}/catalog/` and `/inventory/`.
 Creating a company via `POST /api/v1/organizations/` is the first step.
 
@@ -86,6 +86,18 @@ python manage.py migrate
 
 Modules are detected by the presence of `apps/<name>/manifest.py`. No `INSTALLED_APPS` or `config/urls.py` edits are necessary. Source checkout must be trusted; never copy unreviewed code into a production server. The installer is an explicit filesystem operation; it does **not** perform migrations, deploy, install external pip dependencies or overwrite an existing module. Restart running Django processes after copying.
 
-**Honest dependency boundary:** `storage` works with the baseline without Organizations. `inventory` still requires both `catalog` and `organizations` in its existing ORM. The installer selects that dependency closure automatically; copying only `inventory/` without the required folders fails fast rather than permitting unsafe behavior. Standalone Inventory is a separate future schema/API design, not accomplished by manifest discovery.
+**Schema boundary:** standalone Inventory and Catalog now have their own models and require no other business modules. The original tenant implementation still requires Catalog and Organizations when enabled; installing another app later does not silently flip the persisted model mode. See ADR 0005.
 
 For copied modules that already have historical migrations, preserve them. For source-catalog modules without migrations, generate migrations **once in the new project** and commit them. Never regenerate the initial migrations of a running client.
+
+## Fully independent Catalog / Inventory (schema modes)
+
+```bash
+uv run python scripts/new_project.py ../catalog-alone --name catalog-alone --apps catalog
+uv run python scripts/new_project.py ../inventory-alone --name inventory-alone --apps inventory
+uv run python scripts/new_project.py ../b2b-stock --name b2b-stock --apps organizations catalog inventory
+```
+
+Catalog-only and Inventory-only projects install **no extra business app**. The generator pins `CATALOG_MODE` and `INVENTORY_MODE` to `standalone` in standalone projects. For a selected company-integrated bundle it pins `tenant` before the project's first migration. Do not change a pinned schema mode on a populated database. The original tenant models, routes and branch authorization are preserved for B2B projects.
+
+For an existing generated project that has no Catalog/Inventory, a raw copy or `install_kit_module` installs standalone apps when their modes in settings are `standalone`. Verify these settings before generating migrations. No runtime magic migrates existing rows or connects inventory SKUs to Catalog SKUs.

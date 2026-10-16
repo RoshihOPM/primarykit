@@ -52,8 +52,39 @@ jobs:
           uv run python manage.py check --settings=config.settings.test
           uv run pytest
           cd -
+          # Actual raw folder-copy smoke from tracked source, without root settings edits.
+          uv run python scripts/new_project.py /tmp/primarykit-catalog-copy --name catalog-copy
+          git archive HEAD apps/catalog | tar -x -C /tmp/primarykit-catalog-copy
+          cd /tmp/primarykit-catalog-copy
+          uv sync --locked --all-groups
+          uv run python manage.py makemigrations users catalog --noinput --settings=config.settings.test
+          uv run python manage.py check --settings=config.settings.test
+          uv run pytest
+          cd -
+          uv run python scripts/new_project.py /tmp/primarykit-inventory-copy --name inventory-copy
+          git archive HEAD apps/inventory | tar -x -C /tmp/primarykit-inventory-copy
+          cd /tmp/primarykit-inventory-copy
+          uv sync --locked --all-groups
+          uv run python manage.py makemigrations users inventory --noinput --settings=config.settings.test
+          uv run python manage.py check --settings=config.settings.test
+          uv run pytest
+          cd -
+          uv run python scripts/new_project.py /tmp/primarykit-catalog-client --name catalog-client --apps catalog
+          cd /tmp/primarykit-catalog-client
+          uv sync --locked --all-groups
+          uv run python manage.py makemigrations users catalog --noinput --settings=config.settings.test
+          uv run python manage.py check --settings=config.settings.test
+          uv run pytest
+          cd -
           uv run python scripts/new_project.py /tmp/primarykit-inventory-client --name inventory-client --apps inventory
           cd /tmp/primarykit-inventory-client
+          uv sync --locked --all-groups
+          uv run python manage.py makemigrations users inventory --noinput --settings=config.settings.test
+          uv run python manage.py check --settings=config.settings.test
+          uv run pytest
+          cd -
+          uv run python scripts/new_project.py /tmp/primarykit-tenant-client --name tenant-client --apps inventory catalog organizations
+          cd /tmp/primarykit-tenant-client
           uv sync --locked --all-groups
           uv run python manage.py makemigrations users catalog inventory organizations --noinput --settings=config.settings.test
           uv run python manage.py check --settings=config.settings.test

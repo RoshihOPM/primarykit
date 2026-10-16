@@ -154,7 +154,7 @@ Optional `inventory` app provides warehouses, receipt/issue/transfer operations,
 stock reservations, transactional balances and an immutable movement ledger.
 Commands use PostgreSQL row locks and idempotency keys. All inventory endpoints
 are restricted to superusers until tenant-scoped permissions are introduced.
-Selecting `inventory` in the project generator automatically includes `catalog`.
+Selecting only `inventory` generates a standalone warehouse module. Supply `inventory catalog organizations` together to select the tenant-integrated schema.
 
 ```bash
 uv run python scripts/new_project.py ../warehouse-api --name warehouse-api --apps inventory audit --git-init
@@ -177,13 +177,13 @@ See [organizations architecture, API, security and migration notes](docs/organiz
 
 ## Company and branch isolation
 
-`catalog` and `inventory` require `organizations`; Storage can also run independently. Catalog and Inventory use
+In tenant mode, `catalog` and `inventory` use Organizations; in standalone mode they work independently. Tenant implementations use
 `/api/v1/organizations/{org_id}/catalog/` and
 `/api/v1/organizations/{org_id}/inventory/`. Company membership and
 branch grants are checked server-side, including in stock command services.
 Cross-company transfers and lookup by foreign IDs are forbidden.
 
-`--apps inventory` automatically selects Catalog and Organizations.
+`--apps inventory` installs standalone Inventory. For tenant-mode Inventory explicitly select `--apps inventory catalog organizations`.
 **Existing clients require manual, verified tenant data migration**; old
 global Catalog and Inventory endpoints are intentionally removed. Storage's personal and tenant endpoints are strictly isolated. Read the architecture documents
 before updating a populated database.
@@ -200,7 +200,7 @@ before updating a populated database.
 
 Например, если в проекте уже есть базовые `core`, `users`, `notifications`, скопируйте `apps/storage/` — появится личный API `/api/v1/files/`. Если дополнительно есть `apps/organizations/`, автоматически появится безопасный корпоративный маршрут. После копирования моделей **нужно создать, проверить и закоммитить миграции, а затем применить их**. Копирование папки не устанавливает зависимости из PyPI и не настраивает внешние S3/SMTP-сервисы.
 
-Для модулей с **жёсткими зависимостями**, таких как Inventory (требует Catalog и Organizations), есть команда установки из локального проверенного каталога:
+Для модулей с реальными обязательными зависимостями команда подтягивает недостающие папки из проверенного каталога. Inventory теперь самостоятельный в standalone-режиме:
 
 ```bash
 python manage.py install_kit_module inventory --source ../primarykit
@@ -209,3 +209,14 @@ python manage.py migrate
 ```
 
 Команда копирует отсутствующие папки, не перезаписывая существующие. Подробнее: [Plug & Play ADR](docs/adr/0004-copyable-module-contract.md) и [генератор](docs/project-generator.md).
+
+## Самостоятельные Catalog и Inventory
+
+Начиная с ADR 0005, `--apps catalog` и `--apps inventory` больше **не требуют Organizations или друг друга**. Каждый модуль содержит собственные standalone-модели, API и сервисы. `Catalog` — категории и SKU владельца (`/api/v1/catalog/`); `Inventory` — собственные складские SKU, склады, движения и резервы (`/api/v1/inventory/`). В новом проекте режим `standalone` фиксируется до первой миграции. Вариант с компаниями сохраняется при создании проекта с `--apps catalog inventory organizations` и имеет прежние маршруты.
+
+```bash
+uv run python scripts/new_project.py ../catalog-app --name catalog-app --apps catalog
+uv run python scripts/new_project.py ../stock-app --name stock-app --apps inventory
+```
+
+**Важно:** на работающем проекте менять `CATALOG_MODE` или `INVENTORY_MODE` простой настройкой нельзя — модели различаются, требуется спланированная миграция данных. Добавление папки Organizations само по себе режим не переключает. [ADR 0005](docs/adr/0005-standalone-catalog-inventory.md).

@@ -17,6 +17,7 @@ class ModuleConfigurationError(ValueError):
 class Route:
     prefix: str
     requires: tuple[str, ...] = ()
+    mode: str | None = None
 
 
 @dataclass(frozen=True)
@@ -87,11 +88,22 @@ def installed_module_apps() -> list[str]:
 
 def module_routes() -> tuple[tuple[str, str], ...]:
     """Registered endpoints including only available optional integrations."""
+    from django.conf import settings
+
     modules = active_modules()
     installed = {module.name for module in modules}
     result = []
     for module in sorted(modules, key=lambda item: (item.priority, item.name)):
+        mode = getattr(settings, f"{module.name.upper()}_MODE", None)
+        if module.name in {"catalog", "inventory"} and mode == "tenant":
+            required = {"organizations"} | ({"catalog"} if module.name == "inventory" else set())
+            if not required.issubset(installed):
+                raise ModuleConfigurationError(
+                    f"{module.name} tenant mode requires: {sorted(required)}"
+                )
         for route in module.routes:
+            if route.mode is not None and route.mode != mode:
+                continue
             if all(dependency in installed for dependency in route.requires):
                 result.append((route.prefix, f"apps.{module.name}.urls"))
     return tuple(result)

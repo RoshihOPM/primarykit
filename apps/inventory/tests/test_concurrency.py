@@ -1,11 +1,16 @@
+# ruff: noqa: E402
 """Prove invariant under independent PostgreSQL writers (not SQLite simulation)."""
 
 from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
 
 import pytest
+from django.conf import settings
 from django.db import close_old_connections, connection
 from rest_framework.exceptions import ValidationError
+
+if settings.INVENTORY_MODE != "tenant":
+    pytest.skip("Tenant-only regression suite", allow_module_level=True)
 
 from apps.catalog.models import CatalogItem, Category
 from apps.inventory.models import StockBalance, Warehouse
