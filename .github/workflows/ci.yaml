@@ -83,6 +83,31 @@ jobs:
           uv run pytest
           cd -
           # Commerce modules must all boot and work when copied independently.
+          # Optional infrastructure modules must generate without importing Celery or Redis.
+          uv run python scripts/new_project.py /tmp/primarykit-cache-client --name cache-client --apps cache
+          cd /tmp/primarykit-cache-client
+          uv sync --locked --all-groups
+          uv run python -m apps.core.doctor --strict
+          uv run python manage.py makemigrations users --noinput --settings=config.settings.test
+          uv run python manage.py check --settings=config.settings.test
+          uv run pytest
+          cd -
+          uv run python scripts/new_project.py /tmp/primarykit-celery-client --name celery-client --apps celery_tasks
+          cd /tmp/primarykit-celery-client
+          uv sync --locked --all-groups
+          uv run python -m apps.core.doctor --strict
+          uv run python manage.py makemigrations users --noinput --settings=config.settings.test
+          uv run python manage.py check --settings=config.settings.test
+          uv run pytest
+          cd -
+          uv run python scripts/new_project.py /tmp/primarykit-infra-client --name infra-client --apps cache celery_tasks
+          cd /tmp/primarykit-infra-client
+          uv sync --locked --all-groups
+          uv run python -m apps.core.doctor --strict
+          uv run python manage.py makemigrations users --noinput --settings=config.settings.test
+          uv run python manage.py check --settings=config.settings.test
+          uv run pytest
+          cd -
           uv run python scripts/new_project.py /tmp/primarykit-tasks-client --name tasks-client --apps tasks
           cd /tmp/primarykit-tasks-client
           uv sync --locked --all-groups
@@ -170,6 +195,10 @@ jobs:
           docker compose -f compose.prod.yaml config --quiet
           docker compose -f compose.yaml -f compose.seaweedfs.yaml config --quiet
           docker compose -f compose.prod.yaml -f compose.seaweedfs.yaml config --quiet
+          docker compose -f compose.yaml -f compose.redis.yaml config --quiet
+          docker compose -f compose.yaml -f compose.celery.yaml config --quiet
+          docker compose -f compose.yaml -f compose.redis.yaml -f compose.celery.yaml config --quiet
+          docker compose -f compose.prod.yaml -f compose.celery.prod.yaml config --quiet
       - name: Build Docker development and production images
         run: |
           docker compose build api
