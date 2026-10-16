@@ -53,3 +53,9 @@ populated databases: that would request a one-off default or fail.
 
 Fresh generated projects create/commit `users organizations catalog`
 migrations directly.
+
+## Standalone и tenant режимы (ADR 0005)
+
+`CATALOG_MODE="standalone"`: самодостаточные Category, AttributeDefinition, CatalogItem. Категории и позиции принадлежат конкретному пользователю; owner назначается только сервером, данные чужих пользователей (включая от глобального Django superuser) скрыты. URL: `/api/v1/catalog/categories/`, `attributes/`, `items/`. Organizations **не нужен**.
+
+`CATALOG_MODE="tenant"`: исходные модели с обязательным Organization FK и корпоративными правами, URL `/api/v1/organizations/{org_id}/catalog/`. Режим фиксируется **перед первой миграцией**, простой сменой настройки на существующей базе переключать нельзя. См. [ADR 0005](adr/0005-standalone-catalog-inventory.md).

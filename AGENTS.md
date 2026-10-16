@@ -46,3 +46,9 @@ PrimaryKit is a copy-based Django starter, not a separately deployed shared back
 - Core/users/notifications are the minimum project baseline. Copying a module with required missing dependencies MUST fail at startup; the `install_kit_module` management command resolves closure from a **trusted** source checkout. Never silently import an optional context.
 - Copying code does not apply migrations, provision the database or install third-party packages. Clients must generate/review/commit their own migrations; never auto-migrate production as an AppConfig side effect.
 - Maintain isolation: an optional integration must fail closed when absent, especially tenant scoping and file access. Keep DDD domain rules framework-independent.
+
+## Catalog and Inventory schema modes
+
+- Independent `catalog` and `inventory` folders use pinned `CATALOG_MODE` / `INVENTORY_MODE` (`standalone` or `tenant`) selected before the first migration. Do not infer, flip or migrate modes in AppConfig.ready() or a registry import.
+- Standalone Catalog and Inventory must remain free of imports from Organizations and Catalog (for Inventory), including at model import time. All owner scope checks are mandatory at both API and transactional command boundaries; no implicit Django superuser bypass.
+- Tenant implementation remains a separate explicit adapter with original models, migrations and routes. Any mode conversion on a populated database needs an agreed and tested data migration, including historical immutable movements and idempotency partitions.

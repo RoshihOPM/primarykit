@@ -69,3 +69,9 @@ and stock ledgers cannot be placed into arbitrary companies. Plan:
 
 Never reset, delete or rewrite client migration history. New generated
 projects run `makemigrations users organizations catalog inventory`.
+
+## Standalone и tenant режимы (ADR 0005)
+
+`INVENTORY_MODE="standalone"`: модуль не требует ни Catalog, ни Organizations. Модуль владеет минимальной складской позицией InventoryItem (SKU + название), Warehouse, StockBalance, Reservation, Operation и неизменяемым Movement. API: `/api/v1/inventory/items/`, `warehouses/`, `balances/`, `reservations/`, `operations/`. Владение проверяется на уровне сериализатора **и** командного сервиса. Idempotency key разграничивается по владельцу, отрицательные остатки и двойное закрытие резервов запрещены.
+
+`INVENTORY_MODE="tenant"`: прежний API `/api/v1/organizations/{org_id}/inventory/`, FK на CatalogItem, Organization, Branch, проверки branch grants и организация-скоупа. Режим выбирается перед первыми миграциями. Добавление Catalog/Organizations позднее не изменяет режим автоматически; переход требует отдельной миграции данных. См. [ADR 0005](adr/0005-standalone-catalog-inventory.md).

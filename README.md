@@ -209,3 +209,14 @@ python manage.py migrate
 ```
 
 Команда копирует отсутствующие папки, не перезаписывая существующие. Подробнее: [Plug & Play ADR](docs/adr/0004-copyable-module-contract.md) и [генератор](docs/project-generator.md).
+
+## Самостоятельные Catalog и Inventory
+
+Начиная с ADR 0005, `--apps catalog` и `--apps inventory` больше **не требуют Organizations или друг друга**. Каждый модуль содержит собственные standalone-модели, API и сервисы. `Catalog` — категории и SKU владельца (`/api/v1/catalog/`); `Inventory` — собственные складские SKU, склады, движения и резервы (`/api/v1/inventory/`). В новом проекте режим `standalone` фиксируется до первой миграции. Вариант с компаниями сохраняется при создании проекта с `--apps catalog inventory organizations` и имеет прежние маршруты.
+
+```bash
+uv run python scripts/new_project.py ../catalog-app --name catalog-app --apps catalog
+uv run python scripts/new_project.py ../stock-app --name stock-app --apps inventory
+```
+
+**Важно:** на работающем проекте менять `CATALOG_MODE` или `INVENTORY_MODE` простой настройкой нельзя — модели различаются, требуется спланированная миграция данных. Добавление папки Organizations само по себе режим не переключает. [ADR 0005](docs/adr/0005-standalone-catalog-inventory.md).
