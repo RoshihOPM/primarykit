@@ -69,6 +69,16 @@ jobs:
           uv run python manage.py check --settings=config.settings.test
           uv run pytest
           cd -
+          # Statistics raw-copy test: copying one folder auto-registers its routes.
+          uv run python scripts/new_project.py /tmp/primarykit-statistics-copy --name stats-copy
+          git archive HEAD apps/statistics | tar -x -C /tmp/primarykit-statistics-copy
+          cd /tmp/primarykit-statistics-copy
+          uv sync --locked --all-groups
+          uv run python manage.py makemigrations users --noinput --settings=config.settings.test
+          uv run python manage.py check --settings=config.settings.test
+          uv run python -c 'import os; os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.test"); import django; django.setup(); from django.urls import reverse; assert reverse("statistics-metrics") == "/api/v1/statistics/"'
+          uv run pytest
+          cd -
           # Statistics must work without any optional business module.
           uv run python scripts/new_project.py /tmp/primarykit-statistics-client --name stats-client --apps statistics
           cd /tmp/primarykit-statistics-client
