@@ -59,9 +59,7 @@ def test_catalog_domain_enforces_attribute_constraints():
         "weight": "2.50",
         "count": 3,
     }
-    assert Decimal(normalize_attributes(specs, {"weight": "0.1"})["weight"]) == Decimal(
-        "0.1"
-    )
+    assert Decimal(normalize_attributes(specs, {"weight": "0.1"})["weight"]) == Decimal("0.1")
     with pytest.raises(CatalogRuleViolation):
         normalize_attributes(specs, {"count": 3})
     with pytest.raises(CatalogRuleViolation):
@@ -126,9 +124,7 @@ def test_audit_domain_rejects_credentials_and_bad_ids():
     assert validate_event_identity("users.profile.updated", "users.User", 42) == "42"
     with pytest.raises(ValueError):
         validate_event_identity("!", "users.User", 42)
-    assert sanitize_snapshot({"first_name": {"after": "A"}}) == {
-        "first_name": {"after": "A"}
-    }
+    assert sanitize_snapshot({"first_name": {"after": "A"}}) == {"first_name": {"after": "A"}}
     with pytest.raises(ValueError):
         sanitize_snapshot({"nested": {"api_key": "hidden"}})
 
