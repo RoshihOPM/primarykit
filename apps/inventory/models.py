@@ -1,4 +1,4 @@
-"""Warehouse stock: balances are transactional materializations of an append-only ledger."""
+"""Organization-bound warehouse balances and immutable movement ledger."""
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -7,18 +7,42 @@ from django.db.models import F, Q
 
 from apps.catalog.models import CatalogItem
 from apps.core.models import UUIDTimestampedModel
+from apps.organizations.models import Branch, Organization
 
 
 class Warehouse(UUIDTimestampedModel):
-    code = models.SlugField(max_length=80, unique=True)
+    organization = models.ForeignKey(
+        Organization, on_delete=models.PROTECT, related_name="warehouses"
+    )
+    branch = models.ForeignKey(Branch, on_delete=models.PROTECT, related_name="warehouses")
+    code = models.SlugField(max_length=80)
     name = models.CharField(max_length=200)
     is_active = models.BooleanField(default=True)
 
     class Meta:
         ordering = ("code",)
+        constraints = [
+            models.UniqueConstraint(
+                fields=("organization", "code"), name="inventory_warehouse_org_code_uniq"
+            )
+        ]
+
+    def save(self, *args, **kwargs):
+        if self.branch_id and self.organization_id:
+            branch_org = (
+                Branch.objects.filter(pk=self.branch_id)
+                .values_list("organization_id", flat=True)
+                .first()
+            )
+            if branch_org != self.organization_id:
+                raise ValidationError("Warehouse branch must belong to its organization.")
+        return super().save(*args, **kwargs)
 
 
 class StockBalance(UUIDTimestampedModel):
+    organization = models.ForeignKey(
+        Organization, on_delete=models.PROTECT, related_name="stock_balances"
+    )
     warehouse = models.ForeignKey(Warehouse, on_delete=models.PROTECT, related_name="balances")
     item = models.ForeignKey(CatalogItem, on_delete=models.PROTECT, related_name="stock_balances")
     on_hand = models.PositiveBigIntegerField(default=0)
@@ -26,16 +50,41 @@ class StockBalance(UUIDTimestampedModel):
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=("warehouse", "item"), name="inventory_balance_unique"),
+            models.UniqueConstraint(
+                fields=("organization", "warehouse", "item"), name="inventory_balance_unique"
+            ),
             models.CheckConstraint(
                 condition=Q(on_hand__gte=F("reserved")), name="inventory_reserve_lte_onhand"
             ),
         ]
-        indexes = [models.Index(fields=["item", "warehouse"], name="inventory_item_warehouse_idx")]
+        indexes = [
+            models.Index(
+                fields=["organization", "item", "warehouse"],
+                name="inventory_org_item_wh_idx",
+            )
+        ]
 
     @property
     def available(self):
         return self.on_hand - self.reserved
+
+    def save(self, *args, **kwargs):
+        if self.organization_id and self.warehouse_id and self.item_id:
+            warehouse_org = (
+                Warehouse.objects.filter(pk=self.warehouse_id)
+                .values_list("organization_id", flat=True)
+                .first()
+            )
+            item_org = (
+                CatalogItem.objects.filter(pk=self.item_id)
+                .values_list("organization_id", flat=True)
+                .first()
+            )
+            if self.organization_id != warehouse_org or self.organization_id != item_org:
+                raise ValidationError(
+                    "Balance, warehouse and item must belong to one organization."
+                )
+        return super().save(*args, **kwargs)
 
 
 class StockReservation(UUIDTimestampedModel):
@@ -59,7 +108,10 @@ class StockReservation(UUIDTimestampedModel):
 
 
 class InventoryOperation(UUIDTimestampedModel):
-    key = models.CharField(max_length=128, unique=True)
+    organization = models.ForeignKey(
+        Organization, on_delete=models.PROTECT, related_name="inventory_operations"
+    )
+    key = models.CharField(max_length=128)
     fingerprint = models.CharField(max_length=64)
     kind = models.CharField(max_length=20)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
@@ -67,6 +119,11 @@ class InventoryOperation(UUIDTimestampedModel):
 
     class Meta:
         ordering = ("-created_at",)
+        constraints = [
+            models.UniqueConstraint(
+                fields=("organization", "key"), name="inventory_operation_org_key_uniq"
+            )
+        ]
 
 
 class ImmutableMovementQuerySet(models.QuerySet):
@@ -106,6 +163,21 @@ class StockMovement(UUIDTimestampedModel):
     def save(self, *args, **kwargs):
         if not self._state.adding:
             raise ValidationError("Stock movements are immutable.")
+        if self.operation_id and self.balance_id:
+            operation_org = (
+                InventoryOperation.objects.filter(pk=self.operation_id)
+                .values_list("organization_id", flat=True)
+                .first()
+            )
+            balance_org = (
+                StockBalance.objects.filter(pk=self.balance_id)
+                .values_list("organization_id", flat=True)
+                .first()
+            )
+            if operation_org != balance_org:
+                raise ValidationError(
+                    "Movement's operation and balance must share one organization."
+                )
         return super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):

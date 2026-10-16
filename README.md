@@ -173,3 +173,16 @@ See [organizations architecture, API, security and migration notes](docs/organiz
 
 **Important:** Catalog, Inventory and Storage are not yet tenant-scoped by this
 module. They require separate migration and authorization work.
+
+## Company and branch isolation
+
+`catalog` and `inventory` now require `organizations` and use
+`/api/v1/organizations/{org_id}/catalog/` and
+`/api/v1/organizations/{org_id}/inventory/`. Company membership and
+branch grants are checked server-side, including in stock command services.
+Cross-company transfers and lookup by foreign IDs are forbidden.
+
+`--apps inventory` automatically selects Catalog and Organizations.
+**Existing clients require manual, verified tenant data migration**; old
+global endpoints are intentionally removed. Read the architecture documents
+before updating a populated database.

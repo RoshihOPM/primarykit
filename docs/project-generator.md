@@ -22,9 +22,9 @@ For minimal API:
 uv run python scripts/new_project.py ../crm-api --name crm-api --git-init
 ```
 
-Always copied: `core`, `users`, `notifications`. Optional: `rbac`, `audit`, `storage`.
+Always copied: `core`, `users`, `notifications`. Optional: `rbac`, `audit`, `storage`, `organizations`, `catalog`, `inventory`.
 
-`users` currently depends on `notifications` because account verification uses its email transport. Audit is optional (core facade is a no-op when not installed). Storage and RBAC depend on Users.
+`users` currently depends on `notifications` because account verification uses its email transport. Audit is optional (core facade is a no-op when not installed). Storage and RBAC depend on Users. Catalog depends on Organizations; Inventory depends on both Catalog and Organizations. These dependencies are automatically selected.
 
 ## What generator does
 
@@ -43,3 +43,25 @@ Always copied: `core`, `users`, `notifications`. Optional: `rbac`, `audit`, `sto
 - Template drift intentionally fails rather than silently producing an invalid project.
 - Source version records kit package version, **not** the precise Git commit. Record a commit pin manually for deterministic production provenance.
 - `uv.lock` virtual root package name is replaced; CI verifies locked sync on generated project.
+
+## Generate a tenant-scoped warehouse system
+
+```bash
+uv run python scripts/new_project.py ../warehouse-api --name warehouse-api --apps inventory audit storage --git-init
+cd ../warehouse-api
+cp .env.example .env
+uv sync --locked --all-groups
+uv run python manage.py makemigrations users audit storage organizations catalog inventory
+uv run python manage.py migrate
+uv run pytest
+```
+
+`--apps inventory` automatically includes `catalog` and `organizations`.
+Even `--apps catalog` includes `organizations`. API routes are scoped as
+`/api/v1/organizations/{org_id}/catalog/` and `/inventory/`.
+Creating a company via `POST /api/v1/organizations/` is the first step.
+
+**Client upgrade warning:** copying a newer kit module into a pre-existing
+database requires an explicit data-migration plan. Never assign all existing
+products, warehouses or movements to an arbitrary company. Follow the
+Catalog and Inventory architecture migration playbooks.

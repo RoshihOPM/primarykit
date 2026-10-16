@@ -1,45 +1,71 @@
-# Inventory v0.1 — transactional warehouse stock
+# Inventory: company and branch scoped stock
 
-Inventory is an **optional** Django app that depends on Catalog; the generator automatically selects `catalog` when `inventory` is chosen. There is no tenant or organization boundary in v0.1. All Inventory endpoints (read/write) are restricted to **active superusers**, and write services repeat this check even when called outside HTTP.
+Required: `Organizations` + `Catalog`. PrimaryKit's project generator
+selects both automatically for `--apps inventory`.
 
-## Domain schema and invariants
+- `Warehouse` belongs to one organization and one branch of that organization.
+  Codes are unique within each organization.
+- `StockBalance` belongs to one organization, warehouse and catalog item;
+  its parent warehouse and item must have the same organization. Unique
+  `(organization, warehouse, item)`, `on_hand >= reserved >= 0`.
+- `StockReservation` belongs to a balance and inherits its tenant.
+- `InventoryOperation` belongs to an organization and has a per-company
+  unique idempotency key, request fingerprint, actor and result.
+- `StockMovement` records append-only deltas of each operation/balance.
 
-- `Warehouse`: UUID, code, name, active.
-- `StockBalance`: unique (warehouse, item), `on_hand >= reserved >= 0` enforced by PostgreSQL CHECK + nonnegative fields, `available = on_hand - reserved`.
-- `StockReservation`: amount on one balance, ACTIVE → RELEASED or CONSUMED, irreversible.
-- `InventoryOperation`: unique client idempotency key, actor, request fingerprint and result snapshot.
-- `StockMovement`: append-only physical/held deltas tied to operation and balance, including two entries for transfers. Normal ORM update/delete is rejected; SQL admin can still modify history.
+## API
 
-The journal is the **audit trail of all operations made through services**; balance is the transactionally maintained materialization for fast queries. A damaged balance can be reconstructed from movement deltas. There is no row update API for balance or movement.
+All endpoints use `/api/v1/organizations/{org_id}/inventory/`.
+`warehouses/`, `balances/`, `reservations/` and `operations/` are
+nested here; there are no global inventory endpoints.
 
-## Write operations
+Membership rules:
 
-`POST /api/v1/inventory/operations/` accepts a strict command envelope with `kind`, `idempotency_key` (minimum 8 characters), and kind-specific fields.
+| Role | Warehouse/balance | Reservations | Stock commands | Operation history |
+| --- | --- | --- | --- | --- |
+| owner/admin | All within company | All | Yes | All |
+| manager | Assigned active branches | Assigned branches | Yes, assigned branches only | No |
+| member | Assigned active branches (read) | No | No | No |
+| non-member | 404 | 404 | 404 | 404 |
 
-| Kind | Fields | Effect |
-| --- | --- | --- |
-| receive | warehouse, item, quantity | on_hand +quantity |
-| issue | warehouse, item, quantity | on_hand -quantity, only from available |
-| transfer | warehouse, destination, item, quantity | on_hand -quantity/+quantity, two ledger rows |
-| reserve | warehouse, item, quantity | reserved +quantity, creates reservation |
-| release | reservation | reserved -reserved_quantity |
-| consume | reservation | reserved -quantity, on_hand -quantity |
+`POST /operations/` accepts kinds receive, issue, transfer, reserve, release,
+consume. All branch/item/reservation references are constrained to the selected
+organization before validation. Inside the transaction, the command service
+**locks the Organization row**, re-checks current membership and branch grants,
+then writes balance, movement, reservation, operation and optional Audit event
+atomically. Transfers require permission for both warehouses and the same
+company; cross-company transfers are rejected. Reserved units cannot be issued
+twice. Closing an existing reservation remains possible if its warehouse is
+deactivated, but requires its company membership and appropriate branch grant.
 
-All business writes, movement rows, idempotency results and optional Audit event are committed under the **same** `transaction.atomic()`. Operations use `select_for_update` on balances and consistent row lock ordering; concurrent requests must be tested against PostgreSQL. Unique idempotency keys reject mismatched replays and return the original JSON result for matching retries.
+Idempotency key uniqueness is `(organization,key)`; retry of the same request
+by the original permitted actor returns the original result. Replay after
+membership/branch access is revoked is denied.
 
-`GET /api/v1/inventory/warehouses/`, `GET /balances/`, `GET /reservations/`, `GET /operations/` are administrative only; warehouse create/PATCH also superuser-only. No direct inventory mutations via serializers or generic CRUD.
+## Important limits
 
-## Limitations / next steps
+Quantities are positive integers; lots, expiry dates, cost valuation, units
+of measure, partial reservation fulfillment, and third-party warehouse
+integrations belong to domain-specific modules. Ordinary ORM APIs protect
+movement immutability, but privileged SQL can tamper with rows. Composite
+cross-tenant FK checks depend on service/model validation, not database RLS;
+use restricted DB permissions and consider PostgreSQL RLS/triggers if custom
+code can write arbitrary tables.
 
-- Positive **integer quantities** only. Precision, units of measure, lots/batches, serial numbers, expiration and stock costing need domain-specific follow-ups.
-- Reservations have no timeout, TTL or partial fulfillment yet; release/consume operates on the full reservation. Store expiry and cleanup as explicit commands later.
-- Default owner of every stock record is the application. A tenant/organization membership model must be introduced before delegating inventory management to different businesses/branches.
-- Inactive warehouse/catalog items block new receives/issues/transfers/reserves; existing reservations can still close.
-- Ledger is append-only via ORM but database administrators can manipulate it; production compliance requires additional DB permissions, retention and reconciliation.
-- Idempotency keys are globally unique within the project; callers should use UUID-like random keys to avoid collisions. Key reuse by a different user is not accepted.
-- Use `EXPLAIN (ANALYZE, BUFFERS)` with realistic data before inventing indexes or partitioning. Hot SKUs may contend on a single balance row and require monitoring.
-- No background worker needed for current commands. If a queue is added, preserve the same services and idempotency contract.
+## Upgrading clients with real stock
 
-## Migration policy
+This is a **breaking schema and route change**. Existing global warehouses
+and stock ledgers cannot be placed into arbitrary companies. Plan:
+1. Pause writes or use a controlled dual-write/expand migration.
+2. Identify and verify organization and branch for each Warehouse.
+3. Map each Category/Item and ensure associated balances, reservations and
+   operations all resolve to the **same** organization.
+4. Backfill new nullable tenant and branch FKs and verify no unmapped rows,
+   orphaned references or conflicting per-tenant codes.
+5. Set FKs NOT NULL, validate checks/constraints, deploy scoped API routes
+   and resume writes.
+6. Reconcile all movement deltas against materialized balances and export a
+   verified backup before and after deployment.
 
-In a *new* generated client project run `makemigrations users catalog inventory` and commit generated migrations. On an existing client project **never delete prior migration history**, review new migrations with database architect and deploy using a safe expand/contract strategy.
+Never reset, delete or rewrite client migration history. New generated
+projects run `makemigrations users organizations catalog inventory`.

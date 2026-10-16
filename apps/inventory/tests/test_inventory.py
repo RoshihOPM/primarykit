@@ -1,6 +1,6 @@
 import pytest
 from django.core.exceptions import ValidationError as DjangoValidationError
-from django.urls import reverse
+from django.urls import reverse as django_reverse
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -12,9 +12,22 @@ from apps.inventory.models import (
     StockReservation,
     Warehouse,
 )
+from apps.organizations.models import Branch, Membership, Organization
 from apps.users.models import User
 
 pytestmark = pytest.mark.django_db
+
+
+def tenant():
+    return Organization.objects.get_or_create(
+        slug="inventory-company", defaults={"name": "Inventory company"}
+    )[0]
+
+
+def reverse(name, kwargs=None):
+    if name.startswith("inventory-"):
+        kwargs = {**(kwargs or {}), "org_id": tenant().pk}
+    return django_reverse(name, kwargs=kwargs)
 
 
 def identity(email, *, admin=False):
@@ -25,6 +38,9 @@ def identity(email, *, admin=False):
         is_staff=admin,
         is_superuser=admin,
     )
+    Membership.objects.create(
+        user=member, organization=tenant(), role="owner" if admin else "member"
+    )
     api = APIClient()
     api.credentials(HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(member).access_token}")
     return member, api
@@ -32,10 +48,16 @@ def identity(email, *, admin=False):
 
 @pytest.fixture
 def stock():
-    category = Category.objects.create(slug="tools", name="Tools")
-    item = CatalogItem.objects.create(category=category, sku="HAMMER-01", name="Hammer")
-    source = Warehouse.objects.create(code="main", name="Main")
-    destination = Warehouse.objects.create(code="branch", name="Branch")
+    org = tenant()
+    category = Category.objects.create(organization=org, slug="tools", name="Tools")
+    item = CatalogItem.objects.create(
+        organization=org, category=category, sku="HAMMER-01", name="Hammer"
+    )
+    branch = Branch.objects.create(organization=org, code="primary", name="Primary")
+    source = Warehouse.objects.create(organization=org, branch=branch, code="main", name="Main")
+    destination = Warehouse.objects.create(
+        organization=org, branch=branch, code="branch", name="Branch"
+    )
     admin, client = identity("inventory-admin@example.com", admin=True)
     return {
         "item": item,
@@ -193,12 +215,9 @@ def test_invalid_operation_shapes_and_over_reserved(stock):
 
 def test_non_admin_denied_every_inventory_endpoint(stock):
     _, viewer = identity("warehouse-viewer@example.com")
-    for name in (
-        "inventory-warehouses-list",
-        "inventory-balances-list",
-        "inventory-reservations-list",
-        "inventory-operations-list",
-    ):
+    for name in ("inventory-warehouses-list", "inventory-balances-list"):
+        assert viewer.get(reverse(name)).status_code == 200
+    for name in ("inventory-reservations-list", "inventory-operations-list"):
         assert viewer.get(reverse(name)).status_code == 403
     assert (
         viewer.post(
@@ -214,7 +233,7 @@ def test_warehouse_and_ledger_cannot_be_mutated_by_api(stock):
     api = stock["api"]
     created = api.post(
         reverse("inventory-warehouses-list"),
-        {"code": "new", "name": "New"},
+        {"code": "new", "name": "New", "branch": str(stock["source"].branch_id)},
         format="json",
     )
     assert created.status_code == 201
