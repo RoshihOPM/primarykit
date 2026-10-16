@@ -5,6 +5,7 @@ from rest_framework import serializers
 from apps.catalog.models import CatalogItem
 from apps.organizations.models import Branch
 
+from .domain import COMMAND_KINDS, StockRuleViolation, validate_command_shape
 from .models import InventoryOperation, StockBalance, StockReservation, Warehouse
 
 
@@ -60,7 +61,7 @@ class InventoryOperationSerializer(serializers.ModelSerializer):
 
 
 class StockCommandSerializer(serializers.Serializer):
-    KINDS = ("receive", "issue", "transfer", "reserve", "release", "consume")
+    KINDS = COMMAND_KINDS
     kind = serializers.ChoiceField(choices=KINDS)
     idempotency_key = serializers.CharField(max_length=128, min_length=8, trim_whitespace=True)
     warehouse = serializers.PrimaryKeyRelatedField(
@@ -107,19 +108,8 @@ class StockCommandSerializer(serializers.Serializer):
         return fields
 
     def validate(self, attrs):
-        kind = attrs["kind"]
-        if kind in {"release", "consume"}:
-            required = {"reservation"}
-            forbidden = {"warehouse", "destination", "item", "quantity"}
-        else:
-            required = {"warehouse", "item", "quantity"}
-            forbidden = {"reservation"}
-            if kind == "transfer":
-                required.add("destination")
-            else:
-                forbidden.add("destination")
-        if required - attrs.keys() or forbidden & attrs.keys():
-            raise serializers.ValidationError(
-                {"detail": "Invalid fields for this stock operation."}
-            )
+        try:
+            validate_command_shape(attrs["kind"], attrs)
+        except StockRuleViolation as exc:
+            raise serializers.ValidationError({"detail": str(exc)}) from exc
         return attrs
