@@ -8,7 +8,6 @@ from types import SimpleNamespace
 
 import pytest
 
-
 APPS_ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -135,8 +134,8 @@ def test_audit_domain_rejects_credentials_and_bad_ids():
 
 
 def test_access_lifecycle_and_delivery_intents():
-    from apps.users.domain import may_authenticate, may_send_verification
     from apps.notifications.domain import EmailIntent
+    from apps.users.domain import may_authenticate, may_send_verification
 
     assert may_authenticate(active=True, verified=True)
     assert not may_authenticate(active=True, verified=False)
