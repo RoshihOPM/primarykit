@@ -15,6 +15,7 @@ from scripts.new_project import create_project
         {"orders"},
         {"sales"},
         {"payments"},
+        {"tasks"},
         {"orders", "sales", "payments"},
         {"statistics", "orders", "sales", "payments"},
         {"statistics"},
@@ -50,6 +51,7 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
         "orders",
         "sales",
         "payments",
+        "tasks",
     ):
         assert (target / "apps" / app).exists() == (app in selected)
 
@@ -93,6 +95,7 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
         + (" orders" if "orders" in selected else "")
         + (" sales" if "sales" in selected else "")
         + (" payments" if "payments" in selected else "")
+        + (" tasks" if "tasks" in selected else "")
     )
     assert workflows.count(f"makemigrations {migration_apps} --noinput") == 2
     if "storage" in selected:
