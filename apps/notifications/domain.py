@@ -1,7 +1,7 @@
 """Notification intent is a value object; delivery is an external effect."""
 
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Mapping
 
 
 @dataclass(frozen=True)
