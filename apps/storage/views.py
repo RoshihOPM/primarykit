@@ -61,7 +61,7 @@ class StoredFileViewSet(
         return Response(StoredFileReadSerializer(file).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=["get"], url_path="download")
-    def download(self, request, pk=None):
+    def download(self, request, pk=None, org_id=None):
         file = self.get_object()
         try:
             stream = storages["default"].open(file.object_key, "rb")
