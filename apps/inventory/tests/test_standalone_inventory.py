@@ -99,11 +99,14 @@ def test_standalone_warehouse_stock_reservations_and_idempotency(stock):
     assert release.status_code == 200, release.data
     closed = StockReservation.objects.get(pk=reserve.data["reservation_id"])
     assert closed.status == "released"
-    assert command(
-        stock, "release", key="release-00002", reservation=closed.pk
-    ).status_code == 400
+    assert command(stock, "release", key="release-00002", reservation=closed.pk).status_code == 400
     transferred = command(
-        stock, "transfer", key="transfer-0001", quantity=3, source=source, destination=stock["target"]
+        stock,
+        "transfer",
+        key="transfer-0001",
+        quantity=3,
+        source=source,
+        destination=stock["target"],
     )
     assert transferred.status_code == 200, transferred.data
     assert StockBalance.objects.get(warehouse=source).on_hand == 7
@@ -119,25 +122,34 @@ def test_foreign_stock_is_denied_even_to_global_superuser(stock):
     _, root_api = principal("stock-superuser@standalone.test", superuser=True)
     for client in (other_api, root_api):
         assert client.get(reverse("inventory-items-list")).data["count"] == 0
-        assert client.get(
-            reverse("inventory-warehouses-detail", kwargs={"pk": stock["source"].pk})
-        ).status_code == 404
-        assert client.patch(
-            reverse("inventory-warehouses-detail", kwargs={"pk": stock["source"].pk}),
-            {"name": "Stolen"},
-            format="json",
-        ).status_code == 404
-        assert client.post(
-            reverse("inventory-operations-list"),
-            {
-                "kind": "receive",
-                "idempotency_key": "intruder-receipt",
-                "warehouse": str(stock["source"].pk),
-                "item": str(stock["item"].pk),
-                "quantity": 10,
-            },
-            format="json",
-        ).status_code == 400
+        assert (
+            client.get(
+                reverse("inventory-warehouses-detail", kwargs={"pk": stock["source"].pk})
+            ).status_code
+            == 404
+        )
+        assert (
+            client.patch(
+                reverse("inventory-warehouses-detail", kwargs={"pk": stock["source"].pk}),
+                {"name": "Stolen"},
+                format="json",
+            ).status_code
+            == 404
+        )
+        assert (
+            client.post(
+                reverse("inventory-operations-list"),
+                {
+                    "kind": "receive",
+                    "idempotency_key": "intruder-receipt",
+                    "warehouse": str(stock["source"].pk),
+                    "item": str(stock["item"].pk),
+                    "quantity": 10,
+                },
+                format="json",
+            ).status_code
+            == 400
+        )
 
     with pytest.raises(NotFound):
         execute_stock_operation(

@@ -92,7 +92,9 @@ class StockReservation(UUIDTimestampedModel):
 
     class Meta:
         constraints = [
-            models.CheckConstraint(condition=Q(quantity__gt=0), name="inventory_reserve_qty_positive")
+            models.CheckConstraint(
+                condition=Q(quantity__gt=0), name="inventory_reserve_qty_positive"
+            )
         ]
 
 
@@ -101,7 +103,9 @@ class InventoryOperation(UUIDTimestampedModel):
     key = models.CharField(max_length=128)
     fingerprint = models.CharField(max_length=64)
     kind = models.CharField(max_length=20)
-    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
     result = models.JSONField(default=dict)
 
     class Meta:
@@ -123,7 +127,9 @@ class ImmutableMovementQuerySet(models.QuerySet):
 
 
 class StockMovement(UUIDTimestampedModel):
-    operation = models.ForeignKey(InventoryOperation, on_delete=models.PROTECT, related_name="movements")
+    operation = models.ForeignKey(
+        InventoryOperation, on_delete=models.PROTECT, related_name="movements"
+    )
     balance = models.ForeignKey(StockBalance, on_delete=models.PROTECT, related_name="movements")
     kind = models.CharField(max_length=20)
     on_hand_delta = models.BigIntegerField(default=0)

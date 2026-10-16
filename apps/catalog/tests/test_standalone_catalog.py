@@ -60,12 +60,16 @@ def test_catalog_copy_has_owner_scoped_category_attributes_items_and_idor():
     assert client.get(reverse("catalog-items-list")).data["count"] == 1
     for unauthorized in (stranger, root):
         assert unauthorized.get(reverse("catalog-items-list")).data["count"] == 0
-        assert unauthorized.get(
-            reverse("catalog-items-detail", kwargs={"pk": product.pk})
-        ).status_code == 404
-        assert unauthorized.patch(
-            reverse("catalog-items-detail", kwargs={"pk": product.pk}), {"name": "Stolen"}
-        ).status_code == 404
+        assert (
+            unauthorized.get(reverse("catalog-items-detail", kwargs={"pk": product.pk})).status_code
+            == 404
+        )
+        assert (
+            unauthorized.patch(
+                reverse("catalog-items-detail", kwargs={"pk": product.pk}), {"name": "Stolen"}
+            ).status_code
+            == 404
+        )
 
 
 def test_personal_catalog_rejects_foreign_category_and_invalid_attributes():
@@ -94,11 +98,19 @@ def test_personal_catalog_rejects_foreign_category_and_invalid_attributes():
         format="json",
     )
     assert valid.status_code == 201, valid.data
-    assert api.post(
-        reverse("catalog-items-list"),
-        {"category": str(local.pk), "sku": "s1", "name": "Duplicate", "attributes": {"weight": 2}},
-        format="json",
-    ).status_code == 400
+    assert (
+        api.post(
+            reverse("catalog-items-list"),
+            {
+                "category": str(local.pk),
+                "sku": "s1",
+                "name": "Duplicate",
+                "attributes": {"weight": 2},
+            },
+            format="json",
+        ).status_code
+        == 400
+    )
     with pytest.raises(DjangoValidationError):
         CatalogItem.objects.create(owner=other, category=local, sku="BAD", name="Bad")
     assert other_api.get(reverse("catalog-categories-list")).data["count"] == 1

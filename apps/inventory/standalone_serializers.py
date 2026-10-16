@@ -86,9 +86,7 @@ class StockCommandSerializer(serializers.Serializer):
         fields["warehouse"].queryset = warehouses
         fields["destination"].queryset = warehouses
         fields["item"].queryset = InventoryItem.objects.filter(owner=actor, is_active=True)
-        fields["reservation"].queryset = StockReservation.objects.filter(
-            balance__owner=actor
-        )
+        fields["reservation"].queryset = StockReservation.objects.filter(balance__owner=actor)
         return fields
 
     def validate(self, attrs):

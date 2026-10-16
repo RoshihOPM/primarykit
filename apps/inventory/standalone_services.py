@@ -66,14 +66,10 @@ def _balance_dict(balance):
 def _locked_balances(actor, pairs):
     ids = []
     for warehouse, item in sorted(pairs, key=lambda p: (str(p[0].pk), str(p[1].pk))):
-        row, _ = StockBalance.objects.get_or_create(
-            owner=actor, warehouse=warehouse, item=item
-        )
+        row, _ = StockBalance.objects.get_or_create(owner=actor, warehouse=warehouse, item=item)
         ids.append(row.pk)
     balances = list(
-        StockBalance.objects.select_for_update()
-        .filter(owner=actor, pk__in=ids)
-        .order_by("pk")
+        StockBalance.objects.select_for_update().filter(owner=actor, pk__in=ids).order_by("pk")
     )
     return {(row.warehouse_id, row.item_id): row for row in balances}
 
@@ -171,9 +167,9 @@ def execute_stock_operation(*, actor, data, organization=None):
     key = data["idempotency_key"]
 
     def lock_actor():
-        locked = get_user_model().objects.select_for_update().filter(
-            pk=actor.pk, is_active=True
-        ).first()
+        locked = (
+            get_user_model().objects.select_for_update().filter(pk=actor.pk, is_active=True).first()
+        )
         if locked is None:
             raise NotFound()
         _require_owner(locked, data)
