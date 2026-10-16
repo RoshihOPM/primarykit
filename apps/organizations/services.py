@@ -6,19 +6,15 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 
 from apps.core.audit import record_audit_event
 
+from .domain import can_invite, may_assign_explicit_branches, may_manage_role, preserves_active_owner
 from .models import Branch, BranchAccess, Invitation, Membership, Organization
 from .permissions import get_active_membership
 
 
 def _can_manage(actor_membership, target_role, new_role=None):
-    if actor_membership.role == Membership.Role.OWNER:
-        return
-    if actor_membership.role != Membership.Role.ADMIN:
-        raise PermissionDenied("Only owners and admins manage members.")
-    if target_role in (Membership.Role.OWNER, Membership.Role.ADMIN) or new_role in (
-        Membership.Role.OWNER,
-        Membership.Role.ADMIN,
-    ):
+    if not may_manage_role(actor_membership.role, target_role, new_role):
+        if actor_membership.role != Membership.Role.ADMIN:
+            raise PermissionDenied("Only owners and admins manage members.")
         raise PermissionDenied("Only owners may manage privileged roles.")
 
 
@@ -30,7 +26,13 @@ def _preserve_owner(organization, member, *, new_role=None, deactivate=False):
     owners = Membership.objects.filter(
         organization=organization, role=Membership.Role.OWNER, is_active=True
     ).count()
-    if owners <= 1:
+    if not preserves_active_owner(
+        member_role=member.role,
+        member_active=member.is_active,
+        next_role=new_role,
+        deactivate=deactivate,
+        active_owner_count=owners,
+    ):
         raise ValidationError({"role": "An organization must retain an active owner."})
 
 
@@ -92,7 +94,7 @@ def set_branch_access(*, actor, organization, membership_id, branch_ids):
     if member is None:
         raise ValidationError({"member": "Active membership does not exist."})
     _can_manage(manager, member.role)
-    if member.role in (Membership.Role.OWNER, Membership.Role.ADMIN):
+    if not may_assign_explicit_branches(member.role):
         raise ValidationError({"branches": "Owner and admin have full branch access."})
     branches = list(Branch.objects.filter(organization=org, is_active=True, pk__in=branch_ids))
     if len(branches) != len(branch_ids):
@@ -118,7 +120,7 @@ def create_invitation(*, actor, organization, invitee, role):
     _can_manage(manager, role, role)
     if role == Membership.Role.OWNER:
         raise ValidationError({"role": "Owner role must be assigned by an existing owner."})
-    if not invitee.is_active or not invitee.email_verified:
+    if not can_invite(role=role, is_active=invitee.is_active, verified=invitee.email_verified):
         raise ValidationError({"invitee": "Recipient must have a verified account."})
     existing = Membership.objects.filter(organization=org, user=invitee, is_active=True)
     if existing.exists():
