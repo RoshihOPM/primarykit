@@ -1,11 +1,11 @@
 import pytest
 from django.urls import reverse as django_reverse
 
-from apps.organizations.models import Membership, Organization
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.catalog.models import AttributeDefinition, CatalogItem, Category
+from apps.organizations.models import Membership, Organization
 from apps.users.models import User
 
 pytestmark = pytest.mark.django_db
