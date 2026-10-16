@@ -193,3 +193,19 @@ before updating a populated database.
 В восьми существующих контекстах бизнес-правила вынесены в `domain.py` и не зависят от Django/DRF. `services.py` — прикладной слой: транзакции, ORM, авторизация, идемпотентность и аудит. Django/DRF предоставляет входящие адаптеры; Notifications отправляет сообщения через интерфейс `EmailGateway` и Django-адаптер. Для отдельных простых CRUD дополнительные слои не создаются.
 
 Тест `apps/core/tests/test_ddd_boundaries.py` проверяет чистоту доменного кода и инварианты, в том числе при генерации проекта с выбранным подмножеством модулей. Реализован прагматичный DDD-модульный монолит, **не** CQRS, event sourcing или полноценная распределённая система. [Решение ADR 0003](docs/adr/0003-implemented-ddd-boundaries.md).
+
+## Copy-and-run modules
+
+Каждый переносимый модуль содержит `manifest.py` (обязательные зависимости, необязательные интеграции и URL). В заранее подготовленном Django-проекте из PrimaryKit достаточно скопировать независимый модуль в `apps/<name>/`: `INSTALLED_APPS` и API-маршруты находятся автоматически при следующем запуске.
+
+Например, если в проекте уже есть базовые `core`, `users`, `notifications`, скопируйте `apps/storage/` — появится личный API `/api/v1/files/`. Если дополнительно есть `apps/organizations/`, автоматически появится безопасный корпоративный маршрут. После копирования моделей **нужно создать, проверить и закоммитить миграции, а затем применить их**. Копирование папки не устанавливает зависимости из PyPI и не настраивает внешние S3/SMTP-сервисы.
+
+Для модулей с **жёсткими зависимостями**, таких как Inventory (требует Catalog и Organizations), есть команда установки из локального проверенного каталога:
+
+```bash
+python manage.py install_kit_module inventory --source ../primarykit
+python manage.py makemigrations organizations catalog inventory
+python manage.py migrate
+```
+
+Команда копирует отсутствующие папки, не перезаписывая существующие. Подробнее: [Plug & Play ADR](docs/adr/0004-copyable-module-contract.md) и [генератор](docs/project-generator.md).

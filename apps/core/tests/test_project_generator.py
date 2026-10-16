@@ -2,6 +2,7 @@ import json
 
 import pytest
 
+from apps.core.module_registry import dependency_closure, discover_modules
 from scripts.new_project import create_project
 
 
@@ -27,26 +28,20 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
     assert (target / "apps" / "core").exists()
     assert (target / "apps" / "users").exists()
     assert (target / "apps" / "notifications").exists()
-    selected = set(apps)
-    if "inventory" in selected:
-        selected.add("catalog")
-    if "catalog" in selected:
-        selected.add("organizations")
+    selected = dependency_closure(
+        discover_modules(), {"core", "users", "notifications"} | set(apps)
+    )
     for app in ("rbac", "audit", "storage", "catalog", "inventory", "organizations"):
         assert (target / "apps" / app).exists() == (app in selected)
 
     settings = (target / "config/settings/base.py").read_text()
     urls = (target / "config/urls.py").read_text()
-    for app, prefix in (
-        ("rbac", "api/v1/admin/rbac/"),
-        ("audit", "api/v1/admin/audit/"),
-        ("storage", 'include("apps.storage.urls")'),
-        ("catalog", 'include("apps.catalog.urls")'),
-        ("inventory", 'include("apps.inventory.urls")'),
-        ("organizations", 'include("apps.organizations.urls")'),
-    ):
-        assert (f'"apps.{app}"' in settings) == (app in selected)
-        assert (prefix in urls) == (app in selected)
+    assert "*installed_module_apps()" in settings
+    assert "module_routes()" in urls
+    for name in selected:
+        assert (target / "apps" / name / "manifest.py").is_file()
+    for name in set(discover_modules()) - selected:
+        assert not (target / "apps" / name).exists()
 
     assert 'name = "demo-api"' in (target / "pyproject.toml").read_text()
     assert 'name = "demo-api"' in (target / "uv.lock").read_text()
@@ -58,7 +53,7 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
     assert (target / "compose.seaweedfs.yaml").exists() == ("storage" in apps)
 
     metadata = json.loads((target / "primarykit-origin.json").read_text())
-    assert set(metadata["included_apps"]) == {"core", "users", "notifications"} | selected
+    assert set(metadata["included_apps"]) == selected
     workflows = (target / ".github/workflows/ci.yaml").read_text()
     migration_apps = (
         "users"
@@ -69,14 +64,9 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
         + (" organizations" if "organizations" in selected else "")
     )
     assert workflows.count(f"makemigrations {migration_apps} --noinput") == 2
-    assert ('path("api/v1/", include("apps.storage.urls"))' in urls) == ("storage" in selected)
-    tenant_route = 'path("api/v1/organizations/<uuid:org_id>/", include("apps.storage.urls"))'
-    assert (tenant_route in urls) == ("storage" in selected and "organizations" in selected)
     if "storage" in selected:
         assert (target / "apps/storage/tests/test_personal_storage.py").exists()
-        assert (target / "apps/storage/tests/test_storage.py").exists() == (
-            "organizations" in selected
-        )
+        assert (target / "apps/storage/tests/test_storage.py").exists()
 
 
 def test_generator_rejects_existing_directory_and_invalid_input(tmp_path):

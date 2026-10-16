@@ -10,11 +10,14 @@ from rest_framework.exceptions import NotFound
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from apps.organizations.models import Membership, Organization
 from apps.storage.models import StoredFile
 from apps.storage.policies import resolve_file_scope
 from apps.storage.services import save_private_file, soft_delete_private_file
 from apps.users.models import User
+
+organization_models = pytest.importorskip("apps.organizations.models")
+Membership = organization_models.Membership
+Organization = organization_models.Organization
 
 pytestmark = pytest.mark.django_db
 

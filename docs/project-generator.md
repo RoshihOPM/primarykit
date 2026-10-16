@@ -68,3 +68,24 @@ Creating a company via `POST /api/v1/organizations/` is the first step.
 database requires an explicit data-migration plan. Never assign all existing
 products, warehouses or movements to an arbitrary company. Follow the
 Catalog and Inventory architecture migration playbooks.
+
+## Copy an additional module into an existing generated project
+
+```bash
+# Run inside the generated project; an independent copied module also works via file copy:
+python manage.py install_kit_module storage --source ../primarykit
+python manage.py makemigrations storage
+python manage.py migrate
+
+# Install an existing feature bundle with all its required submodules:
+python manage.py install_kit_module inventory --source ../primarykit --dry-run
+python manage.py install_kit_module inventory --source ../primarykit
+python manage.py makemigrations organizations catalog inventory
+python manage.py migrate
+```
+
+Modules are detected by the presence of `apps/<name>/manifest.py`. No `INSTALLED_APPS` or `config/urls.py` edits are necessary. Source checkout must be trusted; never copy unreviewed code into a production server. The installer is an explicit filesystem operation; it does **not** perform migrations, deploy, install external pip dependencies or overwrite an existing module. Restart running Django processes after copying.
+
+**Honest dependency boundary:** `storage` works with the baseline without Organizations. `inventory` still requires both `catalog` and `organizations` in its existing ORM. The installer selects that dependency closure automatically; copying only `inventory/` without the required folders fails fast rather than permitting unsafe behavior. Standalone Inventory is a separate future schema/API design, not accomplished by manifest discovery.
+
+For copied modules that already have historical migrations, preserve them. For source-catalog modules without migrations, generate migrations **once in the new project** and commit them. Never regenerate the initial migrations of a running client.
