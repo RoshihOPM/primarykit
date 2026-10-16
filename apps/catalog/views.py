@@ -6,6 +6,8 @@ from rest_framework.permissions import SAFE_METHODS
 
 from apps.core.audit import record_audit_event
 from apps.organizations.scoping import organization_scope, require_writer
+from apps.organizations.permissions import get_active_membership
+from apps.organizations.models import Organization
 
 from .models import AttributeDefinition, CatalogItem, Category
 from .permissions import CatalogAccess
@@ -31,6 +33,12 @@ class CatalogScopeMixin:
     def check_write_role(self):
         require_writer(self.get_scope()[1])
 
+    def lock_and_check_writer(self):
+        org = Organization.objects.select_for_update().get(pk=self.get_scope()[0].pk)
+        membership = get_active_membership(user=self.request.user, organization=org)
+        require_writer(membership)
+        return org
+
 
 class AuditedCatalogViewSet(CatalogScopeMixin, viewsets.ModelViewSet):
     http_method_names = ("get", "post", "patch", "head", "options")
@@ -38,8 +46,7 @@ class AuditedCatalogViewSet(CatalogScopeMixin, viewsets.ModelViewSet):
 
     @transaction.atomic
     def perform_create(self, serializer):
-        self.check_write_role()
-        org = self.get_scope()[0]
+        org = self.lock_and_check_writer()
         obj = serializer.save(organization=org)
         record_audit_event(
             actor=self.request.user,
@@ -51,7 +58,7 @@ class AuditedCatalogViewSet(CatalogScopeMixin, viewsets.ModelViewSet):
 
     @transaction.atomic
     def perform_update(self, serializer):
-        self.check_write_role()
+        self.lock_and_check_writer()
         obj = serializer.save()
         record_audit_event(
             actor=self.request.user,
@@ -117,7 +124,7 @@ class AttributeDefinitionViewSet(
 
     @transaction.atomic
     def perform_create(self, serializer):
-        self.check_write_role()
+        self.lock_and_check_writer()
         obj = serializer.save()
         record_audit_event(
             actor=self.request.user,

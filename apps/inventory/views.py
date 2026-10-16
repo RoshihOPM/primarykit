@@ -3,6 +3,7 @@
 from django.db import transaction
 from rest_framework import mixins, status, viewsets
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.permissions import SAFE_METHODS
 from rest_framework.response import Response
 
 from apps.core.audit import record_audit_event
@@ -13,6 +14,8 @@ from apps.organizations.scoping import (
     organization_scope,
     require_writer,
 )
+from apps.organizations.permissions import get_active_membership
+from apps.organizations.models import Organization
 
 from .models import InventoryOperation, StockBalance, StockReservation, Warehouse
 from .serializers import (
@@ -26,6 +29,18 @@ from .services import execute_stock_operation
 
 
 class InventoryScopeMixin:
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        _, membership = self.get_scope()
+        if request.method not in SAFE_METHODS:
+            require_writer(membership)
+
+    def lock_and_check_writer(self):
+        org = Organization.objects.select_for_update().get(pk=self.get_scope()[0].pk)
+        membership = get_active_membership(user=self.request.user, organization=org)
+        require_writer(membership)
+        return org
+
     def get_scope(self):
         if not hasattr(self, "_tenant_scope"):
             self._tenant_scope = organization_scope(
@@ -54,8 +69,8 @@ class WarehouseViewSet(InventoryScopeMixin, viewsets.ModelViewSet):
 
     @transaction.atomic
     def perform_create(self, serializer):
-        require_writer(self.get_scope()[1])
-        warehouse = serializer.save(organization=self.get_scope()[0])
+        org = self.lock_and_check_writer()
+        warehouse = serializer.save(organization=org)
         record_audit_event(
             actor=self.request.user,
             action="inventory.warehouse.created",
@@ -65,7 +80,7 @@ class WarehouseViewSet(InventoryScopeMixin, viewsets.ModelViewSet):
 
     @transaction.atomic
     def perform_update(self, serializer):
-        require_writer(self.get_scope()[1])
+        self.lock_and_check_writer()
         warehouse = serializer.save()
         record_audit_event(
             actor=self.request.user,

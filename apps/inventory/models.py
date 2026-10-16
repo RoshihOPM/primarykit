@@ -157,6 +157,15 @@ class StockMovement(UUIDTimestampedModel):
     def save(self, *args, **kwargs):
         if not self._state.adding:
             raise ValidationError("Stock movements are immutable.")
+        if self.operation_id and self.balance_id:
+            operation_org = InventoryOperation.objects.filter(pk=self.operation_id).values_list(
+                "organization_id", flat=True
+            ).first()
+            balance_org = StockBalance.objects.filter(pk=self.balance_id).values_list(
+                "organization_id", flat=True
+            ).first()
+            if operation_org != balance_org:
+                raise ValidationError("Movement's operation and balance must share one organization.")
         return super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
