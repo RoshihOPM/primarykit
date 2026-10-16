@@ -48,8 +48,7 @@ def test_durable_queue_idempotency_and_namespace_isolation():
     first = enqueue(code="test.ok", payload={"item": 1}, idempotency_key="req-1")
     assert enqueue(code="test.ok", payload={"item": 1}, idempotency_key="req-1").pk == first.pk
     assert (
-        enqueue(code="test.ok", payload={"item": 1}, idempotency_key="req-1", namespace="org:2")
-        .pk
+        enqueue(code="test.ok", payload={"item": 1}, idempotency_key="req-1", namespace="org:2").pk
         != first.pk
     )
     assert BackgroundJob.objects.count() == 2
@@ -82,7 +81,9 @@ def test_worker_failure_retry_and_dead_letter_state():
     assert job.status == BackgroundJob.Status.PENDING
     assert job.last_error == "RuntimeError"
     assert "never-log" not in job.last_error
-    BackgroundJob.objects.filter(pk=job.pk).update(available_at=timezone.now() - timedelta(seconds=1))
+    BackgroundJob.objects.filter(pk=job.pk).update(
+        available_at=timezone.now() - timedelta(seconds=1)
+    )
     assert run_next()
     job.refresh_from_db()
     assert job.status == BackgroundJob.Status.FAILED
@@ -159,7 +160,8 @@ def test_postgresql_two_workers_claim_a_single_job():
 
 
 @pytest.mark.django_db
+@override_settings(BACKGROUND_JOB_HANDLERS={})
 def test_no_worker_handler_by_default():
-    assert settings.BACKGROUND_JOB_HANDLERS == {} if hasattr(settings, "BACKGROUND_JOB_HANDLERS") else True
+    assert settings.BACKGROUND_JOB_HANDLERS == {}
     with pytest.raises(ValueError, match="Unknown"):
         enqueue(code="test.ok", payload={})
