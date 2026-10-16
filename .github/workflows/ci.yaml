@@ -35,6 +35,13 @@ jobs:
           uv run python manage.py check --settings=config.settings.test
           uv run pytest
           cd -
+          uv run python scripts/new_project.py /tmp/primarykit-storage-client --name storage-client --apps storage
+          cd /tmp/primarykit-storage-client
+          uv sync --locked --all-groups
+          uv run python manage.py makemigrations users storage organizations --noinput --settings=config.settings.test
+          uv run python manage.py check --settings=config.settings.test
+          uv run pytest
+          cd -
           uv run python scripts/new_project.py /tmp/primarykit-inventory-client --name inventory-client --apps inventory
           cd /tmp/primarykit-inventory-client
           uv sync --locked --all-groups
