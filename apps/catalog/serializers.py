@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from .domain import CatalogRuleViolation, normalize_sku
 from .models import AttributeDefinition, CatalogItem, Category
 from .services import validate_attributes
 
@@ -74,9 +75,10 @@ class CatalogItemSerializer(serializers.ModelSerializer):
         return attrs
 
     def validate_sku(self, value):
-        value = value.strip().upper()
-        if not value:
-            raise serializers.ValidationError("SKU cannot be empty.")
+        try:
+            value = normalize_sku(value)
+        except CatalogRuleViolation as exc:
+            raise serializers.ValidationError(str(exc)) from exc
         org = self.context["view"].get_scope()[0]
         if (
             CatalogItem.objects.filter(organization=org, sku__iexact=value)
