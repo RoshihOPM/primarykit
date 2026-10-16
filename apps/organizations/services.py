@@ -6,7 +6,12 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 
 from apps.core.audit import record_audit_event
 
-from .domain import can_invite, may_assign_explicit_branches, may_manage_role, preserves_active_owner
+from .domain import (
+    can_invite,
+    may_assign_explicit_branches,
+    may_manage_role,
+    preserves_active_owner,
+)
 from .models import Branch, BranchAccess, Invitation, Membership, Organization
 from .permissions import get_active_membership
 
