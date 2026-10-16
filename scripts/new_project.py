@@ -6,11 +6,15 @@ import json
 import re
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
-from apps.core.module_registry import dependency_closure, discover_modules
-
 SOURCE_ROOT = Path(__file__).resolve().parents[1]
+# Direct execution (python scripts/new_project.py) has scripts/ as sys.path[0].
+if __package__ in (None, ""):
+    sys.path.insert(0, str(SOURCE_ROOT))
+
+from apps.core.module_registry import dependency_closure, discover_modules  # noqa: E402
 
 REQUIRED_APPS = frozenset({"core", "users", "notifications"})
 AVAILABLE_MODULES = discover_modules()
