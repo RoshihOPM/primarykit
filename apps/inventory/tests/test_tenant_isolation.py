@@ -217,8 +217,11 @@ def test_existing_reservation_can_be_released_after_warehouse_deactivation(two_c
     t = two_companies
     command_url = url(t["a"], "inventory-operations-list")
     receipt = {
-        "kind": "receive", "idempotency_key": "receipt-old-00001",
-        "warehouse": str(t["wh_a"].pk), "item": str(t["item_a"].pk), "quantity": 8,
+        "kind": "receive",
+        "idempotency_key": "receipt-old-00001",
+        "warehouse": str(t["wh_a"].pk),
+        "item": str(t["item_a"].pk),
+        "quantity": 8,
     }
     assert t["api_a"].post(command_url, receipt, format="json").status_code == 200
     receipt["kind"] = "reserve"
@@ -226,14 +229,24 @@ def test_existing_reservation_can_be_released_after_warehouse_deactivation(two_c
     receipt["quantity"] = 4
     reservation = t["api_a"].post(command_url, receipt, format="json")
     assert reservation.status_code == 200
-    assert t["api_a"].patch(
-        url(t["a"], "inventory-warehouses-detail", pk=t["wh_a"].pk),
-        {"is_active": False}, format="json",
-    ).status_code == 200
+    assert (
+        t["api_a"]
+        .patch(
+            url(t["a"], "inventory-warehouses-detail", pk=t["wh_a"].pk),
+            {"is_active": False},
+            format="json",
+        )
+        .status_code
+        == 200
+    )
     release = t["api_a"].post(
         command_url,
-        {"kind": "release", "idempotency_key": "release-old-00001",
-         "reservation": reservation.data["reservation_id"]}, format="json",
+        {
+            "kind": "release",
+            "idempotency_key": "release-old-00001",
+            "reservation": reservation.data["reservation_id"],
+        },
+        format="json",
     )
     assert release.status_code == 200, release.data
     balance = StockBalance.objects.get(organization=t["a"])
