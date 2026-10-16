@@ -101,3 +101,13 @@ uv run python scripts/new_project.py ../b2b-stock --name b2b-stock --apps organi
 Catalog-only and Inventory-only projects install **no extra business app**. The generator pins `CATALOG_MODE` and `INVENTORY_MODE` to `standalone` in standalone projects. For a selected company-integrated bundle it pins `tenant` before the project's first migration. Do not change a pinned schema mode on a populated database. The original tenant models, routes and branch authorization are preserved for B2B projects.
 
 For an existing generated project that has no Catalog/Inventory, a raw copy or `install_kit_module` installs standalone apps when their modes in settings are `standalone`. Verify these settings before generating migrations. No runtime magic migrates existing rows or connects inventory SKUs to Catalog SKUs.
+
+## Statistics: optional metrics provided by installed modules
+
+```bash
+uv run python scripts/new_project.py ../stats-alone --name stats-alone --apps statistics
+uv run python scripts/new_project.py ../warehouse-stats --name warehouse-stats --apps statistics inventory
+uv run python scripts/new_project.py ../company-stats --name company-stats --apps statistics organizations catalog inventory
+```
+
+Statistics adds **no database tables**, and no extra required Catalog/Inventory/Organizations modules. Its local `manifest.py` auto-registers the personal, conditional tenant, and system statistics routes. Installed modules with `statistics.py` provide their own safe metric definitions. Personal and tenant mode providers respect the project's pinned schema choice. See [Statistics architecture](statistics-architecture.md).

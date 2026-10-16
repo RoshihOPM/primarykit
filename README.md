@@ -220,3 +220,7 @@ uv run python scripts/new_project.py ../stock-app --name stock-app --apps invent
 ```
 
 **Важно:** на работающем проекте менять `CATALOG_MODE` или `INVENTORY_MODE` простой настройкой нельзя — модели различаются, требуется спланированная миграция данных. Добавление папки Organizations само по себе режим не переключает. [ADR 0005](docs/adr/0005-standalone-catalog-inventory.md).
+
+## Plug & Play Statistics
+
+`--apps statistics` добавляет независимый read-only API метрик. Каждый установленный бизнес-модуль сам определяет показатели в `apps/<module>/statistics.py`, а Statistics автоматически обнаруживает только доступные провайдеры. Без дополнительных модулей пользователь получит пустой набор личных метрик — это корректно. Есть строго разграниченные маршруты: `/api/v1/statistics/` (личные), `/api/v1/organizations/{org_id}/statistics/` (владелец/администратор компании) и `/api/v1/admin/statistics/` (только суперпользователь). Периоды: сегодня, 7 дней, 30 дней и произвольный диапазон. Системные показатели пользователей и аудит никогда не доступны обычным пользователям. Подробнее: [Statistics v1](docs/statistics-architecture.md).
