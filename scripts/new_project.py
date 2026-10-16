@@ -8,25 +8,14 @@ import shutil
 import subprocess
 from pathlib import Path
 
+from apps.core.module_registry import dependency_closure, discover_modules
+
 SOURCE_ROOT = Path(__file__).resolve().parents[1]
 
 REQUIRED_APPS = frozenset({"core", "users", "notifications"})
-OPTIONAL_APPS = frozenset({"rbac", "audit", "storage", "catalog", "inventory", "organizations"})
+AVAILABLE_MODULES = discover_modules()
+OPTIONAL_APPS = frozenset(AVAILABLE_MODULES) - REQUIRED_APPS
 MIGRATION_APPS = ("users", "audit", "storage", "catalog", "inventory", "organizations")
-
-URL_ROWS = {
-    "rbac": '    path("api/v1/admin/rbac/", include("apps.rbac.urls")),\n',
-    "audit": '    path("api/v1/admin/audit/", include("apps.audit.urls")),\n',
-    "storage": '    path("api/v1/", include("apps.storage.urls")),\n',
-    "catalog": '    path("api/v1/organizations/<uuid:org_id>/catalog/", include("apps.catalog.urls")),\n',
-    "inventory": '    path("api/v1/organizations/<uuid:org_id>/inventory/", include("apps.inventory.urls")),\n',
-    "organizations": '    path("api/v1/", include("apps.organizations.urls")),\n',
-}
-
-
-STORAGE_TENANT_ROW = (
-    '    path("api/v1/organizations/<uuid:org_id>/", include("apps.storage.urls")),\n'
-)
 
 
 def _ignore_excluded(directory, names):
@@ -80,11 +69,7 @@ def create_project(
     if target.exists():
         raise FileExistsError(f"Destination already exists: {target}")
 
-    selected = set(REQUIRED_APPS) | set(optional_apps)
-    if "inventory" in selected:
-        selected.add("catalog")
-    if "catalog" in selected:
-        selected.add("organizations")
+    selected = dependency_closure(AVAILABLE_MODULES, set(REQUIRED_APPS) | set(optional_apps))
     target.parent.mkdir(parents=True, exist_ok=True)
     try:
         shutil.copytree(root, target, ignore=_ignore_excluded)
@@ -96,13 +81,7 @@ def create_project(
         # Generator remains with the source catalog only, not in client projects.
         shutil.rmtree(target / "scripts")
         (target / "apps" / "core" / "tests" / "test_project_generator.py").unlink()
-        settings = target / "config" / "settings" / "base.py"
-        routes = target / "config" / "urls.py"
-        for module in OPTIONAL_APPS - selected:
-            _replace_one(settings, f'    "apps.{module}",\n', "")
-            _replace_one(routes, URL_ROWS[module], "")
-        if "storage" not in selected or "organizations" not in selected:
-            _replace_one(routes, STORAGE_TENANT_ROW, "")
+        # Installed apps and URLs are discovered from each copied manifest.py.
         if "storage" in selected and "organizations" not in selected:
             # Standalone Storage's test suite does not import the optional adapter.
             (target / "apps/storage/tests/test_storage.py").unlink()
@@ -187,11 +166,7 @@ def main():
         optional_apps=set(args.apps),
         git_init=args.git_init,
     )
-    copied = set(REQUIRED_APPS) | set(args.apps)
-    if "inventory" in copied:
-        copied.add("catalog")
-    if "catalog" in copied:
-        copied.add("organizations")
+    copied = dependency_closure(AVAILABLE_MODULES, set(REQUIRED_APPS) | set(args.apps))
     print(f"Created {target} with apps: {', '.join(sorted(copied))}")
     print("Next: copy .env.example to .env, run uv sync --locked, generate migrations and test.")
 
