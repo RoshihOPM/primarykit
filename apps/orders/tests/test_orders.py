@@ -1,7 +1,7 @@
 """Order snapshots remain private and idempotent with or without other apps."""
 
 import pytest
-from rest_framework.exceptions import NotFound, ValidationError
+from rest_framework.exceptions import NotFound
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
