@@ -65,13 +65,10 @@ def record_sale(*, actor, currency, lines, idempotency_key, source_order_id=None
         if order.currency != currency or order.total_minor != total:
             raise ValidationError({"source_order_id": "Sale must match order currency and total."})
         order_lines = list(
-            order.items.order_by("pk").values_list(
-                "sku", "title", "quantity", "unit_price_minor"
-            )
+            order.items.order_by("pk").values_list("sku", "title", "quantity", "unit_price_minor")
         )
         sale_lines = [
-            (line.sku, line.title, line.quantity, line.unit_price_minor)
-            for line in normalized
+            (line.sku, line.title, line.quantity, line.unit_price_minor) for line in normalized
         ]
         if order_lines != sale_lines:
             raise ValidationError({"source_order_id": "Sale lines must match order snapshot."})
