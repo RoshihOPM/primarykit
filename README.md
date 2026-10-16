@@ -1,226 +1,106 @@
 # PrimaryKit
 
-Личный конструктор Django backend-проектов с переиспользуемым исходным кодом.
+**PrimaryKit — конструктор Django REST API из переносимых модулей.** Выбираешь готовый функционал (пользователи, каталог, склад, заказы, продажи, платежи, файлы, статистика), создаёшь проект или копируешь папку модуля, фиксируешь миграции и запускаешь собственный backend.
 
-Архитектурный ориентир — [djancore](https://github.com/vathna-vuthy/djancore), но PrimaryKit развивается независимо. **Core** — обычный Django-проект в `config/`, `apps/` — каталог прикладных модулей.
+Это **каталог исходников + генератор проектов**, а не SaaS, не микросервисная платформа и не пакет, который автоматически обновляет все клиентские приложения. Сгенерированный проект независим: он владеет своим кодом, миграциями, инфраструктурой и релизами.
 
-## Stack
+## Быстрый старт
 
-Python 3.13 · Django 6.1 · Django REST Framework · PostgreSQL 17 · uv · Docker Compose · Gunicorn · pytest-django · Ruff.
-
-## Локальный запуск с Docker
-
-1. Скопируйте `.env.example` в `.env` и измените значения по необходимости.
-2. Запустите `docker compose up --build -d`.
-3. **Для нового проекта один раз** сгенерируйте миграцию пользователя:
-   `docker compose exec api python manage.py makemigrations users audit storage`
-4. Выполните `docker compose exec api python manage.py migrate`.
-5. Проверьте `http://localhost:8000/health/live/` и `http://localhost:8000/health/ready/`.
-6. Создайте администратора: `docker compose exec api python manage.py createsuperuser`.
-
-Это исходный **конструктор**, поэтому миграции пользовательских приложений не хранятся в каталоге PrimaryKit. В созданном из него проекте **обязательно коммитьте полученные миграции** до первого развёртывания.
-
-## Локальный запуск через uv
+Нужны Python 3.13, `uv`, Git и PostgreSQL (для Docker-сценария также Docker Compose).
 
 ```bash
+git clone https://github.com/RoshihOPM/primarykit.git
+cd primarykit
+uv sync --locked
+uv run python scripts/new_project.py ../shop-api --name shop-api --apps catalog inventory orders sales payments statistics --git-init
+cd ../shop-api
 cp .env.example .env
 docker compose up -d db
-uv sync --locked
-uv run python manage.py makemigrations users audit storage
+uv run python manage.py makemigrations users catalog inventory orders sales payments
 uv run python manage.py migrate
 uv run python manage.py runserver
 ```
 
-Локальный Postgres пробрасывается только на 127.0.0.1:5432. В Windows PowerShell вместо `cp` можно использовать `Copy-Item`.
+После запуска: [health/live](http://127.0.0.1:8000/health/live/) и Swagger [api/docs](http://127.0.0.1:8000/api/docs/) (при `DEBUG` в локальных настройках). Миграции нужно **сохранить в Git созданного проекта**. Для Windows PowerShell используйте `Copy-Item .env.example .env` вместо `cp`.
 
-## Контроль качества
+Важно: в команде выше Catalog и Inventory работают в **standalone**-режиме (собственные товары/склады, без Organizations). Для организации/филиалов добавьте `organizations` при генерации проекта **до создания миграций**.
+
+Подробнее: **[Руководство по установке](docs/getting-started.md)**.
+
+## Документация
+
+| Раздел | Для чего |
+| --- | --- |
+| [Старт и установка](docs/getting-started.md) | Установка, .env, Docker, uv, миграции, первый API |
+| [Каталог модулей](docs/modules.md) | Что даёт каждая папка, обязательные и необязательные зависимости |
+| [Как устроена репа](docs/repository-guide.md) | Архитектура, manifest, Django/DDD, переносимость |
+| [Создание и подключение модулей](docs/module-development.md) | Пошаговая разработка своего Django-приложения |
+| [Генератор проектов](docs/project-generator.md) | CLI-аргументы, выбор модулей, миграции, `--git-init` |
+| [Commerce: Orders, Sales, Payments](docs/commerce-architecture.md) | API, состояния, деньги, инварианты, безопасность |
+| [Статистика](docs/statistics-architecture.md) | Как бизнес-модули отдают метрики |
+| [Развёртывание](docs/deployment.md) | Dev/prod, nginx, переменные и эксплуатационные ограничения |
+| [Правила агентов](AGENTS.md) | Код-стайл, тесты, архитектурные границы |
+| [ADR](docs/adr/0001-copy-based-modular-monolith.md) | Решения и архитектурные компромиссы |
+
+[Полный индекс документации](docs/README.md).
+
+## Модули
+
+| Модуль | Что умеет |
+| --- | --- |
+| **core** | Настройки проекта, абстрактные модели, healthcheck, registry |
+| **users** | JWT, email auth, профиль, восстановление |
+| **notifications** | Шаблоны писем и email backend |
+| organizations | Компании, роли участников, филиалы |
+| rbac | Назначение Django Groups/Permissions |
+| audit | Неизменяемый журнал действий |
+| storage | Приватные файлы, локальный/S3 backend |
+| catalog | Категории, SKU, типизированные атрибуты |
+| inventory | Склады, остатки, резервы, движение |
+| statistics | Автоматическое обнаружение метрик модулей |
+| orders | Снимки заказов, цены, отмена |
+| sales | Учет записанных продаж и аннулирование |
+| payments | Намерения оплаты, ручная привилегированная сверка |
+
+Первые три входят в базовый проект. Все остальные **опциональны**. Orders, Sales и Payments запускаются независимо и не требуют друг друга. Подробнее: [таблица зависимостей и маршрутов](docs/modules.md).
+
+## Два способа использования
+
+**1. Сгенерировать независимый проект:**
+
+```bash
+uv run python scripts/new_project.py ../warehouse --name warehouse --apps inventory statistics
+```
+
+**2. Скопировать дополнительный модуль в уже созданный PrimaryKit-проект:**
+
+```bash
+python manage.py install_kit_module orders --source ../primarykit
+python manage.py makemigrations orders
+python manage.py migrate
+```
+
+Команда копирует нужные папки из доверенного исходника и не перезаписывает код. `INSTALLED_APPS` и URLs собираются автоматически из `manifest.py`. **В произвольном стороннем Django-проекте без базы PrimaryKit простое копирование не гарантируется.**
+
+## Гарантии и границы
+
+- Django + DRF + PostgreSQL, JWT, права доступа на уровне queryset **и** сервисов, PostgreSQL транзакции и idempotency keys там, где это необходимо.
+- Catalog и Inventory: `standalone` или `tenant` — схема фиксируется **до первых миграций**. Простое изменение режима у заполненной базы недопустимо.
+- Prices в Orders/Sales задаются в **целых минимальных денежных единицах**, это снимки, а не доверенный серверный прайсинг магазина.
+- **Payments не интегрирован с реальным эквайрингом.** Создание PaymentIntent не означает, что деньги получены; ручное подтверждение ограничено суперпользователем. Для реального приёма платежей нужны проверяемые webhook-события провайдера, возвраты и финансовая сверка.
+- Sales — учёт записи о продаже, **не** автоматическое списание Inventory и **не** кассовый чек/фискализация.
+- Для новой установки генерируйте, проверяйте и коммитьте миграции. Не перегенерируйте initial migrations работающего клиентского приложения.
+- Секреты в `.env`, production HTTPS, защищённое хранение и резервные копии — ответственность окружения.
+
+## Проверки
 
 ```bash
 uv run ruff check .
 uv run ruff format --check .
 uv run python manage.py check --settings=config.settings.test
-uv run python manage.py makemigrations users --settings=config.settings.test
 uv run pytest
 ```
 
-## Production
+CI дополнительно проверяет генератор и разные составы модулей, Docker, PostgreSQL и SeaweedFS.
 
-Сборка отдельного production-образа: `docker build --target production -t primarykit:latest -f docker/Dockerfile .`.
-
-В `compose.prod.yaml` используется `config.settings.production`. До запуска задайте реальный `DJANGO_SECRET_KEY`, `DJANGO_ALLOWED_HOSTS` и `DJANGO_CSRF_TRUSTED_ORIGINS`. Приложение слушает localhost:8000 для Nginx. HTTPS завершается на доверенном reverse proxy; `DJANGO_TRUST_PROXY_SSL_HEADER=true` допустим **только если** proxy гарантированно перезаписывает X-Forwarded-Proto.
-
-Инициализация нового окружения: генерация миграций **до сборки**, затем `docker compose -f compose.prod.yaml run --rm api python manage.py migrate` и `collectstatic`. Продакшену нужны надёжные резервные копии PostgreSQL, TLS, мониторинг, хранение статических файлов и отдельные секреты.
-
-## Что уже есть
-
-- Разделение настроек и обязательные production-проверки.
-- DRF, CORS, Swagger/Redoc в local, единые ошибки и пагинация.
-- Liveness/readiness с проверкой БД.
-- Минимальный email-based `users.User` до первой миграции.
-- Dev/production Docker targets, Compose и CI.
-
-## Что будет позже
-
-Wallets, chats, payments, catalog, inventory. Эти функции реализуются поэтапно; актуальный состав — ниже.
-
-Соглашения по переносимым модулям — в [docs/architecture.md](docs/architecture.md).
-## Architecture and Agent Skills
-
-- [Core conventions: models, services/selectors and localization](docs/core-conventions.md)
-- [Repository rules for agents](AGENTS.md)
-- [Agent workflow and evaluated external skills](docs/agent-workflow.md)
-- [Modular monolith architecture decision](docs/adr/0001-copy-based-modular-monolith.md)
-- [Implemented DDD-lite boundaries and pure domain rules](docs/adr/0003-implemented-ddd-boundaries.md)
-- [Storage bounded context / DDD-lite access policies](docs/adr/0002-storage-bounded-context-and-policies.md)
-- [Catalog / inventory design backlog](docs/module-roadmap.md)
-
-Agent Skills: `.agents/skills/system-architect/`, `.agents/skills/database-architect/`, `.agents/skills/feature-delivery/`. These are guidance files, **not** a deployed multi-agent runner. The catalog/inventory modules remain future work.
-
-Core now exposes opt-in `SoftDeleteModel` and `SoftDeleteUUIDTimestampedModel` with separate active/unfiltered managers; see the documented caveats about cascades, uniqueness, and bulk operations.
-
-## Users API v0.1 and security
-
-[Users API, authorization model and deployment limitations](docs/users-architecture.md).
-The endpoints include JWT login/refresh/logout, account profile, password change, optional registration, and superuser administration.
-Authentication changes must pass the [.agents security-review skill](.agents/skills/security-review/SKILL.md).
-Public registration is off by default. **Do not deploy public authentication without shared-cache / edge-layer brute-force controls.**
-
-## RBAC module
-
-RBAC reuses Django Groups and Permissions (no duplicate role model). An active superuser manages roles and assignments at `/api/v1/admin/rbac/`. Default `RBAC_ASSIGNABLE_PERMISSIONS = []` denies permission grants until the new project sets an allowlist.
-
-See [RBAC architecture and object scoping](docs/rbac-architecture.md). The built-in owner-only scoping helper prevents IDOR for explicitly configured views; arbitrary per-object ACL and multi-tenant role grants are **not included**.
-
-## Notifications and account recovery
-
-[Email notifications, verification and password reset](docs/email-notifications.md).
-
-`apps/notifications` provides reusable Django 6.1 MAILERS-based templated email. `users` issues signed, expiring single-use verification/password-reset tokens. **Email flows are disabled by default**. Configure the mailer, frontend callback URLs, and registration settings before enabling public signups; use shared rate limits and email-abuse protections in production.
-
-## Audit Events
-
-Audit logs are written in the same database transaction as identity and RBAC changes.
-The `apps.audit` app exposes read-only, superuser-only endpoints at
-`/api/v1/admin/audit/events/` and an opt-in audit service for other modules.
-See [audit architecture and limitations](docs/audit-architecture.md).
-
-**Migration setup for new project:** `python manage.py makemigrations users audit`
-before `migrate`, and **commit generated migrations in that project**.
-
-## Private Storage
-
-Storage now supports standalone private files at `/api/v1/files/`; when Organizations is selected, company-scoped files are also available at `/api/v1/organizations/{org_id}/files/`. Both paths use explicit access policies with
-PDF/PNG/JPEG/WebP magic-byte verification, safe random object keys, read-only
-metadata and no public storage URLs. See [storage architecture](docs/storage-architecture.md).
-
-Use `STORAGE_BACKEND=local` for development. Production requires an explicitly
-persistent local volume (`STORAGE_ALLOW_LOCAL_PRODUCTION=true`) or
-`STORAGE_BACKEND=s3` and an installed `django-storages[s3]` backend (e.g.
-`uv add 'django-storages[s3]'` in the generated project). S3-compatible
-SeaweedFS/MinIO endpoints are supported by the backend but require a live provider
-integration test in each deployment.
-
-## Create an independent backend project
-
-```bash
-uv run python scripts/new_project.py ../automarket --name automarket --apps rbac audit storage --git-init
-```
-
-The generator copies Django Core, Users, Notifications, optional apps, adjusts
-`INSTALLED_APPS`, URL routing, GitHub Actions migrations and `uv.lock` root name.
-See [project generator documentation](docs/project-generator.md).
-
-## SeaweedFS — recommended self-hosted S3
-
-For projects using the `storage` module (Organizations is optional), PrimaryKit provides a single-node SeaweedFS 4.48 S3 gateway, persistent Docker volume, and optional Compose overlay:
-
-```bash
-cp .env.example .env
-docker compose -f compose.yaml -f compose.seaweedfs.yaml up -d --build
-```
-
-It creates the configured private bucket automatically. Replace sample S3 access/secret keys before production and protect the SeaweedFS data volume with backups. Storage is only accessible on the internal Compose network. See [Storage architecture](docs/storage-architecture.md).
-
-## Catalog
-
-Optional `catalog` includes categories, items/SKUs and typed attributes (text,
-integer, decimal, boolean). Authenticated users may read active items; only active
-superusers may create or edit. Prices and quantities belong in separate modules.
-See [catalog architecture](docs/catalog-architecture.md).
-
-## Inventory
-
-Optional `inventory` app provides warehouses, receipt/issue/transfer operations,
-stock reservations, transactional balances and an immutable movement ledger.
-Commands use PostgreSQL row locks and idempotency keys. All inventory endpoints
-are restricted to superusers until tenant-scoped permissions are introduced.
-Selecting only `inventory` generates a standalone warehouse module. Supply `inventory catalog organizations` together to select the tenant-integrated schema.
-
-```bash
-uv run python scripts/new_project.py ../warehouse-api --name warehouse-api --apps inventory audit --git-init
-```
-
-See [inventory architecture and transaction guarantees](docs/inventory-architecture.md).
-
-## Organizations / Memberships
-
-Optional `organizations` enables company-scoped membership, branches and invitation
-acceptance. Django Groups are global and MUST NOT be treated as tenant roles.
-
-```bash
-uv run python scripts/new_project.py ../b2b-api --name b2b-api --apps organizations audit --git-init
-```
-
-See [organizations architecture, API, security and migration notes](docs/organizations-architecture.md).
-
-**Important:** Personal `/api/v1/files/` and tenant `/api/v1/organizations/{org_id}/files/` are distinct authorization scopes. The Storage context keeps an optional opaque organization UUID, not a cross-context FK. Existing installations require reviewed migrations; see `docs/storage-architecture.md`.
-
-## Company and branch isolation
-
-In tenant mode, `catalog` and `inventory` use Organizations; in standalone mode they work independently. Tenant implementations use
-`/api/v1/organizations/{org_id}/catalog/` and
-`/api/v1/organizations/{org_id}/inventory/`. Company membership and
-branch grants are checked server-side, including in stock command services.
-Cross-company transfers and lookup by foreign IDs are forbidden.
-
-`--apps inventory` installs standalone Inventory. For tenant-mode Inventory explicitly select `--apps inventory catalog organizations`.
-**Existing clients require manual, verified tenant data migration**; old
-global Catalog and Inventory endpoints are intentionally removed. Storage's personal and tenant endpoints are strictly isolated. Read the architecture documents
-before updating a populated database.
-
-## DDD архитектура (реализовано)
-
-В восьми существующих контекстах бизнес-правила вынесены в `domain.py` и не зависят от Django/DRF. `services.py` — прикладной слой: транзакции, ORM, авторизация, идемпотентность и аудит. Django/DRF предоставляет входящие адаптеры; Notifications отправляет сообщения через интерфейс `EmailGateway` и Django-адаптер. Для отдельных простых CRUD дополнительные слои не создаются.
-
-Тест `apps/core/tests/test_ddd_boundaries.py` проверяет чистоту доменного кода и инварианты, в том числе при генерации проекта с выбранным подмножеством модулей. Реализован прагматичный DDD-модульный монолит, **не** CQRS, event sourcing или полноценная распределённая система. [Решение ADR 0003](docs/adr/0003-implemented-ddd-boundaries.md).
-
-## Copy-and-run modules
-
-Каждый переносимый модуль содержит `manifest.py` (обязательные зависимости, необязательные интеграции и URL). В заранее подготовленном Django-проекте из PrimaryKit достаточно скопировать независимый модуль в `apps/<name>/`: `INSTALLED_APPS` и API-маршруты находятся автоматически при следующем запуске.
-
-Например, если в проекте уже есть базовые `core`, `users`, `notifications`, скопируйте `apps/storage/` — появится личный API `/api/v1/files/`. Если дополнительно есть `apps/organizations/`, автоматически появится безопасный корпоративный маршрут. После копирования моделей **нужно создать, проверить и закоммитить миграции, а затем применить их**. Копирование папки не устанавливает зависимости из PyPI и не настраивает внешние S3/SMTP-сервисы.
-
-Для модулей с реальными обязательными зависимостями команда подтягивает недостающие папки из проверенного каталога. Inventory теперь самостоятельный в standalone-режиме:
-
-```bash
-python manage.py install_kit_module inventory --source ../primarykit
-python manage.py makemigrations organizations catalog inventory
-python manage.py migrate
-```
-
-Команда копирует отсутствующие папки, не перезаписывая существующие. Подробнее: [Plug & Play ADR](docs/adr/0004-copyable-module-contract.md) и [генератор](docs/project-generator.md).
-
-## Самостоятельные Catalog и Inventory
-
-Начиная с ADR 0005, `--apps catalog` и `--apps inventory` больше **не требуют Organizations или друг друга**. Каждый модуль содержит собственные standalone-модели, API и сервисы. `Catalog` — категории и SKU владельца (`/api/v1/catalog/`); `Inventory` — собственные складские SKU, склады, движения и резервы (`/api/v1/inventory/`). В новом проекте режим `standalone` фиксируется до первой миграции. Вариант с компаниями сохраняется при создании проекта с `--apps catalog inventory organizations` и имеет прежние маршруты.
-
-```bash
-uv run python scripts/new_project.py ../catalog-app --name catalog-app --apps catalog
-uv run python scripts/new_project.py ../stock-app --name stock-app --apps inventory
-```
-
-**Важно:** на работающем проекте менять `CATALOG_MODE` или `INVENTORY_MODE` простой настройкой нельзя — модели различаются, требуется спланированная миграция данных. Добавление папки Organizations само по себе режим не переключает. [ADR 0005](docs/adr/0005-standalone-catalog-inventory.md).
-
-## Plug & Play Statistics
-
-`--apps statistics` добавляет независимый read-only API метрик. Каждый установленный бизнес-модуль сам определяет показатели в `apps/<module>/statistics.py`, а Statistics автоматически обнаруживает только доступные провайдеры. Без дополнительных модулей пользователь получит пустой набор личных метрик — это корректно. Есть строго разграниченные маршруты: `/api/v1/statistics/` (личные), `/api/v1/organizations/{org_id}/statistics/` (владелец/администратор компании) и `/api/v1/admin/statistics/` (только суперпользователь). Периоды: сегодня, 7 дней, 30 дней и произвольный диапазон. Системные показатели пользователей и аудит никогда не доступны обычным пользователям. Подробнее: [Statistics v1](docs/statistics-architecture.md).
+Python 3.13 · Django 6.1 · DRF · PostgreSQL 17 · uv · Docker Compose · pytest · Ruff.
