@@ -19,7 +19,17 @@ from apps.core.module_registry import dependency_closure, discover_modules  # no
 REQUIRED_APPS = frozenset({"core", "users", "notifications"})
 AVAILABLE_MODULES = discover_modules()
 OPTIONAL_APPS = frozenset(AVAILABLE_MODULES) - REQUIRED_APPS
-MIGRATION_APPS = ("users", "audit", "storage", "catalog", "inventory", "organizations")
+MIGRATION_APPS = (
+    "users",
+    "audit",
+    "storage",
+    "catalog",
+    "inventory",
+    "organizations",
+    "orders",
+    "sales",
+    "payments",
+)
 # Statistics uses existing module data only; it has no persistence migrations.
 
 
@@ -95,7 +105,7 @@ def create_project(
         migrations = " ".join(a for a in MIGRATION_APPS if a in selected)
         workflow = target / ".github" / "workflows" / "ci.yaml"
         raw = workflow.read_text(encoding="utf-8")
-        phrase = "makemigrations users audit storage catalog inventory organizations --noinput"
+        phrase = "makemigrations users audit storage catalog inventory organizations orders sales payments --noinput"
         if raw.count(phrase) != 2:
             raise RuntimeError("CI migration template has changed")
         raw = raw.replace(phrase, f"makemigrations {migrations} --noinput")

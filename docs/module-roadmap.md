@@ -1,27 +1,59 @@
-# Catalog, inventory and i18n — design backlog (not implemented)
+# PrimaryKit roadmap — implemented modules and next milestones
 
-## Proposed independent Apps
+Updated: 2026-10-16. This is a future-improvement backlog, **not** a list of unimplemented modules.
 
-### catalog
+## Already implemented (v1)
 
-`CatalogItem` has stable properties (UUID, SKU where applicable, name, description, status, category). Domain-specific car/product/warehouse features do **not** belong directly on its base model.
+| Context | Current capabilities | Documentation |
+| --- | --- | --- |
+| Core, Users, Notifications | Project infrastructure, JWT, email flows | [Users](users-architecture.md) |
+| Organizations, RBAC, Audit | Memberships, branches, permissions, immutable audit | [Organizations](organizations-architecture.md) |
+| Storage | Owner / optional organization scope, S3/SeaweedFS | [Storage](storage-architecture.md) |
+| Catalog | Categories, SKUs, typed attributes; standalone/tenant modes | [Catalog](catalog-architecture.md) |
+| Inventory | Warehouses, reservations, stock ledger, idempotency; standalone/tenant modes | [Inventory](inventory-architecture.md) |
+| Statistics | Auto-discovered providers, scoped counts and date windows | [Statistics](statistics-architecture.md) |
+| Orders | Owner-private priced order snapshots and cancellation | [Commerce](commerce-architecture.md) |
+| Sales | Owner-private sale records, optional verified order links and voiding | [Commerce](commerce-architecture.md) |
+| Payments | Payment intents and superuser-only manual reconciliation (no real gateway) | [Commerce](commerce-architecture.md) |
 
-For changing attributes consider `AttributeDefinition` (name, type, unit, required, filterable), type-safe `AttributeValue` and a translation entity for localized display. Prefer native columns and indexes for high-cardinality filters and mandatory invariants; JSONB is an option for low-query-flexible metadata, not a default for the full catalog.
+For the full source-code/module contract, use [Repository Guide](repository-guide.md) and [Module Catalog](modules.md).
 
-Questions before implementation: catalog vs listing vs physical SKU, identity uniqueness across tenants, product variants, search/index strategy, translations/fallbacks, lifecycle and pricing.
+## Priorities for v2
 
-### inventory
+### 1. Trustworthy e-commerce checkout
 
-Suggested entities: `Warehouse`, `StockLocation`, `StockItem`, `StockMovement`, `StockBalance`, `StockReservation`. Inventory operations should have explicit service contracts such as Receive, Transfer, Reserve, Release and WriteOff.
+- Price calculation on the server from a trusted product/price source; taxes, discounts, coupons, shipping costs and controlled rounding.
+- Consistent reservation of Inventory for Orders, expirations and compensation after cancellation; explicit idempotent commands and transactional guarantees.
+- Tenant-ready Orders/Sales/Payments models: owner organization, seller/manager access, branch restrictions, customer visibility and audited permissions.
+- Order and Sale statuses that distinguish accepted, fulfilled, canceled, refunded or partially fulfilled with terminal-state invariants.
 
-Movements are an immutable audit/ledger; balance is a transactional materialization for fast reads. Do not mutate stock by read-modify-save. Use conditional atomic UPDATE or row locks with stable order, enforce nonnegative available stock where required, idempotency keys and consistent movement/balance updates in `transaction.atomic`.
+### 2. Real payment provider adapters
 
-Questions before implementation: unit of measure, lots/serials, negative stock allowed or not, available/on-hand/reserved definitions, reserved expiration, inventory costing, backdating, offline clients and concurrent writers.
+- Verified signed webhooks per provider, provider account/transaction identity and durable event inbox; protect against spoofing and replay.
+- Partial/full refunds, chargebacks, payment retries, ledger reconciliation and failure recovery.
+- Proper support for payment currencies, precision/rounding, multi-currency reporting and payment-provider-specific statuses.
+- Integration and sandbox end-to-end tests before enabling real money operations.
 
-### Localization
+### 3. Scaling and historical analytics
 
-Infrastructure is enabled in Core for en/ru/ko. Dynamic catalog content will need explicit localized models and fallback policy; no field-per-language schema assumption.
+- Currency-specific grouped financial aggregates (never sum different currencies into one unlabelled number).
+- Historical inventory balance charts from immutable StockMovement and period boundaries.
+- PostgreSQL indexes/query budgets, dashboard widget metadata, caching after measurements.
+- Async aggregation, transactional outbox and materialized reports only when justified by real traffic.
 
-## Review gates
+### 4. Catalog/Inventory future needs
 
-Each business module needs an ADR or equivalent documented design, API contract, permissions, migrations, unit/API/PostgreSQL integration and concurrent-write tests. Do not claim implementation of catalog or inventory until these gates are met.
+- Localization and fallback rules for product names/descriptions (en/ru/ko).
+- Product variants and category-specific attribute indexing, full text/search integration.
+- Lots/serials, multiple units, costing rules, warehouse locations, backdated operations and offline sync.
+- Explicit optional Catalog-to-Inventory SKU mapping and data migrations between pinned standalone/tenant schemas.
+
+### 5. Operational robustness
+
+- Stronger shared throttling for public login, endpoints, tracing/metrics/alerts and restored backup testing.
+- Durable task queues, notifications/outbox and idempotent reconciliation for external side effects.
+- Module version compatibility rules and CLI tooling for upgrading copied modules across client repositories.
+
+## Definition of done for new modules
+
+Each feature must define a bounded context, explicit optional dependencies, secure scope, domain invariants, transactional application commands, tested migrations, API/schema contract, negative IDOR and concurrency tests (when relevant), generated-project smoke, documented production limitations, and green CI. Passing a mocked provider test does **not** replace a real provider sandbox test.
