@@ -102,6 +102,24 @@ def create_project(
         end = raw.index(end_marker, start) + len(end_marker)
         workflow.write_text(raw[:start] + raw[end:], encoding="utf-8")
 
+        # Pin app schemas before the first migration; later module copies cannot
+        # implicitly switch personal data into tenant-owned tables.
+        catalog_mode = "tenant" if {"catalog", "organizations"} <= selected else "standalone"
+        inventory_mode = (
+            "tenant" if {"inventory", "catalog", "organizations"} <= selected else "standalone"
+        )
+        if catalog_mode != "tenant":
+            _replace_one(
+                target / "config/settings/base.py",
+                'CATALOG_MODE = "tenant"',
+                'CATALOG_MODE = "standalone"',
+            )
+        if inventory_mode != "tenant":
+            _replace_one(
+                target / "config/settings/base.py",
+                'INVENTORY_MODE = "tenant"',
+                'INVENTORY_MODE = "standalone"',
+            )
         # uv.lock's only virtual root package entry has to match pyproject.name.
         _replace_one(target / "pyproject.toml", 'name = "primarykit"', f'name = "{name}"')
         _replace_one(target / "uv.lock", 'name = "primarykit"', f'name = "{name}"')
