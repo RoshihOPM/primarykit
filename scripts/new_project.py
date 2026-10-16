@@ -14,6 +14,7 @@ SOURCE_ROOT = Path(__file__).resolve().parents[1]
 if __package__ in (None, ""):
     sys.path.insert(0, str(SOURCE_ROOT))
 
+from apps.core.doctor import inspect_project  # noqa: E402
 from apps.core.module_registry import dependency_closure, discover_modules  # noqa: E402
 
 REQUIRED_APPS = frozenset({"core", "users", "notifications"})
@@ -135,6 +136,17 @@ def create_project(
                 'INVENTORY_MODE = "tenant"',
                 'INVENTORY_MODE = "standalone"',
             )
+        # Client-facing API branding belongs to the generated product, not the kit.
+        _replace_one(
+            target / "config/settings/base.py",
+            '"TITLE": "PrimaryKit API"',
+            f'"TITLE": "{name} API"',
+        )
+        _replace_one(
+            target / "config/settings/base.py",
+            '"DESCRIPTION": "Reusable Django API backend"',
+            '"DESCRIPTION": "Independent Django API backend"',
+        )
         # uv.lock's only virtual root package entry has to match pyproject.name.
         _replace_one(target / "pyproject.toml", 'name = "primarykit"', f'name = "{name}"')
         _replace_one(target / "uv.lock", 'name = "primarykit"', f'name = "{name}"')
@@ -150,7 +162,10 @@ def create_project(
         )
         (target / "README.md").write_text(
             f"# {name}\n\n"
-            "Independent Django project generated from PrimaryKit.\n\n"
+            "Independent Django project created from copied starter source.\n\n"
+            "This repository owns all business rules, Django apps, dependencies, migrations "
+            "and deployments. The source constructor is not needed at runtime.\n"
+            "Optional primarykit-origin.json is only provenance metadata and may be deleted.\n\n"
             f"## Selected apps\n\n{', '.join(sorted(selected))}\n\n"
             "## Development startup\n\n"
             "```bash\n"
@@ -160,6 +175,8 @@ def create_project(
             "docker compose exec api python manage.py migrate\n"
             "```\n\n"
             "Commit the generated migrations to **this project's Git repository**.\n"
+            "Run `python -m apps.core.doctor --strict` to validate copied modules "
+            "without Django startup, database access, or the source kit.\n"
             "Configure SMTP, object storage, secrets and reverse proxy before production.\n"
             + (
                 "SeaweedFS: docker compose -f compose.yaml -f compose.seaweedfs.yaml up -d --build\n"
@@ -169,6 +186,13 @@ def create_project(
             + "See docs/architecture.md and AGENTS.md for conventions.\n",
             encoding="utf-8",
         )
+
+        # Fail during generation when copied modules or dependencies violate
+        # the offline portability contract. No DB or Django startup is needed.
+        report = inspect_project(target)
+        if report.failed(strict=True):
+            details = "; ".join(f"{item.code}: {item.detail}" for item in report.findings)
+            raise RuntimeError(f"Generated project did not pass doctor: {details}")
 
         if git_init:
             subprocess.run(
@@ -201,7 +225,10 @@ def main():
     )
     copied = dependency_closure(AVAILABLE_MODULES, set(REQUIRED_APPS) | set(args.apps))
     print(f"Created {target} with apps: {', '.join(sorted(copied))}")
-    print("Next: copy .env.example to .env, run uv sync --locked, generate migrations and test.")
+    print(
+        "Next: run python -m apps.core.doctor --strict, configure .env, "
+        "uv sync --locked, create and commit client-owned migrations."
+    )
 
 
 if __name__ == "__main__":
