@@ -98,6 +98,11 @@ def create_project(
             shutil.rmtree(target / "apps" / module)
         if "storage" not in selected:
             (target / "compose.seaweedfs.yaml").unlink()
+        if not {"cache", "celery_tasks"} & selected:
+            (target / "compose.redis.yaml").unlink()
+        if "celery_tasks" not in selected:
+            (target / "compose.celery.yaml").unlink()
+            (target / "compose.celery.prod.yaml").unlink()
 
         # Generator remains with the source catalog only, not in client projects.
         shutil.rmtree(target / "scripts")
@@ -137,6 +142,12 @@ def create_project(
                 target / "config/settings/base.py",
                 'INVENTORY_MODE = "tenant"',
                 'INVENTORY_MODE = "standalone"',
+            )
+        if "cache" in selected:
+            _replace_one(
+                target / ".env.example",
+                "REDIS_CACHE_KEY_PREFIX=primarykit-dev",
+                f"REDIS_CACHE_KEY_PREFIX={name}-dev",
             )
         # Client-facing API branding belongs to the generated product, not the kit.
         _replace_one(
@@ -183,6 +194,19 @@ def create_project(
             + (
                 "SeaweedFS: docker compose -f compose.yaml -f compose.seaweedfs.yaml up -d --build\n"
                 if "storage" in selected
+                else ""
+            )
+            + (
+                "\nRedis cache: run `uv add 'redis>=6,<7'`, enable REDIS_CACHE_ENABLED, "
+                "then use compose.redis.yaml for local development.\n"
+                if "cache" in selected
+                else ""
+            )
+            + (
+                "\nCelery: run `uv add 'celery[redis]>=5.6,<6'`, configure the "
+                "RabbitMQ broker, then use compose.celery.yaml for local development. "
+                "The database-backed Tasks module remains independent.\n"
+                if "celery_tasks" in selected
                 else ""
             )
             + "See docs/architecture.md and AGENTS.md for conventions.\n",
