@@ -8,7 +8,13 @@ from django.core.cache import caches
 from django.test import override_settings
 
 from apps.cache.config import build_cache_config
-from apps.cache.services import CacheService, get_cached, get_cache_service, invalidate_cached, set_cached
+from apps.cache.services import (
+    CacheService,
+    get_cache_service,
+    get_cached,
+    invalidate_cached,
+    set_cached,
+)
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("PRIMARYKIT_INFRA_INTEGRATION") != "1",
