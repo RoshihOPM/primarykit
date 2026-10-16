@@ -2,6 +2,7 @@
 
 from django.db import transaction
 from rest_framework import mixins, viewsets
+from rest_framework.permissions import SAFE_METHODS
 
 from apps.core.audit import record_audit_event
 from apps.organizations.scoping import organization_scope, require_writer
@@ -13,6 +14,12 @@ from .serializers import AttributeDefinitionSerializer, CatalogItemSerializer, C
 
 class CatalogScopeMixin:
     permission_classes = (CatalogAccess,)
+
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        self.get_scope()
+        if request.method not in SAFE_METHODS:
+            self.check_write_role()
 
     def get_scope(self):
         if not hasattr(self, "_tenant_scope"):
@@ -33,10 +40,7 @@ class AuditedCatalogViewSet(CatalogScopeMixin, viewsets.ModelViewSet):
     def perform_create(self, serializer):
         self.check_write_role()
         org = self.get_scope()[0]
-        if self.audit_target_type == "catalog.Category":
-            obj = serializer.save(organization=org)
-        else:
-            obj = serializer.save(organization=org)
+        obj = serializer.save(organization=org)
         record_audit_event(
             actor=self.request.user,
             action="catalog.object.created",

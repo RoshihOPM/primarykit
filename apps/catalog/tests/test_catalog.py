@@ -1,5 +1,7 @@
 import pytest
-from django.urls import reverse
+from django.urls import reverse as django_reverse
+
+from apps.organizations.models import Membership, Organization
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -9,6 +11,18 @@ from apps.users.models import User
 pytestmark = pytest.mark.django_db
 
 
+def tenant():
+    return Organization.objects.get_or_create(
+        slug="test-company", defaults={"name": "Test company"}
+    )[0]
+
+
+def reverse(name, kwargs=None):
+    if name.startswith("catalog-"):
+        kwargs = {**(kwargs or {}), "org_id": tenant().pk}
+    return django_reverse(name, kwargs=kwargs)
+
+
 def api(email, *, admin=False):
     user = User.objects.create_user(
         email=email,
@@ -16,6 +30,11 @@ def api(email, *, admin=False):
         email_verified=True,
         is_staff=admin,
         is_superuser=admin,
+    )
+    Membership.objects.create(
+        user=user,
+        organization=tenant(),
+        role="owner" if admin else "member",
     )
     client = APIClient()
     client.credentials(HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(user).access_token}")
@@ -65,7 +84,7 @@ def test_admin_catalog_and_typed_attributes():
 
 def test_reject_unknown_missing_or_incorrect_attributes():
     manager = api("manager@catalog.test", admin=True)
-    cat = Category.objects.create(slug="products", name="Products")
+    cat = Category.objects.create(organization=tenant(), slug="products", name="Products")
     AttributeDefinition.objects.create(
         category=cat, code="weight", data_type="integer", required=True
     )
@@ -95,8 +114,8 @@ def test_reject_unknown_missing_or_incorrect_attributes():
 def test_regular_users_cannot_write_or_see_inactive_catalog():
     admin = api("admin@catalog.test", admin=True)
     viewer = api("viewer@catalog.test")
-    category = Category.objects.create(slug="secret", name="Secret", is_active=False)
-    item = CatalogItem.objects.create(category=category, sku="X01", name="Hidden")
+    category = Category.objects.create(organization=tenant(), slug="secret", name="Secret", is_active=False)
+    item = CatalogItem.objects.create(organization=tenant(), category=category, sku="X01", name="Hidden")
     assert viewer.get(reverse("catalog-items-list")).data["count"] == 0
     assert viewer.get(reverse("catalog-items-detail", kwargs={"pk": item.pk})).status_code == 404
     assert viewer.post(reverse("catalog-items-list"), {"name": "bad"}).status_code == 403
@@ -113,7 +132,7 @@ def test_regular_users_cannot_write_or_see_inactive_catalog():
 
 def test_sku_case_insensitive_uniqueness_and_privilege_fields():
     admin = api("admin@catalog.test", admin=True)
-    category = Category.objects.create(slug="books", name="Books")
+    category = Category.objects.create(organization=tenant(), slug="books", name="Books")
     url = reverse("catalog-items-list")
     result = admin.post(
         url,
