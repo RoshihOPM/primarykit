@@ -4,6 +4,8 @@ from pathlib import Path
 import environ
 from django.core.exceptions import ImproperlyConfigured
 
+from apps.core.module_registry import installed_module_apps
+
 BASE_DIR = Path(__file__).resolve().parents[2]
 
 env = environ.Env()
@@ -26,15 +28,7 @@ INSTALLED_APPS = [
     "drf_spectacular",
     "rest_framework_simplejwt.token_blacklist",
     "corsheaders",
-    "apps.core",
-    "apps.users",
-    "apps.rbac",
-    "apps.notifications",
-    "apps.audit",
-    "apps.storage",
-    "apps.catalog",
-    "apps.inventory",
-    "apps.organizations",
+    *installed_module_apps(),
 ]
 
 MIDDLEWARE = [
