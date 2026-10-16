@@ -58,6 +58,18 @@ def validate_command_shape(kind: str, provided_fields) -> None:
         raise StockRuleViolation("Invalid fields for this stock operation.")
 
 
+def validate_command_quantity(kind: str, payload) -> None:
+    """Never trust DRF serializer bounds: commands are also called internally."""
+    if kind in ENTRY_KINDS:
+        quantity = payload.get("quantity")
+        if (
+            isinstance(quantity, bool)
+            or not isinstance(quantity, int)
+            or not 1 <= quantity <= 10**12
+        ):
+            raise StockRuleViolation("Quantity must be a positive bounded integer.")
+
+
 def require_open_reservation(status: str) -> None:
     if status != "active":
         raise StockRuleViolation("Reservation is already closed.")
