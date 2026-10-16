@@ -11,6 +11,7 @@ from rest_framework_simplejwt.utils import get_md5_hash_password
 
 from apps.core.audit import record_audit_event
 
+from .domain import may_authenticate, may_deactivate
 from .email_services import send_verification_email
 from .models import User
 
@@ -65,7 +66,7 @@ class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         attrs[self.username_field] = User.objects.normalize_identity(attrs[self.username_field])
         tokens = super().validate(attrs)
-        if not self.user.email_verified:
+        if not may_authenticate(active=self.user.is_active, verified=self.user.email_verified):
             raise AuthenticationFailed(
                 self.error_messages["no_active_account"], code="no_active_account"
             )
@@ -83,7 +84,7 @@ class PasswordBoundTokenRefreshSerializer(TokenRefreshSerializer):
         except (TokenError, KeyError, ValueError, User.DoesNotExist) as exc:
             raise InvalidToken(_("Token is invalid or expired.")) from exc
 
-        if not user.email_verified:
+        if not may_authenticate(active=user.is_active, verified=user.email_verified):
             raise InvalidToken(_("Token is invalid or expired."))
 
         if api_settings.CHECK_REVOKE_TOKEN and refresh.get(
@@ -118,6 +119,12 @@ class AdminUserUpdateSerializer(serializers.ModelSerializer):
         fields = ("first_name", "last_name", "is_active")
 
     def validate_is_active(self, value):
-        if self.instance and self.instance.pk == self.context["request"].user.pk and not value:
+        if (
+            self.instance
+            and not value
+            and not may_deactivate(
+                actor_id=self.context["request"].user.pk, target_id=self.instance.pk
+            )
+        ):
             raise serializers.ValidationError(_("You cannot deactivate yourself."))
         return value

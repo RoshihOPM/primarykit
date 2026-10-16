@@ -10,6 +10,7 @@ from django.utils.http import urlsafe_base64_encode
 
 from apps.notifications.services import send_template_email
 
+from .domain import may_send_password_reset, may_send_verification
 from .tokens import email_verification_token
 
 logger = logging.getLogger(__name__)
@@ -24,7 +25,7 @@ def _action_link(configured_url: str, *, user, token: str) -> str:
 
 
 def send_verification_email(user) -> None:
-    if user.email_verified or not user.is_active:
+    if not may_send_verification(active=user.is_active, verified=user.email_verified):
         return
     token = email_verification_token.make_token(user)
     send_template_email(
@@ -38,7 +39,7 @@ def send_verification_email(user) -> None:
 
 
 def send_password_reset_email(user) -> None:
-    if not user.is_active:
+    if not may_send_password_reset(active=user.is_active):
         return
     token = default_token_generator.make_token(user)
     send_template_email(

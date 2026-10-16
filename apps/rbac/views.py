@@ -11,6 +11,7 @@ from apps.core.audit import record_audit_event
 from apps.users.models import User
 from apps.users.permissions import IsActiveSuperuser
 
+from .domain import can_remove_role
 from .serializers import (
     PermissionReadSerializer,
     RoleSerializer,
@@ -74,7 +75,7 @@ class RoleViewSet(viewsets.ModelViewSet):
             )
 
     def perform_destroy(self, instance):
-        if instance.user_set.exists():
+        if not can_remove_role(assigned_user_count=instance.user_set.count()):
             raise ValidationError({"detail": _("Cannot delete a role assigned to users.")})
         role_id = instance.pk
         role_name = instance.name

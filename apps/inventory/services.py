@@ -12,6 +12,13 @@ from apps.organizations.models import BranchAccess, Organization
 from apps.organizations.permissions import get_active_membership
 from apps.organizations.scoping import require_warehouse_access, require_writer
 
+from .domain import (
+    StockPosition,
+    StockRuleViolation,
+    require_open_reservation,
+    validate_command_quantity,
+    validate_command_shape,
+)
 from .models import (
     InventoryOperation,
     StockBalance,
@@ -47,12 +54,14 @@ def _locked_balances(organization, pairs):
 
 
 def _apply(*, balance, physical=0, held=0, operation):
-    new_hand = balance.on_hand + physical
-    new_reserved = balance.reserved + held
-    if new_hand < 0 or new_reserved < 0 or new_reserved > new_hand:
-        raise ValidationError({"stock": "Insufficient available or reserved quantity."})
-    balance.on_hand = new_hand
-    balance.reserved = new_reserved
+    try:
+        updated = StockPosition(balance.on_hand, balance.reserved).apply(
+            physical=physical, held=held
+        )
+    except StockRuleViolation as exc:
+        raise ValidationError({"stock": str(exc)}) from exc
+    balance.on_hand = updated.on_hand
+    balance.reserved = updated.reserved
     balance.save(update_fields=("on_hand", "reserved", "updated_at"))
     StockMovement.objects.create(
         operation=operation,
@@ -107,8 +116,10 @@ def _execute_locked(organization, operation, data, actor):
     )[(reservation.balance.warehouse_id, reservation.balance.item_id)]
     # All operations on reservations lock balance BEFORE reservation to avoid deadlocks.
     current = StockReservation.objects.select_for_update().get(pk=reservation.pk)
-    if current.status != StockReservation.Status.ACTIVE:
-        raise ValidationError({"reservation": "Reservation is already closed."})
+    try:
+        require_open_reservation(current.status)
+    except StockRuleViolation as exc:
+        raise ValidationError({"reservation": str(exc)}) from exc
     quantity = current.quantity
     if kind == "release":
         _apply(balance=balance, held=-quantity, operation=operation)
@@ -165,6 +176,11 @@ def _assert_command_tenant(organization, membership, data):
 def execute_stock_operation(*, actor, organization, data):
     """Idempotent atomic command with locked tenant and branch authorization."""
     kind = data["kind"]
+    try:
+        validate_command_shape(kind, data)
+        validate_command_quantity(kind, data)
+    except StockRuleViolation as exc:
+        raise ValidationError({"detail": str(exc)}) from exc
     key = data["idempotency_key"]
     canonical = {
         field: (str(value.pk) if hasattr(value, "pk") else value)

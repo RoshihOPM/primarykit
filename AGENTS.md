@@ -24,6 +24,9 @@ PrimaryKit is a copy-based Django starter, not a separately deployed shared back
 
 - `config/` is the Django project; `apps/core/` is reusable cross-cutting code.
 - Business apps expose their own serializers, services, selectors, permissions, urls and tests as needed.
+- Follow ADR 0003: pure business decisions in `domain.py` (no Django/DRF/ORM or cross-context imports); existing `services.py` orchestrates transactions and domain rules. Django models, DRF views and external transports are adapters.
+- Use explicit contracts between contexts. Never import another context's views or serializers into domain/application logic. Avoid empty DDD scaffold directories.
+- For domain changes add pure tests and generated-project smoke; for mutations retain PostgreSQL concurrency, tenant IDOR and audit checks.
 - Don't introduce a CRUD abstraction when DRF ModelViewSet/serializer/model already suffice.
 - Keep modules independent of client-specific business entities. Avoid generic `utils` dumping grounds.
 - SOLID / KISS / DRY / YAGNI guide trade-offs; avoid speculative frameworks, needless service wrappers and premature microservices.
@@ -31,7 +34,7 @@ PrimaryKit is a copy-based Django starter, not a separately deployed shared back
 - Each tenant API must filter both list/detail querysets by membership, validate foreign keys from the same tenant, and deny implicit global Group privileges.
 - Protect last active owner under a row lock; include negative IDOR and cross-branch tests.
 - Catalog and Inventory require Organizations. Always scope list/detail querysets by organization and enforce tenant/branch checks inside transactional services; no unscoped catalog or inventory API is permitted.
-- Storage is currently *user-owner*-scoped, **not tenant-scoped**. Never describe it as safe company-owned file storage without an additional model and permission design.
+- Storage has separate personal and organization-scoped APIs. Organization access requires the optional Organizations policy adapter, and service commands recheck access. No global superuser tenant bypass.
 - Do not put migrations in the reusable **catalog**. Each generated client repo MUST version its own migrations.
 - Never copy third-party agent instructions or execute remote scripts without license/security review.
 - Agents may perform independent code/DB reviews in parallel **only when supported by the active runtime**. Changes to the same files must be coordinated; a PR is the final integration gate.

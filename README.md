@@ -70,6 +70,7 @@ Wallets, chats, payments, catalog, inventory. Эти функции реализ
 - [Repository rules for agents](AGENTS.md)
 - [Agent workflow and evaluated external skills](docs/agent-workflow.md)
 - [Modular monolith architecture decision](docs/adr/0001-copy-based-modular-monolith.md)
+- [Implemented DDD-lite boundaries and pure domain rules](docs/adr/0003-implemented-ddd-boundaries.md)
 - [Storage bounded context / DDD-lite access policies](docs/adr/0002-storage-bounded-context-and-policies.md)
 - [Catalog / inventory design backlog](docs/module-roadmap.md)
 
@@ -186,3 +187,9 @@ Cross-company transfers and lookup by foreign IDs are forbidden.
 **Existing clients require manual, verified tenant data migration**; old
 global Catalog and Inventory endpoints are intentionally removed. Storage's personal and tenant endpoints are strictly isolated. Read the architecture documents
 before updating a populated database.
+
+## DDD архитектура (реализовано)
+
+В восьми существующих контекстах бизнес-правила вынесены в `domain.py` и не зависят от Django/DRF. `services.py` — прикладной слой: транзакции, ORM, авторизация, идемпотентность и аудит. Django/DRF предоставляет входящие адаптеры; Notifications отправляет сообщения через интерфейс `EmailGateway` и Django-адаптер. Для отдельных простых CRUD дополнительные слои не создаются.
+
+Тест `apps/core/tests/test_ddd_boundaries.py` проверяет чистоту доменного кода и инварианты, в том числе при генерации проекта с выбранным подмножеством модулей. Реализован прагматичный DDD-модульный монолит, **не** CQRS, event sourcing или полноценная распределённая система. [Решение ADR 0003](docs/adr/0003-implemented-ddd-boundaries.md).

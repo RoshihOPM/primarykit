@@ -4,13 +4,13 @@
 
 - `config/`: Django project settings, ASGI/WSGI, URL routing. Это **Django Core**.
 - `apps/core/`: переносимые абстрактные модели, API utilities, healthchecks.
-- `apps/users/`: минимальный user model на email. Обязателен для выбранной модели аутентификации. Полноценное API появится в следующем этапе.
+- `apps/users/`: account bounded context с email-идентичностью, JWT, восстановлением и проверкой email.
 - Другие `apps/`: автономные бизнес-возможности, без ссылок на клиентские сущности.
 - `docker/`, `compose*.yaml`: инфраструктура, dev/prod отдельно.
 
 ## Контракт нового модуля
 
-Модуль должен иметь `apps.py`, `models.py` (если нужны), `services.py` / `selectors.py` (по назначению), `serializers.py`, `views.py`, `urls.py`, `tests/` и документацию. Не добавляйте пустые файлы ради формального соответствия.
+Модуль включает `domain.py` для **существующих нетривиальных инвариантов** без импортов Django/DRF/ORM, `services.py` как application layer для команд и транзакций и Django/DRF адаптеры (`models.py`, `views.py`, `serializers.py`). Допускаются `ports.py` и `gateways.py`, если есть внешняя зависимость, например email. Простому CRUD не требуются пустые классы и папки. См. ADR 0003.
 
 Внутри модуля допустимы зависимости на Core и явно объявленные модули. Запрещены импорты моделей конкретного клиентского проекта. Все ограничения доступа проверяются на сервере.
 
@@ -40,5 +40,11 @@ PrimaryKit предназначен для **копирования исходн
 
 - `uv.lock` хранится в репозитории. При изменении `pyproject.toml` выполняйте `uv lock` и коммитьте lockfile. Docker/CI используют `uv sync --locked`.
 - Добавить отдельную проверку Compose + PostgreSQL и production `check --deploy`.
-- Users, RBAC, Notifications, Audit, Storage, Organizations, Catalog and Inventory are implemented. Catalog and Inventory have enforced organization-scoped APIs, schemas and membership checks; Storage remains owner-scoped.
+- Users, RBAC, Notifications, Audit, Storage, Organizations, Catalog and Inventory уже реализованы. В Catalog и Inventory действует ограничение по организации; Storage поддерживает раздельные персональные и корпоративные файлы через политику доступа.
 - Генератор выбора модулей уже реализован; Catalog автоматически подключает Organizations, Inventory — Catalog и Organizations.
+
+## DDD и проверяемые границы
+
+В `apps/*/domain.py` находятся чистые Python-правила. HTTP и Django ORM не импортируются в этот слой. Сервисы реализуют применение правил, транзакции, авторизацию, аудит и работу с моделями. Входящие и исходящие адаптеры могут использовать Django/DRF; для внешних инфраструктур определяются порты (`notifications.ports.EmailGateway`). Все изменения сохраняют действующие API и таблицы; критические инварианты дополнительно проверяются внутри сервисов, а не только сериализаторами. Автоматический тест `apps/core/tests/test_ddd_boundaries.py` проверяет чистоту импортов и бизнес-правила как в полном каталоге, так и в сгенерированных вариантах.
+
+См. [ADR 0003](adr/0003-implemented-ddd-boundaries.md).
