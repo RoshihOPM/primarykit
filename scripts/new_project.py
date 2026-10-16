@@ -17,11 +17,14 @@ MIGRATION_APPS = ("users", "audit", "storage", "catalog", "inventory", "organiza
 URL_ROWS = {
     "rbac": '    path("api/v1/admin/rbac/", include("apps.rbac.urls")),\n',
     "audit": '    path("api/v1/admin/audit/", include("apps.audit.urls")),\n',
-    "storage": '    path("api/v1/organizations/<uuid:org_id>/", include("apps.storage.urls")),\n',
+    "storage": '    path("api/v1/", include("apps.storage.urls")),\n',
     "catalog": '    path("api/v1/organizations/<uuid:org_id>/catalog/", include("apps.catalog.urls")),\n',
     "inventory": '    path("api/v1/organizations/<uuid:org_id>/inventory/", include("apps.inventory.urls")),\n',
     "organizations": '    path("api/v1/", include("apps.organizations.urls")),\n',
 }
+
+
+STORAGE_TENANT_ROW = '    path("api/v1/organizations/<uuid:org_id>/", include("apps.storage.urls")),\n'
 
 
 def _ignore_excluded(directory, names):
@@ -78,7 +81,7 @@ def create_project(
     selected = set(REQUIRED_APPS) | set(optional_apps)
     if "inventory" in selected:
         selected.add("catalog")
-    if "catalog" in selected or "storage" in selected:
+    if "catalog" in selected:
         selected.add("organizations")
     target.parent.mkdir(parents=True, exist_ok=True)
     try:
@@ -96,6 +99,12 @@ def create_project(
         for module in OPTIONAL_APPS - selected:
             _replace_one(settings, f'    "apps.{module}",\n', "")
             _replace_one(routes, URL_ROWS[module], "")
+        if "storage" not in selected or "organizations" not in selected:
+            _replace_one(routes, STORAGE_TENANT_ROW, "")
+        if "storage" in selected and "organizations" not in selected:
+            # Standalone Storage's test suite does not import the optional adapter.
+            (target / "apps/storage/tests/test_storage.py").unlink()
+            (target / "apps/storage/tests/test_seaweedfs_integration.py").unlink()
 
         migrations = " ".join(a for a in MIGRATION_APPS if a in selected)
         workflow = target / ".github" / "workflows" / "ci.yaml"
@@ -179,7 +188,7 @@ def main():
     copied = set(REQUIRED_APPS) | set(args.apps)
     if "inventory" in copied:
         copied.add("catalog")
-    if "catalog" in copied or "storage" in copied:
+    if "catalog" in copied:
         copied.add("organizations")
     print(f"Created {target} with apps: {', '.join(sorted(copied))}")
     print("Next: copy .env.example to .env, run uv sync --locked, generate migrations and test.")
