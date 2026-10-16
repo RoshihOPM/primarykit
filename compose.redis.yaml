@@ -1,0 +1,23 @@
+# Optional development Redis cache. Bound to localhost only; never exposed publicly.
+# docker compose -f compose.yaml -f compose.redis.yaml up -d
+services:
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    environment:
+      REDIS_CACHE_ENABLED: ${REDIS_CACHE_ENABLED:-false}
+      REDIS_CACHE_URL: ${REDIS_CACHE_URL:-redis://redis:6379/0}
+      REDIS_CACHE_KEY_PREFIX: ${REDIS_CACHE_KEY_PREFIX:-client-dev}
+    depends_on:
+      redis:
+        condition: service_healthy
