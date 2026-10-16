@@ -70,12 +70,27 @@ def test_private_s3_upload_download_and_idor():
         with storage.open(item.object_key, "rb") as reader:
             assert reader.read() == PNG
         assert (
-            other.get(reverse("stored-files-download", kwargs={"org_id": org.pk, "pk": item.pk})).status_code == 404
+            other.get(
+                reverse("stored-files-download", kwargs={"org_id": org.pk, "pk": item.pk})
+            ).status_code
+            == 404
         )
-        response = api.get(reverse("stored-files-download", kwargs={"org_id": org.pk, "pk": item.pk}))
+        response = api.get(
+            reverse("stored-files-download", kwargs={"org_id": org.pk, "pk": item.pk})
+        )
         assert response.status_code == 200
         assert b"".join(response.streaming_content) == PNG
-        assert api.delete(reverse("stored-files-detail", kwargs={"org_id": org.pk, "pk": item.pk})).status_code == 204
-        assert api.get(reverse("stored-files-download", kwargs={"org_id": org.pk, "pk": item.pk})).status_code == 404
+        assert (
+            api.delete(
+                reverse("stored-files-detail", kwargs={"org_id": org.pk, "pk": item.pk})
+            ).status_code
+            == 204
+        )
+        assert (
+            api.get(
+                reverse("stored-files-download", kwargs={"org_id": org.pk, "pk": item.pk})
+            ).status_code
+            == 404
+        )
     finally:
         storage.delete(item.object_key)
