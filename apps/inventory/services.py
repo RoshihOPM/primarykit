@@ -16,8 +16,8 @@ from .domain import (
     StockPosition,
     StockRuleViolation,
     require_open_reservation,
-    validate_command_shape,
     validate_command_quantity,
+    validate_command_shape,
 )
 from .models import (
     InventoryOperation,
