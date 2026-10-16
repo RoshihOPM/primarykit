@@ -188,3 +188,64 @@ def test_failed_metadata_write_cleans_up_blob(private_disk):
     assert StoredFile.objects.count() == 0
     assert list(private_disk.rglob("*.png")) == []
     assert not any(p.is_file() for p in private_disk.rglob("*"))
+
+
+def test_cross_tenant_file_idor_and_no_global_superuser_bypass(private_disk):
+    owner = user("tenant-owner@example.com")
+    org = org_for(owner)
+    another = user("tenant-other@example.com")
+    other_org = org_for(another)
+    superuser = user("tenant-root@example.com", admin=True)
+    Membership.objects.create(
+        organization=other_org, user=superuser, role=Membership.Role.ADMIN
+    )
+    api = client_for(owner)
+    response = api.post(
+        reverse("stored-files-list", kwargs={"org_id": org.pk}),
+        {"file": png_upload()},
+        format="multipart",
+    )
+    assert response.status_code == 201
+    pk = response.data["id"]
+    detail = reverse("stored-files-detail", kwargs={"org_id": org.pk, "pk": pk})
+    wrong_detail = reverse(
+        "stored-files-detail", kwargs={"org_id": other_org.pk, "pk": pk}
+    )
+    assert client_for(superuser).get(detail).status_code == 404
+    assert client_for(another).get(wrong_detail).status_code == 404
+    assert client_for(another).delete(wrong_detail).status_code == 404
+    assert api.get("/api/v1/files/").status_code == 404
+
+    Membership.objects.create(
+        organization=other_org, user=owner, role=Membership.Role.ADMIN
+    )
+    assert api.get(wrong_detail).status_code == 404
+
+
+def test_tenant_admin_member_revocation_and_service_layer_security(private_disk):
+    owner = user("access-owner@example.com")
+    org = org_for(owner)
+    member = user("access-member@example.com")
+    admin = user("access-admin@example.com")
+    grant = Membership.objects.create(
+        organization=org, user=member, role=Membership.Role.MEMBER
+    )
+    Membership.objects.create(organization=org, user=admin, role=Membership.Role.ADMIN)
+    stored = save_private_file(owner=owner, organization=org, upload=png_upload())
+    detail = reverse("stored-files-detail", kwargs={"org_id": org.pk, "pk": stored.pk})
+    list_url = reverse("stored-files-list", kwargs={"org_id": org.pk})
+    assert client_for(member).get(detail).status_code == 404
+    assert client_for(admin).get(detail).status_code == 200
+    with pytest.raises(NotFound):
+        soft_delete_private_file(file=stored, actor=member, organization=org)
+    grant.is_active = False
+    grant.save(update_fields=["is_active"])
+    assert client_for(member).get(list_url).status_code == 404
+    with pytest.raises(NotFound):
+        save_private_file(owner=member, organization=org, upload=png_upload())
+    with patch("apps.storage.services._locked_scope", side_effect=NotFound()):
+        with pytest.raises(NotFound):
+            save_private_file(owner=owner, organization=org, upload=png_upload())
+    assert StoredFile.objects.count() == 1
+    assert sum(p.is_file() for p in private_disk.rglob("*")) == 1
+    assert client_for(admin).delete(detail).status_code == 204
