@@ -76,6 +76,7 @@ def test_inventory_domain_prevents_negative_and_over_reservation():
         StockRuleViolation,
         require_open_reservation,
         validate_command_shape,
+        validate_command_quantity,
     )
 
     stock = StockPosition(on_hand=10, reserved=2)
@@ -86,6 +87,10 @@ def test_inventory_domain_prevents_negative_and_over_reservation():
         with pytest.raises(StockRuleViolation):
             stock.apply(**deltas)
     validate_command_shape("transfer", {"warehouse", "item", "quantity", "destination"})
+    validate_command_quantity("issue", {"quantity": 4})
+    for bad in (-1, 0, True, 10**13):
+        with pytest.raises(StockRuleViolation):
+            validate_command_quantity("receive", {"quantity": bad})
     with pytest.raises(StockRuleViolation):
         validate_command_shape("transfer", {"warehouse", "item", "quantity"})
     with pytest.raises(StockRuleViolation):
