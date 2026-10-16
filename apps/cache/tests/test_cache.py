@@ -38,6 +38,25 @@ def test_redis_configuration_is_lazy_and_project_scoped():
     assert cfg["LOCATION"].startswith("rediss://")
 
 
+def test_optional_django_redis_backend_configuration():
+    config = build_cache_config(
+        enabled=True,
+        url="rediss://redis.example.test:6380/0",
+        prefix="client-prod",
+        timeout=60,
+        backend="django-redis",
+    )
+    assert config["BACKEND"] == "django_redis.cache.RedisCache"
+    assert config["OPTIONS"]["CLIENT_CLASS"] == "django_redis.client.DefaultClient"
+    with pytest.raises(ImproperlyConfigured, match="BACKEND"):
+        build_cache_config(
+            enabled=True,
+            url="redis://localhost:6379/0",
+            prefix="client",
+            backend="unsupported",
+        )
+
+
 def test_namespaced_cache_uses_hashed_keys_and_explicit_ttl():
     assert "alice" not in scoped_key(namespace="tenant:alice", key="user@example.test")
     assert scoped_key(namespace="tenant:a", key="1") != scoped_key(namespace="tenant:b", key="1")
