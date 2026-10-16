@@ -8,7 +8,13 @@ from .models import StoredFile
 @admin.register(StoredFile)
 class StoredFileAdmin(admin.ModelAdmin):
     list_display = (
-        "created_at", "organization", "owner", "original_name", "size", "content_type", "deleted_at"
+        "created_at",
+        "organization",
+        "owner",
+        "original_name",
+        "size",
+        "content_type",
+        "deleted_at",
     )
     search_fields = ("id", "object_key", "original_name")
     readonly_fields = (
@@ -25,11 +31,15 @@ class StoredFileAdmin(admin.ModelAdmin):
     )
 
     def get_queryset(self, request):
-        return super().get_queryset(request).filter(
-            organization__is_active=True,
-            organization__memberships__user=request.user,
-            organization__memberships__is_active=True,
-            organization__memberships__role__in=(Membership.Role.OWNER, Membership.Role.ADMIN),
+        return (
+            super()
+            .get_queryset(request)
+            .filter(
+                organization__is_active=True,
+                organization__memberships__user=request.user,
+                organization__memberships__is_active=True,
+                organization__memberships__role__in=(Membership.Role.OWNER, Membership.Role.ADMIN),
+            )
         )
 
     def has_view_permission(self, request, obj=None):
