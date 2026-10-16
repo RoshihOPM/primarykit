@@ -119,8 +119,12 @@ class AdminUserUpdateSerializer(serializers.ModelSerializer):
         fields = ("first_name", "last_name", "is_active")
 
     def validate_is_active(self, value):
-        if self.instance and not value and not may_deactivate(
-            actor_id=self.context["request"].user.pk, target_id=self.instance.pk
+        if (
+            self.instance
+            and not value
+            and not may_deactivate(
+                actor_id=self.context["request"].user.pk, target_id=self.instance.pk
+            )
         ):
             raise serializers.ValidationError(_("You cannot deactivate yourself."))
         return value
