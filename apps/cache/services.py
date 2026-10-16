@@ -125,9 +125,7 @@ class CacheService:
             result = pipe.execute()
         return int(result[0])
 
-    def increment(
-        self, key: str, *, amount: int = 1, ttl: int, namespace: str = "default"
-    ) -> int:
+    def increment(self, key: str, *, amount: int = 1, ttl: int, namespace: str = "default") -> int:
         """Atomic INCRBY + EXPIRE on dedicated numeric keys."""
         if type(amount) is not int:
             raise ValueError("Counter delta must be an integer")
