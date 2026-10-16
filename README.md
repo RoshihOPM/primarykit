@@ -70,6 +70,7 @@ Wallets, chats, payments, catalog, inventory. Эти функции реализ
 - [Repository rules for agents](AGENTS.md)
 - [Agent workflow and evaluated external skills](docs/agent-workflow.md)
 - [Modular monolith architecture decision](docs/adr/0001-copy-based-modular-monolith.md)
+- [Storage bounded context / DDD-lite access policies](docs/adr/0002-storage-bounded-context-and-policies.md)
 - [Catalog / inventory design backlog](docs/module-roadmap.md)
 
 Agent Skills: `.agents/skills/system-architect/`, `.agents/skills/database-architect/`, `.agents/skills/feature-delivery/`. These are guidance files, **not** a deployed multi-agent runner. The catalog/inventory modules remain future work.
@@ -107,7 +108,7 @@ before `migrate`, and **commit generated migrations in that project**.
 
 ## Private Storage
 
-A secure organization-scoped upload/download API is available at `/api/v1/organizations/{org_id}/files/` with
+Storage now supports standalone private files at `/api/v1/files/`; when Organizations is selected, company-scoped files are also available at `/api/v1/organizations/{org_id}/files/`. Both paths use explicit access policies with
 PDF/PNG/JPEG/WebP magic-byte verification, safe random object keys, read-only
 metadata and no public storage URLs. See [storage architecture](docs/storage-architecture.md).
 
@@ -130,7 +131,7 @@ See [project generator documentation](docs/project-generator.md).
 
 ## SeaweedFS — recommended self-hosted S3
 
-For projects using the `storage` module (automatically including `organizations`), PrimaryKit provides a single-node SeaweedFS 4.48 S3 gateway, persistent Docker volume, and optional Compose overlay:
+For projects using the `storage` module (Organizations is optional), PrimaryKit provides a single-node SeaweedFS 4.48 S3 gateway, persistent Docker volume, and optional Compose overlay:
 
 ```bash
 cp .env.example .env
@@ -171,11 +172,11 @@ uv run python scripts/new_project.py ../b2b-api --name b2b-api --apps organizati
 
 See [organizations architecture, API, security and migration notes](docs/organizations-architecture.md).
 
-**Important:** The old global Storage API has been removed. Existing file records require a verified organization backfill before adding the required FK. See `docs/storage-architecture.md`; the generator does not migrate client data.
+**Important:** Personal `/api/v1/files/` and tenant `/api/v1/organizations/{org_id}/files/` are distinct authorization scopes. The Storage context keeps an optional opaque organization UUID, not a cross-context FK. Existing installations require reviewed migrations; see `docs/storage-architecture.md`.
 
 ## Company and branch isolation
 
-`storage`, `catalog` and `inventory` now require `organizations` and use
+`catalog` and `inventory` require `organizations`; Storage can also run independently. Catalog and Inventory use
 `/api/v1/organizations/{org_id}/catalog/` and
 `/api/v1/organizations/{org_id}/inventory/`. Company membership and
 branch grants are checked server-side, including in stock command services.
@@ -183,5 +184,5 @@ Cross-company transfers and lookup by foreign IDs are forbidden.
 
 `--apps inventory` automatically selects Catalog and Organizations.
 **Existing clients require manual, verified tenant data migration**; old
-global Catalog, Inventory and Storage endpoints are intentionally removed. Read the architecture documents
+global Catalog and Inventory endpoints are intentionally removed. Storage's personal and tenant endpoints are strictly isolated. Read the architecture documents
 before updating a populated database.
