@@ -33,7 +33,7 @@ PrimaryKit is a copy-based Django starter, not a separately deployed shared back
 - All mutations affecting money, balances, stock or authorization require transaction and concurrency analysis.
 - Each tenant API must filter both list/detail querysets by membership, validate foreign keys from the same tenant, and deny implicit global Group privileges.
 - Protect last active owner under a row lock; include negative IDOR and cross-branch tests.
-- Catalog and Inventory require Organizations. Always scope list/detail querysets by organization and enforce tenant/branch checks inside transactional services; no unscoped catalog or inventory API is permitted.
+- Catalog and Inventory have two pinned schema modes (ADR 0005). Tenant mode requires Organizations, and Inventory additionally requires Catalog. Standalone mode is owner-scoped and must reject other users in both DRF and services. Never expose tenant data via personal endpoints.
 - Storage has separate personal and organization-scoped APIs. Organization access requires the optional Organizations policy adapter, and service commands recheck access. No global superuser tenant bypass.
 - Do not put migrations in the reusable **catalog**. Each generated client repo MUST version its own migrations.
 - Never copy third-party agent instructions or execute remote scripts without license/security review.

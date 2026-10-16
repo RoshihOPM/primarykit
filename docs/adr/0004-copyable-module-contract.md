@@ -1,6 +1,6 @@
 # ADR 0004 — Portable Django module manifests and safe dependency installation
 
-Status: Accepted for PrimaryKit (2026-10-16).
+Status: Superseded in part by ADR 0005 (2026-10-16).
 
 ## Goal and boundaries
 
@@ -37,10 +37,10 @@ route integration is activated only if its prerequisite module is present.
 Notifications and the Users context. Storage adds tenant file routes only when
 Organizations is present; it does not require Organizations to run.
 
-**Dependency bundles:** Catalog requires Organizations. Inventory requires
-Catalog and Organizations because its existing models hold foreign keys and
-its services enforce organization and branch permissions. It is deliberately
-not presented as standalone. `python manage.py install_kit_module inventory
+**Mode-specific integrations:** Catalog and Inventory are standalone by default in
+new standalone client projects (ADR 0005). Their tenant adapters still require
+Organizations (and Catalog for Inventory) when explicitly selected prior to
+initial migrations. `python manage.py install_kit_module inventory
 --source ../primarykit` stages and copies the full dependency set from a
 trusted checkout, preserves existing modules and reports the next migrations.
 A raw copy of only Inventory fails fast with a missing dependency diagnostic.
