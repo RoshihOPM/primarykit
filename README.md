@@ -42,7 +42,7 @@ uv run python manage.py runserver
 | [Генератор проектов](docs/project-generator.md) | CLI-аргументы, выбор модулей, миграции, `--git-init` |
 | [Commerce: Orders, Sales, Payments](docs/commerce-architecture.md) | API, состояния, деньги, инварианты, безопасность |
 | [Фоновые задачи](docs/tasks-architecture.md) | Очередь, обработчики клиента, worker, ограничения доставки |
-| [Redis Cache](docs/redis-cache.md) | Необязательный распределённый кэш и tenant-aware namespace |
+| [Redis Cache](docs/redis-cache.md) | Собственный CacheService на redis-py: JSON, Hashes, счётчики и TTL; Django Cache опционален |
 | [Celery + RabbitMQ](docs/celery-rabbitmq.md) | Независимый worker, брокер, необязательные результаты Redis |
 | [Статистика](docs/statistics-architecture.md) | Как бизнес-модули отдают метрики |
 | [Развёртывание](docs/deployment.md) | Dev/prod, nginx, переменные и эксплуатационные ограничения |
@@ -57,7 +57,7 @@ uv run python manage.py runserver
 | --- | --- |
 | **core** | Настройки проекта, абстрактные модели, healthcheck, registry |
 | tasks | Внутренняя PostgreSQL-очередь фоновых задач, отдельный worker, повторы и идемпотентность |
-| cache | Опциональный RedisCache поверх стандартного Django Cache API |
+| cache | Native redis-py CacheService (JSON, Hashes и счётчики), необязательный Django Cache bridge |
 | celery_tasks | Отдельный Celery-адаптер с RabbitMQ и необязательным Redis result backend |
 | **users** | JWT, email auth, профиль, восстановление |
 | **notifications** | Шаблоны писем и email backend |
