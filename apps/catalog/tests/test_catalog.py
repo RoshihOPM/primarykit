@@ -1,7 +1,13 @@
+# ruff: noqa: E402
 import pytest
 from django.urls import reverse as django_reverse
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
+
+from django.conf import settings
+
+if settings.CATALOG_MODE != "tenant":
+    pytest.skip("Tenant-only regression suite", allow_module_level=True)
 
 from apps.catalog.models import AttributeDefinition, CatalogItem, Category
 from apps.organizations.models import Membership, Organization
