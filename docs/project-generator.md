@@ -34,6 +34,11 @@ Always copied: `core`, `users`, `notifications`. Optional: `rbac`, `audit`, `sto
 - Writes `primarykit-origin.json` with copied modules and source version.
 - `--git-init` initializes local Git history on main; no GitHub remote is created and no push is performed.
 
+## Optional Redis Cache and Celery adapters
+
+`--apps cache` and `--apps celery_tasks` are independent selections, do not create a dependency on the source kit or require `tasks`.
+The generator includes `compose.redis.yaml` for Redis/Celery selections and `compose.celery.yaml` + `compose.celery.prod.yaml` only for Celery. Client projects opt into third-party packages explicitly (`uv add 'redis>=6,<7'`, `uv add 'celery[redis]>=5.6,<6'`) and commit their **own** lockfile. These adapters have no migrations. See [cache](redis-cache.md) and [Celery](celery-rabbitmq.md).
+
 ## Detached project verification
 
 ```bash

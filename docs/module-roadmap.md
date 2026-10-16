@@ -12,6 +12,8 @@ Updated: 2026-10-16. This is a future-improvement backlog, **not** a list of uni
 | Catalog | Categories, SKUs, typed attributes; standalone/tenant modes | [Catalog](catalog-architecture.md) |
 | Inventory | Warehouses, reservations, stock ledger, idempotency; standalone/tenant modes | [Inventory](inventory-architecture.md) |
 | Tasks | Internal PostgreSQL queue, retries, leases and separate worker | [Tasks](tasks-architecture.md) |
+| Cache | Django cache facade and optional Redis backend | [Cache](redis-cache.md) |
+| Celery Tasks | RabbitMQ broker, optional Redis result backend, copyable worker adapter | [Celery](celery-rabbitmq.md) |
 | Statistics | Auto-discovered providers, scoped counts and date windows | [Statistics](statistics-architecture.md) |
 | Orders | Owner-private priced order snapshots and cancellation | [Commerce](commerce-architecture.md) |
 | Sales | Owner-private sale records, optional verified order links and voiding | [Commerce](commerce-architecture.md) |

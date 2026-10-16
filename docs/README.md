@@ -14,6 +14,8 @@
 5. **[Как написать свой модуль](module-development.md)** — файлы, manifest, модели, API, сервисы, тесты и интеграции.
 6. **[Orders, Sales и Payments](commerce-architecture.md)** — жизненный цикл, деньги, схема API, что НЕ делает платежный модуль.
 7. **[Tasks](tasks-architecture.md)** — встроенная переносимая очередь, отдельный worker, ограничения at-least-once.
+8. **[Redis Cache](redis-cache.md)** — опциональный кэш и правила namespace, инвалидации и Redis.
+9. **[Celery + RabbitMQ](celery-rabbitmq.md)** — самостоятельные worker и брокер, Redis results по требованию.
 8. **[Statistics](statistics-architecture.md)** — единый API и подключение своих метрик.
 8. **[Развёртывание и поддержка](deployment.md)** — Docker, Linux/Nginx, SSL, PostgreSQL, бэкапы.
 

@@ -8,6 +8,8 @@ PrimaryKit распознаёт любую доверенную папку `apps
 | --- | --- | --- | --- |
 | `core` | Соглашения и registry | — | — |
 | `tasks` | Внутренняя очередь, транзакционное добавление и worker | core | — |
+| `cache` | Namespace-aware Django Cache, опциональный Redis backend | core | — |
+| `celery_tasks` | Celery adapter, RabbitMQ и необязательный Redis result backend | core | — |
 | `users` | JWT, профиль, email auth | core, notifications | audit |
 | `notifications` | Шаблонные email | core | — |
 | `organizations` | Компании, филиалы, участники | users | audit |
@@ -38,7 +40,7 @@ PrimaryKit распознаёт любую доверенную папку `apps
 | Payments manual reconcile | `/api/v1/admin/payments/` | Только суперпользователь |
 | Statistics | `/api/v1/statistics/` | Только доступные метрики |
 
-Tasks не создаёт публичных API маршрутов: `enqueue` вызывается только из доверенного кода приложения; worker запускается отдельно.
+Tasks, Cache и Celery не создают публичных API маршрутов; Celery и Redis не устанавливаются в клиенте автоматически. Tasks не создаёт публичных API маршрутов: `enqueue` вызывается только из доверенного кода приложения; worker запускается отдельно.
 
 Доступные маршруты можно увидеть после старта в Swagger `/api/docs/` (DEBUG). Если Organizations и нужные приложения включены в **tenant** режиме, Catalog и Inventory регистрируют корпоративные префиксы `/api/v1/organizations/{org_id}/catalog/` и `inventory/`. Statistics также имеет tenant и system API.
 

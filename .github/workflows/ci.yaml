@@ -83,6 +83,31 @@ jobs:
           uv run pytest
           cd -
           # Commerce modules must all boot and work when copied independently.
+          # Optional infrastructure modules must generate without importing Celery or Redis.
+          uv run python scripts/new_project.py /tmp/primarykit-cache-client --name cache-client --apps cache
+          cd /tmp/primarykit-cache-client
+          uv sync --locked --all-groups
+          uv run python -m apps.core.doctor --strict
+          uv run python manage.py makemigrations users --noinput --settings=config.settings.test
+          uv run python manage.py check --settings=config.settings.test
+          uv run pytest
+          cd -
+          uv run python scripts/new_project.py /tmp/primarykit-celery-client --name celery-client --apps celery_tasks
+          cd /tmp/primarykit-celery-client
+          uv sync --locked --all-groups
+          uv run python -m apps.core.doctor --strict
+          uv run python manage.py makemigrations users --noinput --settings=config.settings.test
+          uv run python manage.py check --settings=config.settings.test
+          uv run pytest
+          cd -
+          uv run python scripts/new_project.py /tmp/primarykit-infra-client --name infra-client --apps cache celery_tasks
+          cd /tmp/primarykit-infra-client
+          uv sync --locked --all-groups
+          uv run python -m apps.core.doctor --strict
+          uv run python manage.py makemigrations users --noinput --settings=config.settings.test
+          uv run python manage.py check --settings=config.settings.test
+          uv run pytest
+          cd -
           uv run python scripts/new_project.py /tmp/primarykit-tasks-client --name tasks-client --apps tasks
           cd /tmp/primarykit-tasks-client
           uv sync --locked --all-groups
@@ -170,6 +195,10 @@ jobs:
           docker compose -f compose.prod.yaml config --quiet
           docker compose -f compose.yaml -f compose.seaweedfs.yaml config --quiet
           docker compose -f compose.prod.yaml -f compose.seaweedfs.yaml config --quiet
+          docker compose -f compose.yaml -f compose.redis.yaml config --quiet
+          docker compose -f compose.yaml -f compose.celery.yaml config --quiet
+          docker compose -f compose.yaml -f compose.redis.yaml -f compose.celery.yaml config --quiet
+          docker compose -f compose.prod.yaml -f compose.celery.prod.yaml config --quiet
       - name: Build Docker development and production images
         run: |
           docker compose build api
@@ -182,6 +211,16 @@ jobs:
           docker compose exec -T api python manage.py check
           docker compose exec -T api uv run pytest --ds=config.settings.postgres_test
           curl --fail --retry 12 --retry-connrefused --retry-delay 2 http://127.0.0.1:8000/health/ready/
+      - name: Optional Redis and RabbitMQ integration tests
+        run: |
+          docker compose -f compose.yaml -f compose.redis.yaml -f compose.celery.yaml up -d --wait redis rabbitmq
+          # Only install optional client packages for this isolated integration step;
+          # the base lockfile and generated clients do not depend on them.
+          uv pip install "redis>=6,<7" "celery[redis]>=5.6,<6"
+          PRIMARYKIT_INFRA_INTEGRATION=1 \
+          REDIS_CACHE_URL=redis://127.0.0.1:6379/14 \
+          CELERY_BROKER_URL=amqp://worker:local-worker-only-change-me@127.0.0.1:5672// \
+          uv run --no-sync pytest -q apps/cache/tests/test_redis_integration.py apps/celery_tasks/tests/test_broker_integration.py
       - name: SeaweedFS S3 provider integration test
         run: |
           # Docker Hub occasionally times out during CI; retry the pull only.
@@ -199,5 +238,6 @@ jobs:
       - name: Clean containers
         if: always()
         run: |
+          docker compose -f compose.yaml -f compose.redis.yaml -f compose.celery.yaml down -v || true
           docker compose -f compose.yaml -f compose.seaweedfs.yaml down -v || true
           docker compose down -v || true

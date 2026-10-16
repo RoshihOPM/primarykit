@@ -16,6 +16,9 @@ from scripts.new_project import create_project
         {"sales"},
         {"payments"},
         {"tasks"},
+        {"cache"},
+        {"celery_tasks"},
+        {"cache", "celery_tasks"},
         {"orders", "sales", "payments"},
         {"statistics", "orders", "sales", "payments"},
         {"statistics"},
@@ -52,6 +55,8 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
         "sales",
         "payments",
         "tasks",
+        "cache",
+        "celery_tasks",
     ):
         assert (target / "apps" / app).exists() == (app in selected)
 
@@ -81,6 +86,14 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
     assert not (target / ".env").exists()
     assert (target / ".env.example").exists()
     assert (target / "compose.seaweedfs.yaml").exists() == ("storage" in apps)
+    assert (target / "compose.redis.yaml").exists() == bool({"cache", "celery_tasks"} & apps)
+    assert (target / "compose.celery.yaml").exists() == ("celery_tasks" in apps)
+    assert (target / "compose.celery.prod.yaml").exists() == ("celery_tasks" in apps)
+    if "cache" in apps:
+        assert "REDIS_CACHE_KEY_PREFIX=demo-api-dev" in (target / ".env.example").read_text()
+    readme = (target / "README.md").read_text()
+    assert ("uv add 'redis>=6,<7'" in readme) == ("cache" in apps)
+    assert ("uv add 'celery[redis]>=5.6,<6'" in readme) == ("celery_tasks" in apps)
 
     metadata = json.loads((target / "primarykit-origin.json").read_text())
     assert set(metadata["included_apps"]) == selected
