@@ -15,8 +15,11 @@ pytestmark = pytest.mark.django_db
 
 def actor(email, is_root=False):
     user = User.objects.create_user(
-        email=email, password="secure-payments-password-34567", email_verified=True,
-        is_superuser=is_root, is_staff=is_root,
+        email=email,
+        password="secure-payments-password-34567",
+        email_verified=True,
+        is_superuser=is_root,
+        is_staff=is_root,
     )
     api = APIClient()
     api.credentials(HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(user).access_token}")
@@ -25,7 +28,8 @@ def actor(email, is_root=False):
 
 def request_data():
     return {
-        "currency": "USD", "amount_minor": 235,
+        "currency": "USD",
+        "amount_minor": 235,
         "idempotency_key": "payment-request-001",
     }
 
@@ -43,8 +47,10 @@ def test_create_is_pending_and_only_superuser_can_reconcile():
     assert api.post("/api/v1/payments/", changed, format="json").status_code == 400
     endpoint = f"/api/v1/admin/payments/{payment_id}/reconcile/"
     evidence = {
-        "event_key": "trusted-proof-001", "outcome": "succeeded",
-        "amount_minor": 235, "currency": "USD",
+        "event_key": "trusted-proof-001",
+        "outcome": "succeeded",
+        "amount_minor": 235,
+        "currency": "USD",
     }
     assert api.post(endpoint, evidence, format="json").status_code == 403
     with pytest.raises(PermissionDenied):
@@ -77,21 +83,38 @@ def test_cancel_blocks_settlement_and_prevents_cross_order_payment():
     intent = create_intent(actor=owner, **request_data())
     assert api.post(f"/api/v1/payments/{intent.pk}/cancel/").status_code == 200
     assert api.post(f"/api/v1/payments/{intent.pk}/cancel/").status_code == 400
-    assert root.post(
-        f"/api/v1/admin/payments/{intent.pk}/reconcile/",
-        {"event_key": "reconcile-blocked", "outcome": "succeeded",
-         "amount_minor": 235, "currency": "USD"},
-        format="json",
-    ).status_code == 400
+    assert (
+        root.post(
+            f"/api/v1/admin/payments/{intent.pk}/reconcile/",
+            {
+                "event_key": "reconcile-blocked",
+                "outcome": "succeeded",
+                "amount_minor": 235,
+                "currency": "USD",
+            },
+            format="json",
+        ).status_code
+        == 400
+    )
     if apps.is_installed("apps.orders"):
         from apps.orders.services import place_order
 
         other, _ = actor("payment-otherorder@tests.example")
         order = place_order(
-            actor=other, currency="USD", idempotency_key="another-order-0001",
+            actor=other,
+            currency="USD",
+            idempotency_key="another-order-0001",
             lines=[{"sku": "x", "title": "Item", "quantity": 1, "unit_price_minor": 235}],
         )
-        assert api.post("/api/v1/payments/", {
-            **request_data(), "idempotency_key": "payment-other-order",
-            "source_order_id": str(order.pk),
-        }, format="json").status_code == 404
+        assert (
+            api.post(
+                "/api/v1/payments/",
+                {
+                    **request_data(),
+                    "idempotency_key": "payment-other-order",
+                    "source_order_id": str(order.pk),
+                },
+                format="json",
+            ).status_code
+            == 404
+        )

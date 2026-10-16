@@ -41,8 +41,15 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
         discover_modules(), {"core", "users", "notifications"} | set(apps)
     )
     for app in (
-        "rbac", "audit", "storage", "catalog", "inventory", "organizations",
-        "orders", "sales", "payments",
+        "rbac",
+        "audit",
+        "storage",
+        "catalog",
+        "inventory",
+        "organizations",
+        "orders",
+        "sales",
+        "payments",
     ):
         assert (target / "apps" / app).exists() == (app in selected)
 

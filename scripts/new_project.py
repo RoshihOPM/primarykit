@@ -20,8 +20,15 @@ REQUIRED_APPS = frozenset({"core", "users", "notifications"})
 AVAILABLE_MODULES = discover_modules()
 OPTIONAL_APPS = frozenset(AVAILABLE_MODULES) - REQUIRED_APPS
 MIGRATION_APPS = (
-    "users", "audit", "storage", "catalog", "inventory", "organizations",
-    "orders", "sales", "payments",
+    "users",
+    "audit",
+    "storage",
+    "catalog",
+    "inventory",
+    "organizations",
+    "orders",
+    "sales",
+    "payments",
 )
 # Statistics uses existing module data only; it has no persistence migrations.
 

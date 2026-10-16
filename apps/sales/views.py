@@ -9,8 +9,10 @@ from .services import record_sale, void_sale
 
 
 class SaleViewSet(
-    mixins.ListModelMixin, mixins.RetrieveModelMixin,
-    mixins.CreateModelMixin, viewsets.GenericViewSet,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.CreateModelMixin,
+    viewsets.GenericViewSet,
 ):
     permission_classes = (IsAuthenticated,)
     serializer_class = SaleSerializer

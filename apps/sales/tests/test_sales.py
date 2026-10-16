@@ -15,8 +15,11 @@ pytestmark = pytest.mark.django_db
 
 def auth(email, superuser=False):
     user = User.objects.create_user(
-        email=email, password="strong-sales-password-12345", email_verified=True,
-        is_superuser=superuser, is_staff=superuser,
+        email=email,
+        password="strong-sales-password-12345",
+        email_verified=True,
+        is_superuser=superuser,
+        is_staff=superuser,
     )
     api = APIClient()
     api.credentials(HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(user).access_token}")
@@ -27,9 +30,7 @@ def command():
     return {
         "currency": "KZT",
         "idempotency_key": "sale-record-001",
-        "lines": [
-            {"sku": "abc", "title": "Tea", "quantity": 3, "unit_price_minor": 150}
-        ],
+        "lines": [{"sku": "abc", "title": "Tea", "quantity": 3, "unit_price_minor": 150}],
     }
 
 
@@ -82,6 +83,9 @@ def test_optional_orders_link_cannot_reference_other_users_or_forge_amount():
     assert api.post("/api/v1/sales/", data, format="json").status_code == 404
     data["source_order_id"] = str(order.pk)
     data["lines"][0]["unit_price_minor"] = 500
+    assert api.post("/api/v1/sales/", data, format="json").status_code == 400
+    data = {**command(), "source_order_id": str(order.pk)}
+    data["lines"][0]["sku"] = "OTHER"
     assert api.post("/api/v1/sales/", data, format="json").status_code == 400
     data = {**command(), "source_order_id": str(order.pk)}
     assert api.post("/api/v1/sales/", data, format="json").status_code == 201

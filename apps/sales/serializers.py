@@ -15,8 +15,14 @@ class SaleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Sale
         fields = (
-            "id", "status", "currency", "total_minor", "source_order_id",
-            "lines", "created_at", "voided_at",
+            "id",
+            "status",
+            "currency",
+            "total_minor",
+            "source_order_id",
+            "lines",
+            "created_at",
+            "voided_at",
         )
 
 

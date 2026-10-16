@@ -28,13 +28,24 @@ def normalize_sale_lines(currency, lines):
     result = []
     for row in lines:
         if not isinstance(row, dict) or set(row) != {
-            "sku", "title", "quantity", "unit_price_minor"
+            "sku",
+            "title",
+            "quantity",
+            "unit_price_minor",
         }:
-            raise SalesRuleViolation("Each line requires sku, title, quantity and unit_price_minor.")
+            raise SalesRuleViolation(
+                "Each line requires sku, title, quantity and unit_price_minor."
+            )
         sku, title, qty, price = (
-            row["sku"], row["title"], row["quantity"], row["unit_price_minor"]
+            row["sku"],
+            row["title"],
+            row["quantity"],
+            row["unit_price_minor"],
         )
-        if not isinstance(sku, str) or re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,79}", sku) is None:
+        if (
+            not isinstance(sku, str)
+            or re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,79}", sku) is None
+        ):
             raise SalesRuleViolation("Invalid SKU.")
         if not isinstance(title, str) or not 1 <= len(title.strip()) <= 200:
             raise SalesRuleViolation("Invalid title.")

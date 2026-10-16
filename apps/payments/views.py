@@ -9,8 +9,10 @@ from .services import cancel_intent, create_intent
 
 
 class PaymentViewSet(
-    mixins.ListModelMixin, mixins.RetrieveModelMixin,
-    mixins.CreateModelMixin, viewsets.GenericViewSet,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.CreateModelMixin,
+    viewsets.GenericViewSet,
 ):
     permission_classes = (IsAuthenticated,)
     serializer_class = PaymentSerializer

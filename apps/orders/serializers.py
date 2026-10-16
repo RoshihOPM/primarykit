@@ -15,8 +15,13 @@ class OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = (
-            "id", "status", "currency", "total_minor", "items",
-            "created_at", "canceled_at",
+            "id",
+            "status",
+            "currency",
+            "total_minor",
+            "items",
+            "created_at",
+            "canceled_at",
         )
 
 

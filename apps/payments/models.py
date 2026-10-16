@@ -54,9 +54,13 @@ class PaymentEvent(UUIDTimestampedModel):
 
     intent = models.ForeignKey(PaymentIntent, on_delete=models.PROTECT, related_name="events")
     event_key = models.CharField(max_length=128, unique=True)
-    outcome = models.CharField(max_length=12, choices=(
-        ("succeeded", "Succeeded"), ("failed", "Failed"),
-    ))
+    outcome = models.CharField(
+        max_length=12,
+        choices=(
+            ("succeeded", "Succeeded"),
+            ("failed", "Failed"),
+        ),
+    )
     amount_minor = models.PositiveBigIntegerField()
     currency = models.CharField(max_length=3)
     verified_by = models.ForeignKey(

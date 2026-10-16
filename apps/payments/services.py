@@ -40,9 +40,11 @@ def _source_order(*, owner, source_order_id, currency, amount_minor):
         raise ValidationError({"source_order_id": "Invalid order identifier."}) from exc
     from apps.orders.models import Order
 
-    order = Order.objects.select_for_update().filter(
-        pk=source_order_id, owner=owner, status="placed"
-    ).first()
+    order = (
+        Order.objects.select_for_update()
+        .filter(pk=source_order_id, owner=owner, status="placed")
+        .first()
+    )
     if order is None:
         raise NotFound()
     if order.currency != currency or order.total_minor != amount_minor:
@@ -60,7 +62,8 @@ def create_intent(*, actor, amount_minor, currency, idempotency_key, source_orde
     fingerprint = hashlib.sha256(
         json.dumps(
             {"amount_minor": amount_minor, "currency": currency, "source_order_id": reference},
-            sort_keys=True, separators=(",", ":"),
+            sort_keys=True,
+            separators=(",", ":"),
         ).encode()
     ).hexdigest()
     owner = _owner(actor)
@@ -70,17 +73,24 @@ def create_intent(*, actor, amount_minor, currency, idempotency_key, source_orde
             raise ValidationError({"idempotency_key": "Key reused for different payment."})
         return previous
     source_order_id = _source_order(
-        owner=owner, source_order_id=source_order_id,
-        currency=currency, amount_minor=amount_minor,
+        owner=owner,
+        source_order_id=source_order_id,
+        currency=currency,
+        amount_minor=amount_minor,
     )
     payment = PaymentIntent.objects.create(
-        owner=owner, amount_minor=amount_minor, currency=currency,
-        source_order_id=source_order_id, idempotency_key=idempotency_key,
+        owner=owner,
+        amount_minor=amount_minor,
+        currency=currency,
+        source_order_id=source_order_id,
+        idempotency_key=idempotency_key,
         fingerprint=fingerprint,
     )
     record_audit_event(
-        actor=owner, action="payments.intent.created",
-        target_type="payments.PaymentIntent", target_id=payment.pk,
+        actor=owner,
+        action="payments.intent.created",
+        target_type="payments.PaymentIntent",
+        target_id=payment.pk,
         changes={"currency": currency, "amount_minor": amount_minor},
     )
     return payment
@@ -97,8 +107,10 @@ def cancel_intent(*, actor, payment_id):
     payment.status = PaymentIntent.Status.CANCELED
     payment.save(update_fields=("status", "updated_at"))
     record_audit_event(
-        actor=owner, action="payments.intent.canceled",
-        target_type="payments.PaymentIntent", target_id=payment.pk,
+        actor=owner,
+        action="payments.intent.canceled",
+        target_type="payments.PaymentIntent",
+        target_id=payment.pk,
     )
     return payment
 
@@ -121,8 +133,10 @@ def reconcile_manual(*, actor, payment_id, event_key, outcome, amount_minor, cur
     event = PaymentEvent.objects.filter(event_key=event_key).first()
     if event:
         if (
-            event.intent_id != payment.pk or event.outcome != outcome
-            or event.amount_minor != amount_minor or event.currency != currency
+            event.intent_id != payment.pk
+            or event.outcome != outcome
+            or event.amount_minor != amount_minor
+            or event.currency != currency
         ):
             raise ValidationError({"event_key": "Event key conflicts with prior settlement."})
         return payment
@@ -131,26 +145,38 @@ def reconcile_manual(*, actor, payment_id, event_key, outcome, amount_minor, cur
     if payment.amount_minor != amount_minor or payment.currency != currency:
         raise ValidationError({"amount_minor": "Settlement amount/currency mismatch."})
     if outcome == "succeeded" and payment.source_order_id is not None:
-        if PaymentIntent.objects.filter(
-            owner=owner, source_order_id=payment.source_order_id, status="succeeded"
-        ).exclude(pk=payment.pk).exists():
+        if (
+            PaymentIntent.objects.filter(
+                owner=owner, source_order_id=payment.source_order_id, status="succeeded"
+            )
+            .exclude(pk=payment.pk)
+            .exists()
+        ):
             raise ValidationError(
                 {"source_order_id": "This order already has a successful payment."}
             )
         _source_order(
-            owner=owner, source_order_id=payment.source_order_id,
-            currency=currency, amount_minor=amount_minor,
+            owner=owner,
+            source_order_id=payment.source_order_id,
+            currency=currency,
+            amount_minor=amount_minor,
         )
     payment.status = outcome
     payment.settled_at = timezone.now()
     payment.save(update_fields=("status", "settled_at", "updated_at"))
     PaymentEvent.objects.create(
-        intent=payment, event_key=event_key, outcome=outcome,
-        amount_minor=amount_minor, currency=currency, verified_by=actor,
+        intent=payment,
+        event_key=event_key,
+        outcome=outcome,
+        amount_minor=amount_minor,
+        currency=currency,
+        verified_by=actor,
     )
     record_audit_event(
-        actor=actor, action="payments.intent.reconciled",
-        target_type="payments.PaymentIntent", target_id=payment.pk,
+        actor=actor,
+        action="payments.intent.reconciled",
+        target_type="payments.PaymentIntent",
+        target_id=payment.pk,
         changes={"outcome": outcome, "amount_minor": amount_minor},
     )
     return payment

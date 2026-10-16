@@ -32,9 +32,14 @@ def normalize_order_lines(currency, values):
     results = []
     for row in values:
         if not isinstance(row, dict) or set(row) != {
-            "sku", "title", "quantity", "unit_price_minor"
+            "sku",
+            "title",
+            "quantity",
+            "unit_price_minor",
         }:
-            raise OrderRuleViolation("Each line requires sku, title, quantity and unit_price_minor.")
+            raise OrderRuleViolation(
+                "Each line requires sku, title, quantity and unit_price_minor."
+            )
         sku, title = row["sku"], row["title"]
         qty, price = row["quantity"], row["unit_price_minor"]
         if not isinstance(sku, str) or not SKU_RE.fullmatch(sku):

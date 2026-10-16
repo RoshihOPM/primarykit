@@ -22,7 +22,13 @@ PROVIDER = Provider(
     code="payments",
     metrics=(
         Metric("pending", "Pending intents", "count", "snapshot", ("personal",), _pending),
-        Metric("succeeded", "Reconciled successful intents", "count", "period",
-               ("personal",), _succeeded),
+        Metric(
+            "succeeded",
+            "Reconciled successful intents",
+            "count",
+            "period",
+            ("personal",),
+            _succeeded,
+        ),
     ),
 )

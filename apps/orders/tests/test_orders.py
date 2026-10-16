@@ -15,8 +15,11 @@ pytestmark = pytest.mark.django_db
 
 def client(email, superuser=False):
     user = User.objects.create_user(
-        email=email, password="strong-orders-password-67890", email_verified=True,
-        is_staff=superuser, is_superuser=superuser,
+        email=email,
+        password="strong-orders-password-67890",
+        email_verified=True,
+        is_staff=superuser,
+        is_superuser=superuser,
     )
     api = APIClient()
     api.credentials(HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(user).access_token}")
@@ -25,7 +28,8 @@ def client(email, superuser=False):
 
 def payload():
     return {
-        "currency": "USD", "idempotency_key": "test-order-0001",
+        "currency": "USD",
+        "idempotency_key": "test-order-0001",
         "lines": [{"sku": "tea", "title": "Tea", "quantity": 2, "unit_price_minor": 125}],
     }
 
@@ -66,9 +70,9 @@ def test_order_scope_and_direct_service_idor():
 def test_orders_reject_invalid_minor_values_and_missing_lines():
     for price in (-1, True, 10**15):
         with pytest.raises(OrderRuleViolation):
-            normalize_order_lines("USD", [
-                {"sku": "sku", "title": "Name", "quantity": 1, "unit_price_minor": price}
-            ])
+            normalize_order_lines(
+                "USD", [{"sku": "sku", "title": "Name", "quantity": 1, "unit_price_minor": price}]
+            )
     with pytest.raises(OrderRuleViolation):
         normalize_order_lines("usd", [])
     _, api = client("orders-invalid@example.test")

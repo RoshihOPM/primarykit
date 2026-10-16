@@ -17,9 +17,7 @@ from .models import Order, OrderItem
 def _lock_owner(actor):
     if not actor or not actor.is_authenticated or not actor.is_active:
         raise NotFound()
-    owner = get_user_model().objects.select_for_update().filter(
-        pk=actor.pk, is_active=True
-    ).first()
+    owner = get_user_model().objects.select_for_update().filter(pk=actor.pk, is_active=True).first()
     if owner is None:
         raise NotFound()
     return owner
@@ -33,11 +31,20 @@ def place_order(*, actor, currency, lines, idempotency_key):
         raise ValidationError({"lines": str(exc)}) from exc
     fingerprint = hashlib.sha256(
         json.dumps(
-            {"currency": currency, "lines": [
-                {"sku": row.sku, "title": row.title, "quantity": row.quantity,
-                 "unit_price_minor": row.unit_price_minor}
-                for row in normalized
-            ]}, sort_keys=True, separators=(",", ":")
+            {
+                "currency": currency,
+                "lines": [
+                    {
+                        "sku": row.sku,
+                        "title": row.title,
+                        "quantity": row.quantity,
+                        "unit_price_minor": row.unit_price_minor,
+                    }
+                    for row in normalized
+                ],
+            },
+            sort_keys=True,
+            separators=(",", ":"),
         ).encode()
     ).hexdigest()
     owner = _lock_owner(actor)
@@ -47,18 +54,30 @@ def place_order(*, actor, currency, lines, idempotency_key):
             raise ValidationError({"idempotency_key": "Key reused for different order."})
         return previous
     order = Order.objects.create(
-        owner=owner, currency=currency, total_minor=total,
-        idempotency_key=idempotency_key, fingerprint=fingerprint,
+        owner=owner,
+        currency=currency,
+        total_minor=total,
+        idempotency_key=idempotency_key,
+        fingerprint=fingerprint,
     )
-    OrderItem.objects.bulk_create([
-        OrderItem(
-            order=order, sku=line.sku, title=line.title, quantity=line.quantity,
-            unit_price_minor=line.unit_price_minor, line_total_minor=line.total_minor,
-        ) for line in normalized
-    ])
+    OrderItem.objects.bulk_create(
+        [
+            OrderItem(
+                order=order,
+                sku=line.sku,
+                title=line.title,
+                quantity=line.quantity,
+                unit_price_minor=line.unit_price_minor,
+                line_total_minor=line.total_minor,
+            )
+            for line in normalized
+        ]
+    )
     record_audit_event(
-        actor=owner, action="orders.order.placed",
-        target_type="orders.Order", target_id=order.pk,
+        actor=owner,
+        action="orders.order.placed",
+        target_type="orders.Order",
+        target_id=order.pk,
         changes={"total_minor": total, "currency": currency},
     )
     return order
@@ -79,12 +98,8 @@ def cancel_order(*, actor, order_id):
     if apps.is_installed("apps.sales"):
         from apps.sales.models import Sale
 
-        if Sale.objects.filter(
-            owner=owner, source_order_id=order.pk, status="recorded"
-        ).exists():
-            raise ValidationError(
-                {"status": "Order has a recorded sale and cannot be canceled."}
-            )
+        if Sale.objects.filter(owner=owner, source_order_id=order.pk, status="recorded").exists():
+            raise ValidationError({"status": "Order has a recorded sale and cannot be canceled."})
     if apps.is_installed("apps.payments"):
         from apps.payments.models import PaymentIntent
 
@@ -96,7 +111,9 @@ def cancel_order(*, actor, order_id):
     order.canceled_at = timezone.now()
     order.save(update_fields=("status", "canceled_at", "updated_at"))
     record_audit_event(
-        actor=owner, action="orders.order.canceled",
-        target_type="orders.Order", target_id=order.pk,
+        actor=owner,
+        action="orders.order.canceled",
+        target_type="orders.Order",
+        target_id=order.pk,
     )
     return order

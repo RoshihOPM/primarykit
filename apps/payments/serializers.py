@@ -7,8 +7,13 @@ class PaymentSerializer(serializers.ModelSerializer):
     class Meta:
         model = PaymentIntent
         fields = (
-            "id", "amount_minor", "currency", "status", "source_order_id",
-            "created_at", "settled_at",
+            "id",
+            "amount_minor",
+            "currency",
+            "status",
+            "source_order_id",
+            "created_at",
+            "settled_at",
         )
 
 

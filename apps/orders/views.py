@@ -9,8 +9,10 @@ from .services import cancel_order, place_order
 
 
 class OrderViewSet(
-    mixins.ListModelMixin, mixins.RetrieveModelMixin,
-    mixins.CreateModelMixin, viewsets.GenericViewSet,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.CreateModelMixin,
+    viewsets.GenericViewSet,
 ):
     permission_classes = (IsAuthenticated,)
     serializer_class = OrderSerializer
