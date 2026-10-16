@@ -35,6 +35,16 @@ jobs:
           uv run python manage.py check --settings=config.settings.test
           uv run pytest
           cd -
+          # Raw copy test: no generator edits or INSTALLED_APPS/URL changes after copying.
+          uv run python scripts/new_project.py /tmp/primarykit-copy-client --name copy-client
+          cp -a apps/storage /tmp/primarykit-copy-client/apps/
+          cd /tmp/primarykit-copy-client
+          uv sync --locked --all-groups
+          uv run python manage.py makemigrations users storage --noinput --settings=config.settings.test
+          uv run python manage.py check --settings=config.settings.test
+          uv run python -c 'import os; os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.test"); import django; django.setup(); from django.urls import reverse; assert reverse("stored-files-list") == "/api/v1/files/"'
+          uv run pytest
+          cd -
           uv run python scripts/new_project.py /tmp/primarykit-storage-client --name storage-client --apps storage
           cd /tmp/primarykit-storage-client
           uv sync --locked --all-groups

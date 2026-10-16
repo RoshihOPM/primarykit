@@ -66,9 +66,7 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
     assert workflows.count(f"makemigrations {migration_apps} --noinput") == 2
     if "storage" in selected:
         assert (target / "apps/storage/tests/test_personal_storage.py").exists()
-        assert (target / "apps/storage/tests/test_storage.py").exists() == (
-            "organizations" in selected
-        )
+        assert (target / "apps/storage/tests/test_storage.py").exists()
 
 
 def test_generator_rejects_existing_directory_and_invalid_input(tmp_path):

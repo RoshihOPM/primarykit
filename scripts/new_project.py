@@ -86,10 +86,6 @@ def create_project(
         shutil.rmtree(target / "scripts")
         (target / "apps" / "core" / "tests" / "test_project_generator.py").unlink()
         # Installed apps and URLs are discovered from each copied manifest.py.
-        if "storage" in selected and "organizations" not in selected:
-            # Standalone Storage's test suite does not import the optional adapter.
-            (target / "apps/storage/tests/test_storage.py").unlink()
-            (target / "apps/storage/tests/test_seaweedfs_integration.py").unlink()
 
         migrations = " ".join(a for a in MIGRATION_APPS if a in selected)
         workflow = target / ".github" / "workflows" / "ci.yaml"

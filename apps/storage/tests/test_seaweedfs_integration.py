@@ -11,7 +11,9 @@ from django.urls import reverse
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from apps.organizations.models import Membership, Organization
+pytest.importorskip("apps.organizations.models")
+
+from apps.organizations.models import Membership, Organization  # noqa: E402
 from apps.storage.models import StoredFile
 from apps.users.models import User
 
