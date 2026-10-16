@@ -5,9 +5,9 @@ from rest_framework import mixins, viewsets
 from rest_framework.permissions import SAFE_METHODS
 
 from apps.core.audit import record_audit_event
-from apps.organizations.scoping import organization_scope, require_writer
-from apps.organizations.permissions import get_active_membership
 from apps.organizations.models import Organization
+from apps.organizations.permissions import get_active_membership
+from apps.organizations.scoping import organization_scope, require_writer
 
 from .models import AttributeDefinition, CatalogItem, Category
 from .permissions import CatalogAccess

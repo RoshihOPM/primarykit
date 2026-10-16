@@ -1,6 +1,5 @@
 import pytest
 from django.urls import reverse as django_reverse
-
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -114,8 +113,12 @@ def test_reject_unknown_missing_or_incorrect_attributes():
 def test_regular_users_cannot_write_or_see_inactive_catalog():
     admin = api("admin@catalog.test", admin=True)
     viewer = api("viewer@catalog.test")
-    category = Category.objects.create(organization=tenant(), slug="secret", name="Secret", is_active=False)
-    item = CatalogItem.objects.create(organization=tenant(), category=category, sku="X01", name="Hidden")
+    category = Category.objects.create(
+        organization=tenant(), slug="secret", name="Secret", is_active=False
+    )
+    item = CatalogItem.objects.create(
+        organization=tenant(), category=category, sku="X01", name="Hidden"
+    )
     assert viewer.get(reverse("catalog-items-list")).data["count"] == 0
     assert viewer.get(reverse("catalog-items-detail", kwargs={"pk": item.pk})).status_code == 404
     assert viewer.post(reverse("catalog-items-list"), {"name": "bad"}).status_code == 403

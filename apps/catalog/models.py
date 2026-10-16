@@ -63,20 +63,22 @@ class CatalogItem(UUIDTimestampedModel):
     class Meta:
         ordering = ("name", "sku")
         constraints = [
-            models.UniqueConstraint(
-                Lower("sku"), "organization", name="catalog_org_sku_ci_uniq"
-            ),
+            models.UniqueConstraint(Lower("sku"), "organization", name="catalog_org_sku_ci_uniq"),
         ]
         indexes = [
-            models.Index(fields=["organization", "category", "is_active"], name="catalog_org_category_idx")
+            models.Index(
+                fields=["organization", "category", "is_active"], name="catalog_org_category_idx"
+            )
         ]
 
     def save(self, *args, **kwargs):
         self.sku = self.sku.strip().upper()
         if self.category_id and self.organization_id:
-            category_org = Category.objects.filter(pk=self.category_id).values_list(
-                "organization_id", flat=True
-            ).first()
+            category_org = (
+                Category.objects.filter(pk=self.category_id)
+                .values_list("organization_id", flat=True)
+                .first()
+            )
             if category_org != self.organization_id:
                 raise ValidationError("Catalog item category must belong to the same organization.")
         return super().save(*args, **kwargs)

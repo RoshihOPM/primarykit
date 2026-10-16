@@ -27,9 +27,11 @@ class WarehouseSerializer(serializers.ModelSerializer):
 
     def validate_code(self, value):
         org = self.context["view"].get_scope()[0]
-        if Warehouse.objects.filter(organization=org, code=value).exclude(
-            pk=getattr(self.instance, "pk", None)
-        ).exists():
+        if (
+            Warehouse.objects.filter(organization=org, code=value)
+            .exclude(pk=getattr(self.instance, "pk", None))
+            .exists()
+        ):
             raise serializers.ValidationError("Warehouse code already exists in this company.")
         return value
 
@@ -61,8 +63,12 @@ class StockCommandSerializer(serializers.Serializer):
     KINDS = ("receive", "issue", "transfer", "reserve", "release", "consume")
     kind = serializers.ChoiceField(choices=KINDS)
     idempotency_key = serializers.CharField(max_length=128, min_length=8, trim_whitespace=True)
-    warehouse = serializers.PrimaryKeyRelatedField(queryset=Warehouse.objects.none(), required=False)
-    destination = serializers.PrimaryKeyRelatedField(queryset=Warehouse.objects.none(), required=False)
+    warehouse = serializers.PrimaryKeyRelatedField(
+        queryset=Warehouse.objects.none(), required=False
+    )
+    destination = serializers.PrimaryKeyRelatedField(
+        queryset=Warehouse.objects.none(), required=False
+    )
     item = serializers.PrimaryKeyRelatedField(queryset=CatalogItem.objects.none(), required=False)
     quantity = serializers.IntegerField(min_value=1, max_value=10**12, required=False)
     reservation = serializers.PrimaryKeyRelatedField(

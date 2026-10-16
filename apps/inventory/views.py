@@ -7,6 +7,8 @@ from rest_framework.permissions import SAFE_METHODS
 from rest_framework.response import Response
 
 from apps.core.audit import record_audit_event
+from apps.organizations.models import Organization
+from apps.organizations.permissions import get_active_membership
 from apps.organizations.scoping import (
     FULL_ACCESS,
     WRITERS,
@@ -14,8 +16,6 @@ from apps.organizations.scoping import (
     organization_scope,
     require_writer,
 )
-from apps.organizations.permissions import get_active_membership
-from apps.organizations.models import Organization
 
 from .models import InventoryOperation, StockBalance, StockReservation, Warehouse
 from .serializers import (
@@ -53,7 +53,8 @@ class InventoryScopeMixin:
         qs = Warehouse.objects.filter(organization=organization)
         if membership.role not in FULL_ACCESS:
             qs = qs.filter(
-                is_active=True, branch__is_active=True,
+                is_active=True,
+                branch__is_active=True,
                 branch_id__in=branch_ids_for(membership),
             )
         return qs

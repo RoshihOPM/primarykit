@@ -15,19 +15,6 @@ jobs:
           python-version: "3.13"
       - name: Install dependencies
         run: uv sync --locked --all-groups
-      - name: Temporary autoformat for test feedback
-        run: |
-          uv run ruff check --fix .
-          uv run ruff format .
-          python - <<'PY'
-          from pathlib import Path
-          import base64
-          for p in sorted(Path("apps").rglob("*.py")):
-              if p.parts[1] in {"catalog", "inventory", "organizations"}:
-                  print("SNAP_START:"+str(p))
-                  print(base64.b64encode(p.read_bytes()).decode())
-                  print("SNAP_END:"+str(p))
-          PY
       - name: Ruff lint
         run: uv run ruff check .
       - name: Ruff format

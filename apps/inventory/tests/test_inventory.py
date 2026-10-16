@@ -1,7 +1,6 @@
 import pytest
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.urls import reverse as django_reverse
-
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -51,10 +50,14 @@ def identity(email, *, admin=False):
 def stock():
     org = tenant()
     category = Category.objects.create(organization=org, slug="tools", name="Tools")
-    item = CatalogItem.objects.create(organization=org, category=category, sku="HAMMER-01", name="Hammer")
+    item = CatalogItem.objects.create(
+        organization=org, category=category, sku="HAMMER-01", name="Hammer"
+    )
     branch = Branch.objects.create(organization=org, code="primary", name="Primary")
     source = Warehouse.objects.create(organization=org, branch=branch, code="main", name="Main")
-    destination = Warehouse.objects.create(organization=org, branch=branch, code="branch", name="Branch")
+    destination = Warehouse.objects.create(
+        organization=org, branch=branch, code="branch", name="Branch"
+    )
     admin, client = identity("inventory-admin@example.com", admin=True)
     return {
         "item": item,

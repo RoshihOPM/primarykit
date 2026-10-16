@@ -34,9 +34,15 @@ def _locked_balances(organization, pairs):
     """Create missing zero rows, then lock in stable UUID order to avoid deadlocks."""
     identifiers = []
     for warehouse, item in sorted(pairs, key=lambda pair: (str(pair[0].pk), str(pair[1].pk))):
-        obj, _ = StockBalance.objects.get_or_create(organization=organization, warehouse=warehouse, item=item)
+        obj, _ = StockBalance.objects.get_or_create(
+            organization=organization, warehouse=warehouse, item=item
+        )
         identifiers.append(obj.pk)
-    rows = list(StockBalance.objects.select_for_update().filter(organization=organization, pk__in=identifiers).order_by("pk"))
+    rows = list(
+        StockBalance.objects.select_for_update()
+        .filter(organization=organization, pk__in=identifiers)
+        .order_by("pk")
+    )
     return {(row.warehouse_id, row.item_id): row for row in rows}
 
 
@@ -96,9 +102,9 @@ def _execute_locked(organization, operation, data, actor):
         result["balances"].insert(0, _balance_dict(balance))
         return result
     reservation = data["reservation"]
-    balance = _locked_balances(organization, [(reservation.balance.warehouse, reservation.balance.item)])[
-        (reservation.balance.warehouse_id, reservation.balance.item_id)
-    ]
+    balance = _locked_balances(
+        organization, [(reservation.balance.warehouse, reservation.balance.item)]
+    )[(reservation.balance.warehouse_id, reservation.balance.item_id)]
     # All operations on reservations lock balance BEFORE reservation to avoid deadlocks.
     current = StockReservation.objects.select_for_update().get(pk=reservation.pk)
     if current.status != StockReservation.Status.ACTIVE:
@@ -121,7 +127,10 @@ def _assert_command_tenant(organization, membership, data):
     if kind in {"receive", "issue", "reserve", "transfer"}:
         warehouse = data["warehouse"]
         item = data["item"]
-        if item.organization_id != organization.pk or item.category.organization_id != organization.pk:
+        if (
+            item.organization_id != organization.pk
+            or item.category.organization_id != organization.pk
+        ):
             raise NotFound()
         if not item.is_active or not item.category.is_active:
             raise ValidationError({"item": "Inactive item."})
@@ -142,11 +151,14 @@ def _assert_command_tenant(organization, membership, data):
         ):
             raise NotFound()
         # Existing reservations may be closed after a warehouse is deactivated.
-        if membership.role not in ("owner", "admin") and not BranchAccess.objects.filter(
-            membership=membership,
-            branch_id=warehouse.branch_id,
-            branch__organization=organization,
-        ).exists():
+        if (
+            membership.role not in ("owner", "admin")
+            and not BranchAccess.objects.filter(
+                membership=membership,
+                branch_id=warehouse.branch_id,
+                branch__organization=organization,
+            ).exists()
+        ):
             raise NotFound()
 
 
@@ -188,9 +200,7 @@ def execute_stock_operation(*, actor, organization, data):
             )
             return result
     except IntegrityError:
-        existing = InventoryOperation.objects.filter(
-            organization=organization, key=key
-        ).first()
+        existing = InventoryOperation.objects.filter(organization=organization, key=key).first()
         if existing is None:
             raise
         if existing.fingerprint != fingerprint or existing.created_by_id != actor.pk:

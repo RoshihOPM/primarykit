@@ -12,9 +12,11 @@ class CategorySerializer(serializers.ModelSerializer):
 
     def validate_slug(self, value):
         org = self.context["view"].get_scope()[0]
-        if Category.objects.filter(organization=org, slug=value).exclude(
-            pk=getattr(self.instance, "pk", None)
-        ).exists():
+        if (
+            Category.objects.filter(organization=org, slug=value)
+            .exclude(pk=getattr(self.instance, "pk", None))
+            .exists()
+        ):
             raise serializers.ValidationError("Category slug already exists in this organization.")
         return value
 
@@ -41,8 +43,14 @@ class CatalogItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = CatalogItem
         fields = (
-            "id", "organization", "sku", "category", "name",
-            "description", "attributes", "is_active",
+            "id",
+            "organization",
+            "sku",
+            "category",
+            "name",
+            "description",
+            "attributes",
+            "is_active",
         )
         read_only_fields = ("id", "organization")
 
@@ -70,8 +78,10 @@ class CatalogItemSerializer(serializers.ModelSerializer):
         if not value:
             raise serializers.ValidationError("SKU cannot be empty.")
         org = self.context["view"].get_scope()[0]
-        if CatalogItem.objects.filter(organization=org, sku__iexact=value).exclude(
-            pk=getattr(self.instance, "pk", None)
-        ).exists():
+        if (
+            CatalogItem.objects.filter(organization=org, sku__iexact=value)
+            .exclude(pk=getattr(self.instance, "pk", None))
+            .exists()
+        ):
             raise serializers.ValidationError("SKU already exists in this organization.")
         return value

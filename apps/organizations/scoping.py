@@ -35,9 +35,13 @@ def require_warehouse_access(*, membership, warehouse, writing=False):
         raise NotFound()
     if writing:
         require_writer(membership)
-    if membership.role not in FULL_ACCESS and not BranchAccess.objects.filter(
-        membership=membership, branch_id=warehouse.branch_id,
-        branch__organization_id=membership.organization_id,
-        branch__is_active=True,
-    ).exists():
+    if (
+        membership.role not in FULL_ACCESS
+        and not BranchAccess.objects.filter(
+            membership=membership,
+            branch_id=warehouse.branch_id,
+            branch__organization_id=membership.organization_id,
+            branch__is_active=True,
+        ).exists()
+    ):
         raise NotFound()

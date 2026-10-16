@@ -21,8 +21,12 @@ def test_two_writers_cannot_overdraw_the_same_stock():
     org = Organization.objects.create(slug="concurrent", name="Concurrent")
     branch = Branch.objects.create(organization=org, code="main", name="Main")
     category = Category.objects.create(organization=org, slug="supplies", name="Supplies")
-    item = CatalogItem.objects.create(organization=org, category=category, sku="SKU-1", name="Supply")
-    warehouse = Warehouse.objects.create(organization=org, branch=branch, code="warehouse", name="Warehouse")
+    item = CatalogItem.objects.create(
+        organization=org, category=category, sku="SKU-1", name="Supply"
+    )
+    warehouse = Warehouse.objects.create(
+        organization=org, branch=branch, code="warehouse", name="Warehouse"
+    )
     actor = User.objects.create_user(
         email="concurrent-admin@example.test",
         password="Concurrent-test-password-111",

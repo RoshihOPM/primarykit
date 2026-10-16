@@ -14,9 +14,7 @@ class Warehouse(UUIDTimestampedModel):
     organization = models.ForeignKey(
         Organization, on_delete=models.PROTECT, related_name="warehouses"
     )
-    branch = models.ForeignKey(
-        Branch, on_delete=models.PROTECT, related_name="warehouses"
-    )
+    branch = models.ForeignKey(Branch, on_delete=models.PROTECT, related_name="warehouses")
     code = models.SlugField(max_length=80)
     name = models.CharField(max_length=200)
     is_active = models.BooleanField(default=True)
@@ -31,9 +29,11 @@ class Warehouse(UUIDTimestampedModel):
 
     def save(self, *args, **kwargs):
         if self.branch_id and self.organization_id:
-            branch_org = Branch.objects.filter(pk=self.branch_id).values_list(
-                "organization_id", flat=True
-            ).first()
+            branch_org = (
+                Branch.objects.filter(pk=self.branch_id)
+                .values_list("organization_id", flat=True)
+                .first()
+            )
             if branch_org != self.organization_id:
                 raise ValidationError("Warehouse branch must belong to its organization.")
         return super().save(*args, **kwargs)
@@ -70,14 +70,20 @@ class StockBalance(UUIDTimestampedModel):
 
     def save(self, *args, **kwargs):
         if self.organization_id and self.warehouse_id and self.item_id:
-            warehouse_org = Warehouse.objects.filter(pk=self.warehouse_id).values_list(
-                "organization_id", flat=True
-            ).first()
-            item_org = CatalogItem.objects.filter(pk=self.item_id).values_list(
-                "organization_id", flat=True
-            ).first()
+            warehouse_org = (
+                Warehouse.objects.filter(pk=self.warehouse_id)
+                .values_list("organization_id", flat=True)
+                .first()
+            )
+            item_org = (
+                CatalogItem.objects.filter(pk=self.item_id)
+                .values_list("organization_id", flat=True)
+                .first()
+            )
             if self.organization_id != warehouse_org or self.organization_id != item_org:
-                raise ValidationError("Balance, warehouse and item must belong to one organization.")
+                raise ValidationError(
+                    "Balance, warehouse and item must belong to one organization."
+                )
         return super().save(*args, **kwargs)
 
 
@@ -158,14 +164,20 @@ class StockMovement(UUIDTimestampedModel):
         if not self._state.adding:
             raise ValidationError("Stock movements are immutable.")
         if self.operation_id and self.balance_id:
-            operation_org = InventoryOperation.objects.filter(pk=self.operation_id).values_list(
-                "organization_id", flat=True
-            ).first()
-            balance_org = StockBalance.objects.filter(pk=self.balance_id).values_list(
-                "organization_id", flat=True
-            ).first()
+            operation_org = (
+                InventoryOperation.objects.filter(pk=self.operation_id)
+                .values_list("organization_id", flat=True)
+                .first()
+            )
+            balance_org = (
+                StockBalance.objects.filter(pk=self.balance_id)
+                .values_list("organization_id", flat=True)
+                .first()
+            )
             if operation_org != balance_org:
-                raise ValidationError("Movement's operation and balance must share one organization.")
+                raise ValidationError(
+                    "Movement's operation and balance must share one organization."
+                )
         return super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
