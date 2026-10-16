@@ -1,36 +1,60 @@
+"""No unscoped catalog endpoints: every queryset is filtered by an active membership."""
+
 from django.db import transaction
 from rest_framework import mixins, viewsets
 
 from apps.core.audit import record_audit_event
+from apps.organizations.scoping import organization_scope, require_writer
 
 from .models import AttributeDefinition, CatalogItem, Category
 from .permissions import CatalogAccess
 from .serializers import AttributeDefinitionSerializer, CatalogItemSerializer, CategorySerializer
 
 
-class AuditedCatalogViewSet(viewsets.ModelViewSet):
+class CatalogScopeMixin:
     permission_classes = (CatalogAccess,)
+
+    def get_scope(self):
+        if not hasattr(self, "_tenant_scope"):
+            self._tenant_scope = organization_scope(
+                user=self.request.user, org_id=self.kwargs["org_id"]
+            )
+        return self._tenant_scope
+
+    def check_write_role(self):
+        require_writer(self.get_scope()[1])
+
+
+class AuditedCatalogViewSet(CatalogScopeMixin, viewsets.ModelViewSet):
     http_method_names = ("get", "post", "patch", "head", "options")
     audit_target_type = ""
 
     @transaction.atomic
     def perform_create(self, serializer):
-        obj = serializer.save()
+        self.check_write_role()
+        org = self.get_scope()[0]
+        if self.audit_target_type == "catalog.Category":
+            obj = serializer.save(organization=org)
+        else:
+            obj = serializer.save(organization=org)
         record_audit_event(
             actor=self.request.user,
             action="catalog.object.created",
             target_type=self.audit_target_type,
             target_id=obj.pk,
+            changes={"organization_id": str(org.pk)},
         )
 
     @transaction.atomic
     def perform_update(self, serializer):
+        self.check_write_role()
         obj = serializer.save()
         record_audit_event(
             actor=self.request.user,
             action="catalog.object.updated",
             target_type=self.audit_target_type,
             target_id=obj.pk,
+            changes={"organization_id": str(self.get_scope()[0].pk)},
         )
 
 
@@ -40,8 +64,9 @@ class CategoryViewSet(AuditedCatalogViewSet):
     audit_target_type = "catalog.Category"
 
     def get_queryset(self):
-        queryset = super().get_queryset()
-        if not self.request.user.is_superuser:
+        organization, membership = self.get_scope()
+        queryset = super().get_queryset().filter(organization=organization)
+        if membership.role == "member":
             queryset = queryset.filter(is_active=True)
         return queryset
 
@@ -52,8 +77,9 @@ class CatalogItemViewSet(AuditedCatalogViewSet):
     audit_target_type = "catalog.CatalogItem"
 
     def get_queryset(self):
-        queryset = super().get_queryset()
-        if not self.request.user.is_superuser:
+        organization, membership = self.get_scope()
+        queryset = super().get_queryset().filter(organization=organization)
+        if membership.role == "member":
             queryset = queryset.filter(is_active=True, category__is_active=True)
         category = self.request.query_params.get("category")
         if category:
@@ -65,19 +91,20 @@ class CatalogItemViewSet(AuditedCatalogViewSet):
 
 
 class AttributeDefinitionViewSet(
+    CatalogScopeMixin,
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
     mixins.CreateModelMixin,
     viewsets.GenericViewSet,
 ):
-    permission_classes = (CatalogAccess,)
     serializer_class = AttributeDefinitionSerializer
     queryset = AttributeDefinition.objects.select_related("category").all()
     http_method_names = ("get", "post", "head", "options")
 
     def get_queryset(self):
-        queryset = super().get_queryset()
-        if not self.request.user.is_superuser:
+        organization, membership = self.get_scope()
+        queryset = super().get_queryset().filter(category__organization=organization)
+        if membership.role == "member":
             queryset = queryset.filter(category__is_active=True)
         category = self.request.query_params.get("category")
         if category:
@@ -86,10 +113,12 @@ class AttributeDefinitionViewSet(
 
     @transaction.atomic
     def perform_create(self, serializer):
-        item = serializer.save()
+        self.check_write_role()
+        obj = serializer.save()
         record_audit_event(
             actor=self.request.user,
             action="catalog.attribute.created",
             target_type="catalog.AttributeDefinition",
-            target_id=item.pk,
+            target_id=obj.pk,
+            changes={"organization_id": str(self.get_scope()[0].pk)},
         )
