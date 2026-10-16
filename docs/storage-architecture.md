@@ -36,7 +36,7 @@ Do not configure a public bucket or Nginx static media alias. Django serves auth
 
 Blob upload precedes a DB `transaction.atomic` that creates metadata and audit event. On metadata/audit failure, the service attempts to delete the newly written blob. This is **compensating cleanup**, not a distributed transaction: storage may fail during compensation, leaving an orphan that needs scheduled cleanup.
 
-Deletion updates metadata and audit together, but deliberately does not delete the blob. A later audited purge/retention workflow will be needed for regulated production use.
+Deletion rechecks membership and file authorization under an organization lock, and updates metadata and audit atomically; the blob is retained. A later audited purge/retention workflow will be needed for regulated production use.
 
 ## Production checklist
 
@@ -44,12 +44,14 @@ Deletion updates metadata and audit together, but deliberately does not delete t
 - Verify private bucket ACL and block public access, endpoint TLS, key rotation and access credentials.
 - Put anti-virus/malware scanner, file retention, audit monitoring and gateway `client_max_body_size` limits in front of public uploads.
 - Prevent filename injection and enforce private authenticated downloads, with no long-lived public links.
-- App owner must not be inferred from user-supplied upload metadata.
+- The organization and owner must never be assigned from submitted upload metadata. Check membership again within every service-layer write.
 - If using S3, copy corresponding optional package install and lock changes into the new project's `uv.lock`.
 
 ## Migrations
 
-At project creation: `makemigrations users audit storage`, `migrate`; commit generated migrations in the new project's Git.
+For a new project, generate migrations for `users storage organizations` (plus selected optional apps), then migrate and commit the generated migration files.
+
+**Breaking upgrade:** the global API has been removed. Existing file rows have no organization. To upgrade a populated client database, first introduce a nullable organization FK; backfill each row to a verified organization using authoritative business records, flag ambiguous records for manual review, and verify there are no nulls or cross-company assignments before enforcing NOT NULL. Coordinate API clients' change to the organization-prefixed routes. Do not let `makemigrations` assign a single default tenant to existing files. Rehearse migration and rollback on a staging snapshot; do not discard previously committed migrations.
 
 ## SeaweedFS single-node S3 via Docker Compose
 
