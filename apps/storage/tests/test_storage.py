@@ -109,7 +109,7 @@ def test_idor_and_list_scoping(private_disk):
     created = owner_client.post(
         reverse("stored-files-list", kwargs={"org_id": org.pk}),
         {"file": png_upload()},
-        format="multipart"
+        format="multipart",
     )
     pk = created.data["id"]
     other_client = client_for(stranger)
