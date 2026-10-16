@@ -50,7 +50,7 @@ PrimaryKit is a copy-based Django starter, not a separately deployed shared back
 
 ## Optional infrastructure modules
 
-- `apps/cache` is a standalone Django cache adapter; do not make Redis mandatory for generated clients. Redis is ephemeral and never authoritative for permissions or financial state.
+- `apps/cache` uses an independent redis-py CacheService as the default API (JSON, Hashes, counters). Django Cache and django-redis are optional bridges. Do not make Redis mandatory for generated clients. Redis is ephemeral and never authoritative for permissions or financial state.
 - `apps/celery_tasks` is independent of the PostgreSQL `apps/tasks` queue. RabbitMQ broker and Redis result backend are opt-in. Business task handlers belong to each generated client; publish after commit and use an outbox for delivery guarantees when required.
 - Select overlay Compose files explicitly; never expose Redis/RabbitMQ services to public interfaces or install optional broker dependencies into unrelated clients. See `docs/redis-cache.md` and `docs/celery-rabbitmq.md`.
 
