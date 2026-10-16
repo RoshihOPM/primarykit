@@ -158,14 +158,23 @@ MAILERS = {"default": {"BACKEND": "django.core.mail.backends.console.EmailBacken
 if "apps.cache" in INSTALLED_APPS:
     from apps.cache.config import build_cache_config
 
-    CACHES = {
-        "default": build_cache_config(
-            enabled=env.bool("REDIS_CACHE_ENABLED", default=False),
-            url=env("REDIS_CACHE_URL", default=""),
-            prefix=env("REDIS_CACHE_KEY_PREFIX", default=""),
-            timeout=env.int("REDIS_CACHE_TIMEOUT", default=300),
-        )
-    }
+    REDIS_CACHE_ENABLED = env.bool("REDIS_CACHE_ENABLED", default=False)
+    REDIS_CACHE_URL = env("REDIS_CACHE_URL", default="")
+    REDIS_CACHE_KEY_PREFIX = env("REDIS_CACHE_KEY_PREFIX", default="")
+    REDIS_CACHE_TIMEOUT = env.int("REDIS_CACHE_TIMEOUT", default=300)
+    # Optional bridge for third-party Django extensions. Native CacheService is
+    # independent of Django's CACHES registry.
+    REDIS_CACHE_DJANGO_BACKEND = env("REDIS_CACHE_DJANGO_BACKEND", default="none")
+    if REDIS_CACHE_DJANGO_BACKEND != "none":
+        CACHES = {
+            "default": build_cache_config(
+                enabled=REDIS_CACHE_ENABLED,
+                url=REDIS_CACHE_URL,
+                prefix=REDIS_CACHE_KEY_PREFIX,
+                timeout=REDIS_CACHE_TIMEOUT,
+                backend=REDIS_CACHE_DJANGO_BACKEND,
+            )
+        }
 
 # Optional Celery adapter. No broker is connected during Django initialization.
 if "apps.celery_tasks" in INSTALLED_APPS:
