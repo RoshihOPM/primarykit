@@ -8,7 +8,7 @@ PrimaryKit распознаёт любую доверенную папку `apps
 | --- | --- | --- | --- |
 | `core` | Соглашения и registry | — | — |
 | `tasks` | Внутренняя очередь, транзакционное добавление и worker | core | — |
-| `cache` | Namespace-aware Django Cache, опциональный Redis backend | core | — |
+| `cache` | Native redis-py CacheService, JSON, Hashes, counters; optional Django Cache bridge | core | — |
 | `celery_tasks` | Celery adapter, RabbitMQ и необязательный Redis result backend | core | — |
 | `users` | JWT, профиль, email auth | core, notifications | audit |
 | `notifications` | Шаблонные email | core | — |
