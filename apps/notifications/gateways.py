@@ -10,6 +10,4 @@ class DjangoEmailGateway:
         self.sender_func = sender_func
 
     def send(self, *, recipient: str, subject: str, body: str, sender: str) -> int:
-        return self.sender_func(
-            subject, body, sender, [recipient], using="default"
-        )
+        return self.sender_func(subject, body, sender, [recipient], using="default")
