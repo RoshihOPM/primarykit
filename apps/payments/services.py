@@ -131,6 +131,12 @@ def reconcile_manual(*, actor, payment_id, event_key, outcome, amount_minor, cur
     if payment.amount_minor != amount_minor or payment.currency != currency:
         raise ValidationError({"amount_minor": "Settlement amount/currency mismatch."})
     if outcome == "succeeded" and payment.source_order_id is not None:
+        if PaymentIntent.objects.filter(
+            owner=owner, source_order_id=payment.source_order_id, status="succeeded"
+        ).exclude(pk=payment.pk).exists():
+            raise ValidationError(
+                {"source_order_id": "This order already has a successful payment."}
+            )
         _source_order(
             owner=owner, source_order_id=payment.source_order_id,
             currency=currency, amount_minor=amount_minor,

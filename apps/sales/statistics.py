@@ -1,6 +1,4 @@
-"""Sales aggregates count recorded facts, NOT captured payments."""
-
-from django.db.models import Sum
+"""Sales counts only. Cross-currency monetary totals require currency grouping."""
 
 from apps.statistics.domain import Metric, Provider
 
@@ -11,23 +9,19 @@ def _recorded(context):
     return Sale.objects.filter(owner=context.actor, status="recorded").count()
 
 
-def _period_total(context):
-    return (
-        Sale.objects.filter(
-            owner=context.actor,
-            status="recorded",
-            created_at__gte=context.since,
-            created_at__lt=context.until,
-        ).aggregate(total=Sum("total_minor"))["total"]
-        or 0
-    )
+def _new(context):
+    return Sale.objects.filter(
+        owner=context.actor,
+        status="recorded",
+        created_at__gte=context.since,
+        created_at__lt=context.until,
+    ).count()
 
 
 PROVIDER = Provider(
     code="sales",
     metrics=(
         Metric("recorded", "Recorded sales", "count", "snapshot", ("personal",), _recorded),
-        Metric("period_total_minor", "Recorded value", "minor_units", "period",
-               ("personal",), _period_total),
+        Metric("period_recorded", "New recorded sales", "count", "period", ("personal",), _new),
     ),
 )

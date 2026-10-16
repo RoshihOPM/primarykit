@@ -3,6 +3,7 @@
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import Q
 
 from apps.core.models import UUIDTimestampedModel
 
@@ -28,6 +29,11 @@ class PaymentIntent(UUIDTimestampedModel):
         constraints = [
             models.UniqueConstraint(
                 fields=("owner", "idempotency_key"), name="payments_owner_idempotency_unique"
+            ),
+            models.UniqueConstraint(
+                fields=("owner", "source_order_id"),
+                condition=Q(status="succeeded", source_order_id__isnull=False),
+                name="payments_one_successful_order",
             ),
         ]
 
