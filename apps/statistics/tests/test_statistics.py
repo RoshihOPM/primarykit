@@ -46,6 +46,7 @@ def test_date_preset_domain_validation():
         {"preset": "custom", "start": "2026-10-07", "end": "2026-10-01"},
         {"preset": "custom", "start": "2020-01-01", "end": "2026-10-01"},
         {"preset": "custom", "start": "20261001", "end": "2026-10-07"},
+        {"preset": "custom", "start": "9999-12-30", "end": "9999-12-31"},
         {"preset": "7d", "start": "2026-10-01", "end": None},
     ):
         with pytest.raises(MetricsValidationError):

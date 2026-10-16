@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from datetime import datetime, time, timedelta
+from decimal import Decimal
 
 from django.apps import apps
 from django.shortcuts import get_object_or_404
@@ -76,8 +77,12 @@ def metric_results(context):
     values = []
     for key, spec in discover_metrics(context.scope):
         value = spec.calculate(context)
-        if isinstance(value, bool) or not isinstance(value, (int, float)):
+        if isinstance(value, bool) or not isinstance(value, (int, float, Decimal)):
             raise MetricsValidationError(f"Metric {key} must return a numeric value.")
+        if isinstance(value, Decimal):
+            if not value.is_finite() or value != value.to_integral_value():
+                raise MetricsValidationError(f"Metric {key} must be a finite integer.")
+            value = int(value)
         values.append(
             {
                 "key": key,

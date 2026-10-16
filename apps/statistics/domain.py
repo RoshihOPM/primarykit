@@ -17,6 +17,8 @@ class Period:
     def __post_init__(self):
         if self.end_date < self.start_date:
             raise MetricsValidationError("End date cannot precede start date.")
+        if self.end_date == date.max:
+            raise MetricsValidationError("End date is out of supported range.")
         if (self.end_date - self.start_date).days > 365:
             raise MetricsValidationError("Date range cannot exceed 366 days.")
 
