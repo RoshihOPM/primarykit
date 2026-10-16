@@ -69,7 +69,11 @@ def test_upload_and_authorized_private_download(private_disk):
     member = user("file-owner@example.com")
     org = org_for(member)
     api = client_for(member)
-    response = api.post(reverse("stored-files-list", kwargs={"org_id": org.pk}), {"file": png_upload()}, format="multipart")
+    response = api.post(
+        reverse("stored-files-list", kwargs={"org_id": org.pk}),
+        {"file": png_upload()},
+        format="multipart",
+    )
     assert response.status_code == 201, response.data
     info = response.data
     assert "object_key" not in info and "owner" not in info
@@ -103,16 +107,38 @@ def test_idor_and_list_scoping(private_disk):
     Membership.objects.create(organization=org, user=stranger, role=Membership.Role.MEMBER)
     owner_client = client_for(owner)
     created = owner_client.post(
-        reverse("stored-files-list", kwargs={"org_id": org.pk}), {"file": png_upload()}, format="multipart"
+        reverse("stored-files-list", kwargs={"org_id": org.pk}),
+        {"file": png_upload()},
+        format="multipart"
     )
     pk = created.data["id"]
     other_client = client_for(stranger)
-    assert other_client.get(reverse("stored-files-list", kwargs={"org_id": org.pk})).data["count"] == 0
-    assert other_client.get(reverse("stored-files-detail", kwargs={"org_id": org.pk, "pk": pk})).status_code == 404
-    assert other_client.get(reverse("stored-files-download", kwargs={"org_id": org.pk, "pk": pk})).status_code == 404
-    assert other_client.delete(reverse("stored-files-detail", kwargs={"org_id": org.pk, "pk": pk})).status_code == 404
     assert (
-        client_for(staff).get(reverse("stored-files-detail", kwargs={"org_id": org.pk, "pk": pk})).status_code == 200
+        other_client.get(reverse("stored-files-list", kwargs={"org_id": org.pk})).data["count"] == 0
+    )
+    assert (
+        other_client.get(
+            reverse("stored-files-detail", kwargs={"org_id": org.pk, "pk": pk})
+        ).status_code
+        == 404
+    )
+    assert (
+        other_client.get(
+            reverse("stored-files-download", kwargs={"org_id": org.pk, "pk": pk})
+        ).status_code
+        == 404
+    )
+    assert (
+        other_client.delete(
+            reverse("stored-files-detail", kwargs={"org_id": org.pk, "pk": pk})
+        ).status_code
+        == 404
+    )
+    assert (
+        client_for(staff)
+        .get(reverse("stored-files-detail", kwargs={"org_id": org.pk, "pk": pk}))
+        .status_code
+        == 200
     )
 
 
@@ -155,16 +181,35 @@ def test_soft_delete_hides_file_and_leaves_blob_for_retention(private_disk):
     member = user("del@example.com")
     org = org_for(member)
     api = client_for(member)
-    created = api.post(reverse("stored-files-list", kwargs={"org_id": org.pk}), {"file": png_upload()}, format="multipart")
+    created = api.post(
+        reverse("stored-files-list", kwargs={"org_id": org.pk}),
+        {"file": png_upload()},
+        format="multipart",
+    )
     file = StoredFile.objects.get(pk=created.data["id"])
     path = private_disk / file.object_key
     assert path.exists()
-    assert api.delete(reverse("stored-files-detail", kwargs={"org_id": org.pk, "pk": file.pk})).status_code == 204
+    assert (
+        api.delete(
+            reverse("stored-files-detail", kwargs={"org_id": org.pk, "pk": file.pk})
+        ).status_code
+        == 204
+    )
     file.refresh_from_db()
     assert file.deleted_at is not None
     assert path.exists()
-    assert api.get(reverse("stored-files-download", kwargs={"org_id": org.pk, "pk": file.pk})).status_code == 404
-    assert api.delete(reverse("stored-files-detail", kwargs={"org_id": org.pk, "pk": file.pk})).status_code == 404
+    assert (
+        api.get(
+            reverse("stored-files-download", kwargs={"org_id": org.pk, "pk": file.pk})
+        ).status_code
+        == 404
+    )
+    assert (
+        api.delete(
+            reverse("stored-files-detail", kwargs={"org_id": org.pk, "pk": file.pk})
+        ).status_code
+        == 404
+    )
     if django_apps.is_installed("apps.audit"):
         from apps.audit.models import AuditEvent
 
@@ -196,9 +241,7 @@ def test_cross_tenant_file_idor_and_no_global_superuser_bypass(private_disk):
     another = user("tenant-other@example.com")
     other_org = org_for(another)
     superuser = user("tenant-root@example.com", admin=True)
-    Membership.objects.create(
-        organization=other_org, user=superuser, role=Membership.Role.ADMIN
-    )
+    Membership.objects.create(organization=other_org, user=superuser, role=Membership.Role.ADMIN)
     api = client_for(owner)
     response = api.post(
         reverse("stored-files-list", kwargs={"org_id": org.pk}),
@@ -208,17 +251,13 @@ def test_cross_tenant_file_idor_and_no_global_superuser_bypass(private_disk):
     assert response.status_code == 201
     pk = response.data["id"]
     detail = reverse("stored-files-detail", kwargs={"org_id": org.pk, "pk": pk})
-    wrong_detail = reverse(
-        "stored-files-detail", kwargs={"org_id": other_org.pk, "pk": pk}
-    )
+    wrong_detail = reverse("stored-files-detail", kwargs={"org_id": other_org.pk, "pk": pk})
     assert client_for(superuser).get(detail).status_code == 404
     assert client_for(another).get(wrong_detail).status_code == 404
     assert client_for(another).delete(wrong_detail).status_code == 404
     assert api.get("/api/v1/files/").status_code == 404
 
-    Membership.objects.create(
-        organization=other_org, user=owner, role=Membership.Role.ADMIN
-    )
+    Membership.objects.create(organization=other_org, user=owner, role=Membership.Role.ADMIN)
     assert api.get(wrong_detail).status_code == 404
 
 
@@ -227,9 +266,7 @@ def test_tenant_admin_member_revocation_and_service_layer_security(private_disk)
     org = org_for(owner)
     member = user("access-member@example.com")
     admin = user("access-admin@example.com")
-    grant = Membership.objects.create(
-        organization=org, user=member, role=Membership.Role.MEMBER
-    )
+    grant = Membership.objects.create(organization=org, user=member, role=Membership.Role.MEMBER)
     Membership.objects.create(organization=org, user=admin, role=Membership.Role.ADMIN)
     stored = save_private_file(owner=owner, organization=org, upload=png_upload())
     detail = reverse("stored-files-detail", kwargs={"org_id": org.pk, "pk": stored.pk})
