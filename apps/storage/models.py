@@ -23,7 +23,9 @@ class StoredFile(models.Model):
     class Meta:
         ordering = ("-created_at", "-id")
         indexes = [
-            models.Index(fields=["organization", "owner", "-created_at"], name="storage_org_owner_time_idx"),
+            models.Index(
+                fields=["organization", "owner", "-created_at"], name="storage_org_owner_time_idx"
+            ),
             models.Index(fields=["organization", "-created_at"], name="storage_org_time_idx"),
         ]
 
