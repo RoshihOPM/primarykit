@@ -18,9 +18,7 @@ class NotificationDeliveryError(Exception):
 
 def send_template_email(*, recipient: str, subject: str, template: str, context: dict) -> None:
     """Send plain text via Django 6.1 MAILERS; never log template context or tokens."""
-    intent = EmailIntent(
-        recipient=recipient, subject=subject, template=template, context=context
-    )
+    intent = EmailIntent(recipient=recipient, subject=subject, template=template, context=context)
     body = render_to_string(intent.template, intent.context)
     try:
         sent = DjangoEmailGateway(sender_func=send_mail).send(
