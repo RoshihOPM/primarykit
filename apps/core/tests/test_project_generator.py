@@ -92,8 +92,15 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
     if "cache" in apps:
         assert "REDIS_CACHE_KEY_PREFIX=demo-api-dev" in (target / ".env.example").read_text()
     readme = (target / "README.md").read_text()
-    assert ("uv add 'redis>=6,<7'" in readme) == ("cache" in apps)
-    assert ("uv add 'celery[redis]>=5.6,<6'" in readme) == ("celery_tasks" in apps)
+    assert ("uv add 'redis>=8,<9'" in readme) == (
+        "cache" in apps and "celery_tasks" not in apps
+    )
+    assert ("'redis>=6.2,<6.5'" in readme) == (
+        {"cache", "celery_tasks"} <= apps or "celery_tasks" in apps
+    )
+    assert ("uv add 'celery>=5.6,<6'" in readme) == (
+        "celery_tasks" in apps and "cache" not in apps
+    )
 
     metadata = json.loads((target / "primarykit-origin.json").read_text())
     assert set(metadata["included_apps"]) == selected
