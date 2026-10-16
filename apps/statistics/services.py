@@ -36,9 +36,7 @@ def build_context(*, actor, scope, org_id=None, params=None):
     except MetricsValidationError as exc:
         raise ValidationError({"period": str(exc)}) from exc
     start = timezone.make_aware(datetime.combine(period.start_date, time.min))
-    until = timezone.make_aware(
-        datetime.combine(period.end_date + timedelta(days=1), time.min)
-    )
+    until = timezone.make_aware(datetime.combine(period.end_date + timedelta(days=1), time.min))
     organization = None
     if scope == "system":
         if not actor.is_superuser:
@@ -58,7 +56,11 @@ def build_context(*, actor, scope, org_id=None, params=None):
     elif scope != "personal":
         raise ValidationError({"scope": "Invalid statistics scope."})
     return MetricContext(
-        actor=actor, scope=scope, period=period, since=start, until=until,
+        actor=actor,
+        scope=scope,
+        period=period,
+        since=start,
+        until=until,
         organization=organization,
     )
 

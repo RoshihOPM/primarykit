@@ -19,11 +19,16 @@ def _warehouses(context):
 
 
 def _on_hand(context):
-    return StockBalance.objects.filter(**_scope(context)).aggregate(value=Sum("on_hand"))["value"] or 0
+    return (
+        StockBalance.objects.filter(**_scope(context)).aggregate(value=Sum("on_hand"))["value"] or 0
+    )
 
 
 def _reserved(context):
-    return StockBalance.objects.filter(**_scope(context)).aggregate(value=Sum("reserved"))["value"] or 0
+    return (
+        StockBalance.objects.filter(**_scope(context)).aggregate(value=Sum("reserved"))["value"]
+        or 0
+    )
 
 
 def _operations(context):

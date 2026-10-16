@@ -24,9 +24,7 @@ def identity(email, *, superuser=False):
         is_staff=superuser,
     )
     client = APIClient()
-    client.credentials(
-        HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(user).access_token}"
-    )
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(user).access_token}")
     return user, client
 
 
@@ -65,10 +63,13 @@ def test_statistics_api_is_authenticated_and_filters_system_metrics():
     assert client.get("/api/v1/admin/statistics/available/").status_code == 403
     for invalid in ("unknown", "custom"):
         assert client.get("/api/v1/statistics/", {"period": invalid}).status_code == 400
-    assert client.get(
-        "/api/v1/statistics/",
-        {"period": "custom", "start": "2026-10-04", "end": "2026-10-01"},
-    ).status_code == 400
+    assert (
+        client.get(
+            "/api/v1/statistics/",
+            {"period": "custom", "start": "2026-10-04", "end": "2026-10-01"},
+        ).status_code
+        == 400
+    )
 
 
 def test_superuser_system_metrics_but_no_private_data():
@@ -137,12 +138,8 @@ def test_private_storage_does_not_include_foreign_or_tenant_files():
     owner, owner_api = identity("metric-storage-own@tests.test")
     other, other_api = identity("metric-storage-other@tests.test")
     common = {"original_name": "image.jpg", "content_type": "image/jpeg", "sha256": "f" * 64}
-    StoredFile.objects.create(
-        owner=owner, size=17, object_key="private/metrics/owned", **common
-    )
-    StoredFile.objects.create(
-        owner=other, size=1024, object_key="private/metrics/other", **common
-    )
+    StoredFile.objects.create(owner=owner, size=17, object_key="private/metrics/owned", **common)
+    StoredFile.objects.create(owner=other, size=1024, object_key="private/metrics/other", **common)
     StoredFile.objects.create(
         owner=owner,
         size=2000,
@@ -173,9 +170,7 @@ def test_company_scope_requires_active_owner_or_admin_not_superuser():
     assert member_api.get(base).status_code == 403
     assert stranger_api.get(base).status_code == 404
     assert superuser_api.get(base).status_code == 404
-    assert owner_api.get(
-        f"/api/v1/organizations/{second.pk}/statistics/"
-    ).status_code == 404
+    assert owner_api.get(f"/api/v1/organizations/{second.pk}/statistics/").status_code == 404
     member_link.is_active = False
     member_link.save(update_fields=["is_active"])
     assert values(owner_api.get(base))["organizations.members"] == 1
@@ -198,9 +193,7 @@ def test_tenant_metrics_are_isolated_by_company():
         from apps.catalog.models import CatalogItem, Category
 
         for org, n in ((left, 1), (right, 3)):
-            category = Category.objects.create(
-                organization=org, name="Parts", slug="parts"
-            )
+            category = Category.objects.create(organization=org, name="Parts", slug="parts")
             for i in range(n):
                 CatalogItem.objects.create(
                     organization=org, category=category, sku=f"{org.slug}-{i}", name="Part"
@@ -213,8 +206,12 @@ def test_tenant_metrics_are_isolated_by_company():
     if apps.is_installed("apps.storage"):
         from apps.storage.models import StoredFile
 
-        payload = {"owner": owner, "original_name": "log.pdf",
-                   "content_type": "application/pdf", "sha256": "b" * 64}
+        payload = {
+            "owner": owner,
+            "original_name": "log.pdf",
+            "content_type": "application/pdf",
+            "sha256": "b" * 64,
+        }
         StoredFile.objects.create(
             organization_id=left.pk, size=100, object_key="private/metrics/org-left", **payload
         )

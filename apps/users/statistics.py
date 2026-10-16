@@ -14,7 +14,9 @@ def _active(_context):
 
 
 def _registered(context):
-    return User.objects.filter(date_joined__gte=context.since, date_joined__lt=context.until).count()
+    return User.objects.filter(
+        date_joined__gte=context.since, date_joined__lt=context.until
+    ).count()
 
 
 PROVIDER = Provider(

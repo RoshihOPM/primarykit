@@ -13,7 +13,5 @@ def _events(context):
 
 PROVIDER = Provider(
     code="audit",
-    metrics=(
-        Metric("events", "Audit events", "count", "period", ("system",), _events),
-    ),
+    metrics=(Metric("events", "Audit events", "count", "period", ("system",), _events),),
 )

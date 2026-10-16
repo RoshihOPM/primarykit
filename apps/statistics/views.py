@@ -22,20 +22,24 @@ class StatisticsView(APIView):
 
     def get(self, request, **kwargs):
         context = self.context(request, **kwargs)
-        return Response({
-            "scope": context.scope,
-            "period": period_response(context),
-            "metrics": metric_results(context),
-        })
+        return Response(
+            {
+                "scope": context.scope,
+                "period": period_response(context),
+                "metrics": metric_results(context),
+            }
+        )
 
 
 class AvailableStatisticsView(StatisticsView):
     def get(self, request, **kwargs):
         context = self.context(request, **kwargs)
-        return Response({
-            "scope": context.scope,
-            "metrics": metric_definitions(context),
-        })
+        return Response(
+            {
+                "scope": context.scope,
+                "metrics": metric_definitions(context),
+            }
+        )
 
 
 class SystemStatisticsView(StatisticsView):

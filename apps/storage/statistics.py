@@ -26,9 +26,9 @@ def _bytes(context):
 
 
 def _uploads(context):
-    return _files(context).filter(
-        created_at__gte=context.since, created_at__lt=context.until
-    ).count()
+    return (
+        _files(context).filter(created_at__gte=context.since, created_at__lt=context.until).count()
+    )
 
 
 PROVIDER = Provider(
@@ -36,6 +36,8 @@ PROVIDER = Provider(
     metrics=(
         Metric("files", "Active files", "count", "snapshot", ("personal", "tenant"), _count),
         Metric("bytes", "Stored bytes", "bytes", "snapshot", ("personal", "tenant"), _bytes),
-        Metric("uploads", "New active uploads", "count", "period", ("personal", "tenant"), _uploads),
+        Metric(
+            "uploads", "New active uploads", "count", "period", ("personal", "tenant"), _uploads
+        ),
     ),
 )
