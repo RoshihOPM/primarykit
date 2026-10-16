@@ -9,7 +9,9 @@ from scripts.new_project import create_project
 
 
 def _project(tmp_path, apps=frozenset()):
-    return create_project(tmp_path / "customer-backend", name="customer-backend", optional_apps=set(apps))
+    return create_project(
+        tmp_path / "customer-backend", name="customer-backend", optional_apps=set(apps)
+    )
 
 
 def test_offline_doctor_checks_generated_projects(tmp_path):
@@ -41,9 +43,9 @@ def test_offline_doctor_does_not_require_provenance_or_kit_checkout(tmp_path):
 def test_doctor_reports_missing_dependency_and_tenant_schema_mismatch(tmp_path):
     target = _project(tmp_path, {"inventory"})
     base = target / "config/settings/base.py"
-    base.write_text(base.read_text().replace(
-        'INVENTORY_MODE = "standalone"', 'INVENTORY_MODE = "tenant"'
-    ))
+    base.write_text(
+        base.read_text().replace('INVENTORY_MODE = "standalone"', 'INVENTORY_MODE = "tenant"')
+    )
     (target / "apps/notifications/manifest.py").unlink()
     codes = {item.code for item in inspect_project(target).findings}
     assert "baseline_missing" in codes
