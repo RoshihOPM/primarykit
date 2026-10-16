@@ -8,9 +8,7 @@ from django.core.exceptions import ImproperlyConfigured
 PREFIX = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$")
 
 
-def build_cache_config(
-    *, enabled: bool, url: str, prefix: str, timeout: int = 300
-) -> dict:
+def build_cache_config(*, enabled: bool, url: str, prefix: str, timeout: int = 300) -> dict:
     """Redis must be explicit; local backend is process-local and non-shared."""
     if not enabled:
         return {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}
