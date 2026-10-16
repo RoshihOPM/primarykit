@@ -38,7 +38,7 @@ uv run python scripts/new_project.py ../warehouse-api --name warehouse-api --app
 uv run python scripts/new_project.py ../integration-api --name integration-api
 ```
 
-- Только Core, Users, Notifications. Для долгих задач/ретраев подбирайте очередь **по нагрузке и гарантиям доставки**.
+- Только Core, Users, Notifications. Если нужна маленькая внутренняя очередь — выберите опциональный `tasks` и запустите worker; для высокого потока подбирайте очередь **по нагрузке и гарантиям доставки**. См. [Tasks](tasks-architecture.md).
 - Не создавайте обязательный RabbitMQ, Redis, Celery или Kubernetes без требований к объёму/отказоустойчивости.
 
 ## После генерации

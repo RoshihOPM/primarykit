@@ -41,6 +41,7 @@ uv run python manage.py runserver
 | [Создание и подключение модулей](docs/module-development.md) | Пошаговая разработка своего Django-приложения |
 | [Генератор проектов](docs/project-generator.md) | CLI-аргументы, выбор модулей, миграции, `--git-init` |
 | [Commerce: Orders, Sales, Payments](docs/commerce-architecture.md) | API, состояния, деньги, инварианты, безопасность |
+| [Фоновые задачи](docs/tasks-architecture.md) | Очередь, обработчики клиента, worker, ограничения доставки |
 | [Статистика](docs/statistics-architecture.md) | Как бизнес-модули отдают метрики |
 | [Развёртывание](docs/deployment.md) | Dev/prod, nginx, переменные и эксплуатационные ограничения |
 | [Правила агентов](AGENTS.md) | Код-стайл, тесты, архитектурные границы |
@@ -53,6 +54,7 @@ uv run python manage.py runserver
 | Модуль | Что умеет |
 | --- | --- |
 | **core** | Настройки проекта, абстрактные модели, healthcheck, registry |
+| tasks | Внутренняя PostgreSQL-очередь фоновых задач, отдельный worker, повторы и идемпотентность |
 | **users** | JWT, email auth, профиль, восстановление |
 | **notifications** | Шаблоны писем и email backend |
 | organizations | Компании, роли участников, филиалы |

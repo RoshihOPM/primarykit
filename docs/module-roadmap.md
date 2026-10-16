@@ -11,6 +11,7 @@ Updated: 2026-10-16. This is a future-improvement backlog, **not** a list of uni
 | Storage | Owner / optional organization scope, S3/SeaweedFS | [Storage](storage-architecture.md) |
 | Catalog | Categories, SKUs, typed attributes; standalone/tenant modes | [Catalog](catalog-architecture.md) |
 | Inventory | Warehouses, reservations, stock ledger, idempotency; standalone/tenant modes | [Inventory](inventory-architecture.md) |
+| Tasks | Internal PostgreSQL queue, retries, leases and separate worker | [Tasks](tasks-architecture.md) |
 | Statistics | Auto-discovered providers, scoped counts and date windows | [Statistics](statistics-architecture.md) |
 | Orders | Owner-private priced order snapshots and cancellation | [Commerce](commerce-architecture.md) |
 | Sales | Owner-private sale records, optional verified order links and voiding | [Commerce](commerce-architecture.md) |
