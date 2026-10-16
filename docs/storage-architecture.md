@@ -1,30 +1,30 @@
-# Private Storage v0.1
+# Private Storage v0.2 (organization-scoped)
 
 ## Boundary
 
-`apps.storage` owns immutable upload metadata, private blob paths, owner authorization, soft deletion and controlled download. `users` provides identities; `audit` is optional via `apps.core.audit`.
+`apps.storage` owns immutable upload metadata, private blob paths, owner authorization, soft deletion and controlled download. `organizations` is required; `users` provides identities and `audit` remains optional.
 
 This is a reusable **file attachment service**, not a public CDN or direct presigned-upload system.
 
 ## Model
 
-`StoredFile`: UUID, owner FK PROTECT, random backend key, original filename, server-detected MIME, byte size, SHA-256, created timestamp, deleted timestamp.
+`StoredFile`: UUID, required organization FK PROTECT, owner FK PROTECT, random backend key, original filename, server-detected MIME, byte size, SHA-256, created timestamp, deleted timestamp.
 
-Never return object keys, bucket names or raw direct URLs in normal user API responses. The default owner policy allows only authenticated owners and active superusers. Staff alone cannot access another user's files.
+Never return object keys, bucket names or raw direct URLs in normal user API responses. Active organization membership is mandatory. Organization owners/admins can manage that company's files, while members/managers can manage only their own files. Global superuser status grants no cross-tenant exception.
 
 ## Routes
 
-- `POST /api/v1/files/`: multipart upload, field `file`.
-- `GET /api/v1/files/`: owner's own files (or all for superuser), paginated.
-- `GET /api/v1/files/{uuid}/`: metadata for authorized viewer.
-- `GET /api/v1/files/{uuid}/download/`: streaming response, private no-store, attachment disposition and nosniff.
-- `DELETE /api/v1/files/{uuid}/`: mark deleted, retain underlying object for retention / eventual cleanup.
+- `POST /api/v1/organizations/{org_id}/files/`: multipart upload, field `file`.
+- `GET /api/v1/organizations/{org_id}/files/`: own files (all tenant files for owner/admin), paginated.
+- `GET /api/v1/organizations/{org_id}/files/{uuid}/`: metadata for authorized viewer.
+- `GET /api/v1/organizations/{org_id}/files/{uuid}/download/`: streaming response, private no-store, attachment disposition and nosniff.
+- `DELETE /api/v1/organizations/{org_id}/files/{uuid}/`: mark deleted, retain underlying object for retention / eventual cleanup.
 
 ## Validation
 
 Default max 10 MiB. MIME is guessed from header magic and filename extension, not trusted from multipart `content_type`. Initially PNG/JPEG/WebP/PDF only, with settings allowlist. This is not a fully validating file parser, malware scanner or DLP system: production should add virus scanning, image decoders for dangerous uploads, archive restrictions and request-body limits at Nginx/API gateway.
 
-Random keys are `private/<uuid4>` and never include client filenames.
+Random keys are `private/<org_id>/<uuid4>` and never include client filenames.
 
 ## Storage backends
 
