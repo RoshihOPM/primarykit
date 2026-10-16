@@ -1,9 +1,18 @@
+"""Tenant-scoped inventory API. No global list or detail endpoints."""
+
 from django.db import transaction
 from rest_framework import mixins, status, viewsets
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 
 from apps.core.audit import record_audit_event
-from apps.users.permissions import IsActiveSuperuser
+from apps.organizations.scoping import (
+    FULL_ACCESS,
+    WRITERS,
+    branch_ids_for,
+    organization_scope,
+    require_writer,
+)
 
 from .models import InventoryOperation, StockBalance, StockReservation, Warehouse
 from .serializers import (
@@ -16,15 +25,37 @@ from .serializers import (
 from .services import execute_stock_operation
 
 
-class WarehouseViewSet(viewsets.ModelViewSet):
-    queryset = Warehouse.objects.all()
+class InventoryScopeMixin:
+    def get_scope(self):
+        if not hasattr(self, "_tenant_scope"):
+            self._tenant_scope = organization_scope(
+                user=self.request.user, org_id=self.kwargs["org_id"]
+            )
+        return self._tenant_scope
+
+    def get_accessible_warehouses(self):
+        organization, membership = self.get_scope()
+        qs = Warehouse.objects.filter(organization=organization)
+        if membership.role not in FULL_ACCESS:
+            qs = qs.filter(
+                is_active=True, branch__is_active=True,
+                branch_id__in=branch_ids_for(membership),
+            )
+        return qs
+
+
+class WarehouseViewSet(InventoryScopeMixin, viewsets.ModelViewSet):
     serializer_class = WarehouseSerializer
-    permission_classes = (IsActiveSuperuser,)
+    queryset = Warehouse.objects.all()
     http_method_names = ("get", "post", "patch", "head", "options")
+
+    def get_queryset(self):
+        return self.get_accessible_warehouses()
 
     @transaction.atomic
     def perform_create(self, serializer):
-        warehouse = serializer.save()
+        require_writer(self.get_scope()[1])
+        warehouse = serializer.save(organization=self.get_scope()[0])
         record_audit_event(
             actor=self.request.user,
             action="inventory.warehouse.created",
@@ -34,6 +65,7 @@ class WarehouseViewSet(viewsets.ModelViewSet):
 
     @transaction.atomic
     def perform_update(self, serializer):
+        require_writer(self.get_scope()[1])
         warehouse = serializer.save()
         record_audit_event(
             actor=self.request.user,
@@ -43,30 +75,61 @@ class WarehouseViewSet(viewsets.ModelViewSet):
         )
 
 
-class BalanceViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
-    queryset = StockBalance.objects.select_related("warehouse", "item").all()
-    serializer_class = BalanceSerializer
-    permission_classes = (IsActiveSuperuser,)
-
-
-class ReservationViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
-    queryset = StockReservation.objects.select_related("balance").all()
-    serializer_class = ReservationSerializer
-    permission_classes = (IsActiveSuperuser,)
-
-
-class OperationViewSet(
+class BalanceViewSet(
+    InventoryScopeMixin,
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
     viewsets.GenericViewSet,
 ):
-    queryset = InventoryOperation.objects.all()
+    serializer_class = BalanceSerializer
+
+    def get_queryset(self):
+        organization = self.get_scope()[0]
+        return StockBalance.objects.filter(
+            organization=organization,
+            warehouse__in=self.get_accessible_warehouses(),
+        ).select_related("warehouse", "item")
+
+
+class ReservationViewSet(
+    InventoryScopeMixin,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    viewsets.GenericViewSet,
+):
+    serializer_class = ReservationSerializer
+
+    def get_queryset(self):
+        _, membership = self.get_scope()
+        if membership.role not in WRITERS:
+            raise PermissionDenied("Only inventory staff may read reservations.")
+        return StockReservation.objects.filter(
+            balance__organization=membership.organization,
+            balance__warehouse__in=self.get_accessible_warehouses(),
+        ).select_related("balance")
+
+
+class OperationViewSet(
+    InventoryScopeMixin,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    viewsets.GenericViewSet,
+):
     serializer_class = InventoryOperationSerializer
-    permission_classes = (IsActiveSuperuser,)
     http_method_names = ("get", "post", "head", "options")
 
-    def create(self, request):
-        serializer = StockCommandSerializer(data=request.data)
+    def get_queryset(self):
+        organization, membership = self.get_scope()
+        if membership.role not in FULL_ACCESS:
+            raise PermissionDenied("Operation history requires organization owner/admin.")
+        return InventoryOperation.objects.filter(organization=organization)
+
+    def create(self, request, *args, **kwargs):
+        organization, membership = self.get_scope()
+        require_writer(membership)
+        serializer = StockCommandSerializer(data=request.data, context={"view": self})
         serializer.is_valid(raise_exception=True)
-        result = execute_stock_operation(actor=request.user, data=serializer.validated_data)
+        result = execute_stock_operation(
+            actor=request.user, organization=organization, data=serializer.validated_data
+        )
         return Response(result, status=status.HTTP_200_OK)
