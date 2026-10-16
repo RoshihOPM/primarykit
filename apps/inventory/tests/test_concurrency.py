@@ -5,10 +5,9 @@ from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
 
 import pytest
+from django.conf import settings
 from django.db import close_old_connections, connection
 from rest_framework.exceptions import ValidationError
-
-from django.conf import settings
 
 if settings.INVENTORY_MODE != "tenant":
     pytest.skip("Tenant-only regression suite", allow_module_level=True)

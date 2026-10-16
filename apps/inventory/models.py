@@ -1,9 +1,16 @@
-"""inventory models exports, selected by pinned project schema mode."""
+# ruff: noqa: F401
+"""Stable inventory models facade exposing the project-pinned schema mode."""
 
 from django.conf import settings
 
 if settings.INVENTORY_MODE == "tenant":
-    from .tenant_models import InventoryOperation, StockBalance, StockMovement, StockReservation, Warehouse
+    from .tenant_models import (
+        InventoryOperation,
+        StockBalance,
+        StockMovement,
+        StockReservation,
+        Warehouse,
+    )
 elif settings.INVENTORY_MODE == "standalone":
     from .standalone_models import (
         InventoryItem,

@@ -1,4 +1,5 @@
-"""inventory services exports, selected by pinned project schema mode."""
+# ruff: noqa: F401
+"""Stable inventory services facade exposing the project-pinned schema mode."""
 
 from django.conf import settings
 

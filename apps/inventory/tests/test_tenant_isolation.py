@@ -2,12 +2,11 @@
 """IDOR, confused-deputy, role and branch isolation regression tests."""
 
 import pytest
+from django.conf import settings
 from django.urls import reverse
 from rest_framework.exceptions import NotFound
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
-
-from django.conf import settings
 
 if settings.INVENTORY_MODE != "tenant":
     pytest.skip("Tenant-only regression suite", allow_module_level=True)
