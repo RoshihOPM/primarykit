@@ -2,7 +2,6 @@ import pytest
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.urls import reverse as django_reverse
 
-from apps.organizations.models import Branch, Membership, Organization
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -14,6 +13,7 @@ from apps.inventory.models import (
     StockReservation,
     Warehouse,
 )
+from apps.organizations.models import Branch, Membership, Organization
 from apps.users.models import User
 
 pytestmark = pytest.mark.django_db
