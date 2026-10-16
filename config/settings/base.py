@@ -154,6 +154,35 @@ DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="PrimaryKit <no-reply@exa
 MAILERS = {"default": {"BACKEND": "django.core.mail.backends.console.EmailBackend"}}
 
 # Register only trusted application callables; tasks are internal, never user-invoked by name.
+# Optional copied Redis cache module. With no explicit opt-in, Django uses local memory.
+if "apps.cache" in INSTALLED_APPS:
+    from apps.cache.config import build_cache_config
+
+    CACHES = {
+        "default": build_cache_config(
+            enabled=env.bool("REDIS_CACHE_ENABLED", default=False),
+            url=env("REDIS_CACHE_URL", default=""),
+            prefix=env("REDIS_CACHE_KEY_PREFIX", default=""),
+            timeout=env.int("REDIS_CACHE_TIMEOUT", default=300),
+        )
+    }
+
+# Optional Celery adapter. No broker is connected during Django initialization.
+if "apps.celery_tasks" in INSTALLED_APPS:
+    CELERY_BROKER_URL = env("CELERY_BROKER_URL", default="")
+    CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND", default=None) or None
+    CELERY_TASK_SERIALIZER = "json"
+    CELERY_RESULT_SERIALIZER = "json"
+    CELERY_ACCEPT_CONTENT = ["json"]  # Reject pickle and other unsafe serializers.
+    CELERY_TASK_IGNORE_RESULT = True
+    CELERY_TASK_ACKS_LATE = True
+    CELERY_TASK_REJECT_ON_WORKER_LOST = True
+    CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+    CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+    CELERY_TASK_SOFT_TIME_LIMIT = 240
+    CELERY_TASK_TIME_LIMIT = 300
+    CELERY_RESULT_EXPIRES = 3600
+
 BACKGROUND_JOB_HANDLERS = {}  # e.g. {"mail.send": "apps.myapp.jobs.send_email"}
 RBAC_ASSIGNABLE_PERMISSIONS = []  # Populate in the generated project.
 REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {
