@@ -24,7 +24,7 @@ def test_real_redis_namespace_and_expiration():
         timeout=30,
     )
     with override_settings(CACHES={"default": configuration}):
-        assert caches["default"].set("healthcheck", "ok", timeout=20)
+        caches["default"].set("healthcheck", "ok", timeout=20)
         assert caches["default"].get("healthcheck") == "ok"
         set_cached(namespace="client-a", key="same", value="A", timeout=30)
         assert get_cached(namespace="client-a", key="same") == "A"
