@@ -12,7 +12,9 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--once", action="store_true", help="Process at most one job")
-        parser.add_argument("--max-jobs", type=int, default=0, help="Stop after N completed attempts")
+        parser.add_argument(
+            "--max-jobs", type=int, default=0, help="Stop after N completed attempts"
+        )
         parser.add_argument("--poll-seconds", type=float, default=2.0)
         parser.add_argument("--lease-seconds", type=int, default=900)
 
