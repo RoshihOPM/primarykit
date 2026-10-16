@@ -173,6 +173,16 @@ jobs:
           curl --fail --retry 12 --retry-connrefused --retry-delay 2 http://127.0.0.1:8000/health/ready/
       - name: SeaweedFS S3 provider integration test
         run: |
+          # Docker Hub occasionally times out during CI; retry the pull only.
+          for attempt in 1 2 3; do
+            if docker compose -f compose.yaml -f compose.seaweedfs.yaml pull seaweedfs; then
+              break
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              exit 1
+            fi
+            sleep $((attempt * 10))
+          done
           docker compose -f compose.yaml -f compose.seaweedfs.yaml up -d --no-build
           docker compose -f compose.yaml -f compose.seaweedfs.yaml exec -T -e PRIMARYKIT_SEAWEEDFS_INTEGRATION=1 api uv run pytest --ds=config.settings.postgres_test apps/storage/tests/test_seaweedfs_integration.py
       - name: Clean containers
