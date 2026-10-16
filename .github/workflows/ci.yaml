@@ -216,11 +216,13 @@ jobs:
           docker compose -f compose.yaml -f compose.redis.yaml -f compose.celery.yaml up -d --wait redis rabbitmq
           # Only install optional client packages for this isolated integration step;
           # the base lockfile and generated clients do not depend on them.
-          uv pip install "redis>=6,<7" "celery[redis]>=5.6,<6"
+          uv pip install "redis>=6.2,<6.5" "celery[redis]>=5.6,<6"
           PRIMARYKIT_INFRA_INTEGRATION=1 \
           REDIS_CACHE_URL=redis://127.0.0.1:6379/14 \
           CELERY_BROKER_URL=amqp://worker:local-worker-only-change-me@127.0.0.1:5672// \
           uv run --no-sync pytest -q apps/cache/tests/test_redis_integration.py apps/celery_tasks/tests/test_broker_integration.py
+          # Cache-only client can use redis-py 8.x without Celery Redis-extra constraints.
+          PRIMARYKIT_INFRA_INTEGRATION=1 REDIS_CACHE_URL=redis://127.0.0.1:6379/14 uv run --no-sync --with "redis>=8,<9" pytest -q apps/cache/tests/test_redis_integration.py
       - name: SeaweedFS S3 provider integration test
         run: |
           # Docker Hub occasionally times out during CI; retry the pull only.

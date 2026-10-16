@@ -37,7 +37,7 @@ Always copied: `core`, `users`, `notifications`. Optional: `rbac`, `audit`, `sto
 ## Optional Redis Cache and Celery adapters
 
 `--apps cache` and `--apps celery_tasks` are independent selections, do not create a dependency on the source kit or require `tasks`.
-The generator includes `compose.redis.yaml` for Redis/Celery selections and `compose.celery.yaml` + `compose.celery.prod.yaml` only for Celery. Client projects opt into third-party packages explicitly (`uv add 'redis>=6,<7'`, `uv add 'celery[redis]>=5.6,<6'`) and commit their **own** lockfile. These adapters have no migrations. See [cache](redis-cache.md) and [Celery](celery-rabbitmq.md).
+The generator includes `compose.redis.yaml` for Redis/Celery selections and `compose.celery.yaml` + `compose.celery.prod.yaml` only for Celery. Client projects opt into third-party packages explicitly (`uv add 'redis>=8,<9'` (cache-only), `uv add 'celery>=5.6,<6'` (RabbitMQ-only), or `uv add 'celery[redis]>=5.6,<6' 'redis>=6.2,<6.5'` (Redis result backend)) and commit their **own** lockfile. These adapters have no migrations. See [cache](redis-cache.md) and [Celery](celery-rabbitmq.md).
 
 ## Detached project verification
 

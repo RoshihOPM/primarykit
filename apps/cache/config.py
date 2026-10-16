@@ -8,7 +8,9 @@ from django.core.exceptions import ImproperlyConfigured
 PREFIX = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$")
 
 
-def build_cache_config(*, enabled: bool, url: str, prefix: str, timeout: int = 300) -> dict:
+def build_cache_config(
+    *, enabled: bool, url: str, prefix: str, timeout: int = 300, backend: str = "django"
+) -> dict:
     """Redis must be explicit; local backend is process-local and non-shared."""
     if not enabled:
         return {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}
@@ -32,10 +34,24 @@ def build_cache_config(*, enabled: bool, url: str, prefix: str, timeout: int = 3
         )
     if type(timeout) is not int or not 1 <= timeout <= 86400:
         raise ImproperlyConfigured("REDIS_CACHE_TIMEOUT must be between 1 and 86400 seconds")
-    return {
-        "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": url,
-        "KEY_PREFIX": prefix,
-        "TIMEOUT": timeout,
-        "OPTIONS": {"socket_connect_timeout": 2, "socket_timeout": 2},
-    }
+    if backend == "django":
+        return {
+            "BACKEND": "django.core.cache.backends.redis.RedisCache",
+            "LOCATION": url,
+            "KEY_PREFIX": prefix,
+            "TIMEOUT": timeout,
+            "OPTIONS": {"socket_connect_timeout": 2, "socket_timeout": 2},
+        }
+    if backend == "django-redis":
+        return {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": url,
+            "KEY_PREFIX": prefix,
+            "TIMEOUT": timeout,
+            "OPTIONS": {
+                "CLIENT_CLASS": "django_redis.client.DefaultClient",
+                "SOCKET_CONNECT_TIMEOUT": 2,
+                "SOCKET_TIMEOUT": 2,
+            },
+        }
+    raise ImproperlyConfigured("REDIS_CACHE_DJANGO_BACKEND must be none, django or django-redis")
