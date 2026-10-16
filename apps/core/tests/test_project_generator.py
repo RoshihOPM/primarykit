@@ -30,7 +30,7 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
     selected = set(apps)
     if "inventory" in selected:
         selected.add("catalog")
-    if "catalog" in selected:
+    if "catalog" in selected or "storage" in selected:
         selected.add("organizations")
     for app in ("rbac", "audit", "storage", "catalog", "inventory", "organizations"):
         assert (target / "apps" / app).exists() == (app in selected)
