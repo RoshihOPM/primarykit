@@ -11,6 +11,7 @@ from django.urls import reverse
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from apps.organizations.models import Membership, Organization
 from apps.storage.models import StoredFile
 from apps.users.models import User
 
@@ -50,13 +51,15 @@ def test_private_s3_upload_download_and_idor():
         password="Long-test-password-123457",
         email_verified=True,
     )
+    org = Organization.objects.create(name="Seaweed uploads", slug="seaweed-uploads")
+    Membership.objects.create(organization=org, user=owner, role=Membership.Role.OWNER)
     api = APIClient()
     api.credentials(HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(owner).access_token}")
     other = APIClient()
     other.credentials(HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(stranger).access_token}")
 
     result = api.post(
-        reverse("stored-files-list"),
+        reverse("stored-files-list", kwargs={"org_id": org.pk}),
         {"file": SimpleUploadedFile("photo.png", PNG, content_type="image/png")},
         format="multipart",
     )
@@ -67,12 +70,12 @@ def test_private_s3_upload_download_and_idor():
         with storage.open(item.object_key, "rb") as reader:
             assert reader.read() == PNG
         assert (
-            other.get(reverse("stored-files-download", kwargs={"pk": item.pk})).status_code == 404
+            other.get(reverse("stored-files-download", kwargs={"org_id": org.pk, "pk": item.pk})).status_code == 404
         )
-        response = api.get(reverse("stored-files-download", kwargs={"pk": item.pk}))
+        response = api.get(reverse("stored-files-download", kwargs={"org_id": org.pk, "pk": item.pk}))
         assert response.status_code == 200
         assert b"".join(response.streaming_content) == PNG
-        assert api.delete(reverse("stored-files-detail", kwargs={"pk": item.pk})).status_code == 204
-        assert api.get(reverse("stored-files-download", kwargs={"pk": item.pk})).status_code == 404
+        assert api.delete(reverse("stored-files-detail", kwargs={"org_id": org.pk, "pk": item.pk})).status_code == 204
+        assert api.get(reverse("stored-files-download", kwargs={"org_id": org.pk, "pk": item.pk})).status_code == 404
     finally:
         storage.delete(item.object_key)
