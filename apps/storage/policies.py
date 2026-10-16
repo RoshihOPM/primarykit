@@ -10,6 +10,8 @@ from uuid import UUID
 from django.apps import apps as django_apps
 from rest_framework.exceptions import NotFound
 
+from .domain import may_manage_file
+
 
 @dataclass(frozen=True)
 class FileScope:
@@ -54,5 +56,9 @@ def visible_files(*, queryset, user, scope: FileScope):
 def require_file_access(*, file, actor, scope: FileScope):
     if file.organization_id != scope.organization_id:
         raise NotFound()
-    if not scope.can_manage_all and file.owner_id != actor.pk:
+    if not may_manage_file(
+        actor_id=actor.pk,
+        owner_id=file.owner_id,
+        elevated_in_scope=scope.can_manage_all,
+    ):
         raise NotFound()
