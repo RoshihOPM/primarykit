@@ -40,6 +40,14 @@ PrimaryKit is a copy-based Django starter, not a separately deployed shared back
 - Agents may perform independent code/DB reviews in parallel **only when supported by the active runtime**. Changes to the same files must be coordinated; a PR is the final integration gate.
 - Never apply production migrations, modify production data, rotate secrets, or deploy without explicit approval.
 
+## Independent generated-project policy
+
+- **Copy, never runtime-depend.** A generated backend must build, test, run and deploy after the PrimaryKit source checkout is deleted. No imports from `primarykit`, `scripts.new_project`, shared APIs or runtime dependency on an upstream package.
+- Client repositories own their business logic, versions, schema modes, migration history, secrets and release decisions. Sample Orders/Sales/Payments, Catalog/Inventory are not universal domain models.
+- Do not introduce automatic updates or production migration of client-owned source. A source fix is propagated only by deliberate client-specific change/review/PR.
+- Run `python -m apps.core.doctor --strict` inside generated backends, as well as the usual tests. The doctor does not need Django startup, network access or a kit checkout, and is only a static preflight; it does not replace ORM migrations or runtime security tests.
+- See `docs/independent-projects.md`, `docs/doctor.md`, and `docs/architecture-recipes.md`.
+
 ## Portable module contract
 
 - A module is discovered from `apps/<name>/manifest.py`, not manually added to `INSTALLED_APPS` or root URLs. Define hard dependencies, optional integrations, stable route prefixes and priority there. Add tests for the generator's dependency closure and for the standalone variant where applicable.

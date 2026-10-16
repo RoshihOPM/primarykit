@@ -19,6 +19,7 @@ uv run python scripts/new_project.py ../shop-api --name shop-api \
   --apps catalog inventory orders sales payments statistics audit \
   --git-init
 cd ../shop-api
+python -m apps.core.doctor --strict
 cp .env.example .env
 ```
 
@@ -59,7 +60,9 @@ uv run python manage.py migrate
 uv run python manage.py runserver
 ```
 
-**Исходный репозиторий — конструктор.** Миграции его business apps намеренно не коммитятся: для разработки они генерируются локально. В клиентском проекте после первого создания и деплоя **никогда не удаляйте и не пересоздавайте миграции без плана**.
+**Исходный репозиторий — конструктор.** Готовый backend не содержит runtime-зависимости от PrimaryKit; его исходники, зависимости и бизнес-правила принадлежат отдельному продукту. См. [правила независимости](independent-projects.md) и [doctor](doctor.md).
+
+ Миграции его business apps намеренно не коммитятся: для разработки они генерируются локально. В клиентском проекте после первого создания и деплоя **никогда не удаляйте и не пересоздавайте миграции без плана**.
 
 ```bash
 uv run ruff check .

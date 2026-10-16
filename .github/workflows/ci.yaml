@@ -15,6 +15,8 @@ jobs:
           python-version: "3.13"
       - name: Install dependencies
         run: uv sync --locked --all-groups
+      - name: Offline detached-project doctor
+        run: uv run python -m apps.core.doctor --strict
       - name: Ruff lint
         run: uv run ruff check .
       - name: Ruff format
@@ -31,6 +33,7 @@ jobs:
           uv run python scripts/new_project.py /tmp/primarykit-client --name client-backend --apps audit
           cd /tmp/primarykit-client
           uv sync --locked --all-groups
+          uv run python -m apps.core.doctor --strict
           uv run python manage.py makemigrations users audit --noinput --settings=config.settings.test
           uv run python manage.py check --settings=config.settings.test
           uv run pytest

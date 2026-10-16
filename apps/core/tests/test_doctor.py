@@ -1,0 +1,79 @@
+"""Doctor is copied with Core and runs without importing Django or the source kit."""
+
+import json
+import subprocess
+import sys
+
+from apps.core.doctor import inspect_project
+from scripts.new_project import create_project
+
+
+def _project(tmp_path, apps=frozenset()):
+    return create_project(
+        tmp_path / "customer-backend", name="customer-backend", optional_apps=set(apps)
+    )
+
+
+def test_offline_doctor_checks_generated_projects(tmp_path):
+    target = _project(tmp_path, {"inventory", "catalog", "organizations", "statistics"})
+    report = inspect_project(target)
+    assert not report.findings
+    assert {"core", "users", "notifications", "inventory"} <= set(report.modules)
+    run = subprocess.run(
+        [sys.executable, "-m", "apps.core.doctor", "--json", "--strict"],
+        cwd=target,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert run.returncode == 0, run.stderr + run.stdout
+    assert json.loads(run.stdout)["ok"] is True
+    assert "customer-backend" in (target / "pyproject.toml").read_text()
+
+
+def test_offline_doctor_does_not_require_provenance_or_kit_checkout(tmp_path):
+    target = _project(tmp_path, {"orders"})
+    (target / "primarykit-origin.json").unlink()
+    assert not inspect_project(target).failed()
+    # A generated client's Python runtime must have no dependency on source scripts.
+    assert not (target / "scripts").exists()
+    assert not (target / "primarykit").exists()
+
+
+def test_doctor_reports_missing_dependency_and_tenant_schema_mismatch(tmp_path):
+    target = _project(tmp_path, {"inventory"})
+    base = target / "config/settings/base.py"
+    base.write_text(
+        base.read_text().replace('INVENTORY_MODE = "standalone"', 'INVENTORY_MODE = "tenant"')
+    )
+    (target / "apps/notifications/manifest.py").unlink()
+    codes = {item.code for item in inspect_project(target).findings}
+    assert "baseline_missing" in codes
+    assert "dependency_missing" in codes
+    assert "tenant_dependency_missing" in codes
+
+
+def test_doctor_rejects_runtime_kit_import_and_package_dependency(tmp_path):
+    target = _project(tmp_path)
+    (target / "config" / "from_kit.py").write_text("from primarykit import runtime\n")
+    pyproject = target / "pyproject.toml"
+    pyproject.write_text(
+        pyproject.read_text().replace(
+            '  "django>=6.1,<6.2",', '  "primarykit>=0.1",\n  "django>=6.1,<6.2",'
+        )
+    )
+    report = inspect_project(target)
+    assert report.failed()
+    assert {"kit_import", "kit_dependency"} <= {item.code for item in report.findings}
+
+
+def test_doctor_stale_metadata_is_warning_and_strict_fails(tmp_path):
+    target = _project(tmp_path)
+    metadata = target / "primarykit-origin.json"
+    source = json.loads(metadata.read_text())
+    source["included_apps"] = ["core"]
+    metadata.write_text(json.dumps(source))
+    report = inspect_project(target)
+    assert [item.code for item in report.findings] == ["origin_stale"]
+    assert not report.failed()
+    assert report.failed(strict=True)

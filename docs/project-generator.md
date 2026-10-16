@@ -34,6 +34,15 @@ Always copied: `core`, `users`, `notifications`. Optional: `rbac`, `audit`, `sto
 - Writes `primarykit-origin.json` with copied modules and source version.
 - `--git-init` initializes local Git history on main; no GitHub remote is created and no push is performed.
 
+## Detached project verification
+
+```bash
+cd ../automarket
+python -m apps.core.doctor --strict
+```
+
+The doctor is included in copied `apps/core/` and never imports/contacts PrimaryKit. The generator also runs these static checks before returning. This is a preflight, not a substitute for Django migrations, PostgreSQL tests or client business review. See [independent projects](independent-projects.md), [doctor](doctor.md) and [architecture recipes](architecture-recipes.md).
+
 ## Safety / limitations
 
 - Refuses existing destinations and directories inside PrimaryKit.
