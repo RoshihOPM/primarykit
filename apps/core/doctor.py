@@ -31,8 +31,7 @@ class Report:
 
     def failed(self, *, strict: bool = False) -> bool:
         return any(
-            item.level == "error" or (strict and item.level == "warning")
-            for item in self.findings
+            item.level == "error" or (strict and item.level == "warning") for item in self.findings
         )
 
 
@@ -44,8 +43,7 @@ def _manifest(path: Path, name: str) -> tuple[str, ...]:
         for statement in tree.body
         if isinstance(statement, ast.Assign)
         and any(
-            isinstance(target, ast.Name) and target.id == "MODULE"
-            for target in statement.targets
+            isinstance(target, ast.Name) and target.id == "MODULE" for target in statement.targets
         )
     ]
     if len(declarations) != 1 or not isinstance(declarations[0], ast.Call):
@@ -77,10 +75,7 @@ def _mode(path: Path, setting: str) -> str | None:
         item.value
         for item in tree.body
         if isinstance(item, ast.Assign)
-        and any(
-            isinstance(target, ast.Name) and target.id == setting
-            for target in item.targets
-        )
+        and any(isinstance(target, ast.Name) and target.id == setting for target in item.targets)
     ]
     if len(assignments) != 1:
         return None
