@@ -24,7 +24,7 @@ uv run python scripts/new_project.py ../crm-api --name crm-api --git-init
 
 Always copied: `core`, `users`, `notifications`. Optional: `rbac`, `audit`, `storage`, `organizations`, `catalog`, `inventory`.
 
-`users` currently depends on `notifications` because account verification uses its email transport. Audit is optional (core facade is a no-op when not installed). Storage and RBAC depend on Users. Catalog depends on Organizations; Inventory depends on both Catalog and Organizations. These dependencies are automatically selected.
+`users` currently depends on `notifications` because account verification uses its email transport. Audit is optional (core facade is a no-op when not installed). Storage and Catalog depend on Organizations (and Users); RBAC depends on Users; Inventory depends on both Catalog and Organizations. These dependencies are automatically selected.
 
 ## What generator does
 
@@ -57,9 +57,17 @@ uv run pytest
 ```
 
 `--apps inventory` automatically includes `catalog` and `organizations`.
+`--apps storage` also selects `organizations` and creates organization-scoped file endpoints.
 Even `--apps catalog` includes `organizations`. API routes are scoped as
 `/api/v1/organizations/{org_id}/catalog/` and `/inventory/`.
 Creating a company via `POST /api/v1/organizations/` is the first step.
+
+**Storage upgrade warning:** Existing standalone Storage installations must adopt Organizations,
+assign every existing file to an explicitly verified organization, and migrate global
+`/api/v1/files/` clients to `/api/v1/organizations/{org_id}/files/`.
+Do not apply the new non-nullable organization FK to a populated file table
+without a staged nullable/backfill/validation/non-null migration. The generator
+never migrates existing applications automatically.
 
 **Client upgrade warning:** copying a newer kit module into a pre-existing
 database requires an explicit data-migration plan. Never assign all existing

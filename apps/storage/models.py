@@ -8,6 +8,9 @@ from django.db import models
 
 class StoredFile(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    organization = models.ForeignKey(
+        "organizations.Organization", on_delete=models.PROTECT, related_name="stored_files"
+    )
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
     object_key = models.CharField(max_length=160, unique=True, editable=False)
     original_name = models.CharField(max_length=255)
@@ -19,7 +22,12 @@ class StoredFile(models.Model):
 
     class Meta:
         ordering = ("-created_at", "-id")
-        indexes = [models.Index(fields=["owner", "-created_at"], name="storage_owner_time_idx")]
+        indexes = [
+            models.Index(
+                fields=["organization", "owner", "-created_at"], name="storage_org_owner_time_idx"
+            ),
+            models.Index(fields=["organization", "-created_at"], name="storage_org_time_idx"),
+        ]
 
     def __str__(self):
         return f"{self.id}: {self.original_name}"

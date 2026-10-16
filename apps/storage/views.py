@@ -6,6 +6,8 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from apps.organizations.scoping import FULL_ACCESS, organization_scope
+
 from .models import StoredFile
 from .serializers import StoredFileReadSerializer, StoredFileUploadSerializer
 from .services import InvalidUpload, save_private_file, soft_delete_private_file
@@ -22,12 +24,23 @@ class StoredFileViewSet(
     queryset = StoredFile.objects.filter(deleted_at__isnull=True)
     http_method_names = ("get", "post", "delete", "head", "options")
 
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        self.get_scope()
+
+    def get_scope(self):
+        if not hasattr(self, "_tenant_scope"):
+            self._tenant_scope = organization_scope(
+                user=self.request.user, org_id=self.kwargs["org_id"]
+            )
+        return self._tenant_scope
+
     def get_queryset(self):
-        queryset = super().get_queryset()
-        user = self.request.user
-        if user.is_superuser and user.is_active:
+        organization, membership = self.get_scope()
+        queryset = super().get_queryset().filter(organization=organization)
+        if membership.role in FULL_ACCESS:
             return queryset
-        return queryset.filter(owner=user)
+        return queryset.filter(owner=self.request.user)
 
     def get_serializer_class(self):
         if self.action == "create":
@@ -38,13 +51,17 @@ class StoredFileViewSet(
         data = self.get_serializer(data=request.data)
         data.is_valid(raise_exception=True)
         try:
-            file = save_private_file(owner=request.user, upload=data.validated_data["file"])
+            file = save_private_file(
+                owner=request.user,
+                organization=self.get_scope()[0],
+                upload=data.validated_data["file"],
+            )
         except InvalidUpload as exc:
             raise ValidationError({"file": str(exc)}) from exc
         return Response(StoredFileReadSerializer(file).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=["get"], url_path="download")
-    def download(self, request, pk=None):
+    def download(self, request, pk=None, org_id=None):
         file = self.get_object()
         try:
             stream = storages["default"].open(file.object_key, "rb")
@@ -61,4 +78,6 @@ class StoredFileViewSet(
         return response
 
     def perform_destroy(self, instance):
-        soft_delete_private_file(file=instance, actor=self.request.user)
+        soft_delete_private_file(
+            file=instance, actor=self.request.user, organization=self.get_scope()[0]
+        )

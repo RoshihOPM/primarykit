@@ -8,8 +8,12 @@ from django.conf import settings
 from django.core.files.storage import storages
 from django.db import transaction
 from django.utils import timezone
+from rest_framework.exceptions import NotFound
 
 from apps.core.audit import record_audit_event
+from apps.organizations.models import Organization
+from apps.organizations.permissions import get_active_membership
+from apps.organizations.scoping import FULL_ACCESS, organization_scope
 
 from .models import StoredFile
 
@@ -58,19 +62,32 @@ def validate_upload(upload):
     return filename, content_type
 
 
-def save_private_file(*, owner, upload) -> StoredFile:
-    """Blob saved before DB transaction; compensating cleanup on failed metadata insert."""
+def _locked_scope(*, actor, organization_id):
+    """Serialize organization membership updates and file mutations."""
+    org = (
+        Organization.objects.select_for_update().filter(pk=organization_id, is_active=True).first()
+    )
+    if org is None:
+        raise NotFound()
+    return org, get_active_membership(user=actor, organization=org)
+
+
+def save_private_file(*, owner, organization, upload) -> StoredFile:
+    """Verify membership twice and compensate a blob if persistence fails."""
+    organization_scope(user=owner, org_id=organization.pk)
     filename, content_type = validate_upload(upload)
     digest = hashlib.sha256()
     for chunk in upload.chunks():
         digest.update(chunk)
     upload.seek(0)
     storage = storages["default"]
-    requested_key = f"private/{uuid.uuid4().hex}"
+    requested_key = f"private/{organization.pk}/{uuid.uuid4().hex}"
     key = storage.save(requested_key, upload)
     try:
         with transaction.atomic():
+            org, _ = _locked_scope(actor=owner, organization_id=organization.pk)
             file = StoredFile.objects.create(
+                organization=org,
                 owner=owner,
                 object_key=key,
                 original_name=filename,
@@ -83,7 +100,11 @@ def save_private_file(*, owner, upload) -> StoredFile:
                 action="storage.file.uploaded",
                 target_type="storage.StoredFile",
                 target_id=file.pk,
-                changes={"size": file.size, "content_type": file.content_type},
+                changes={
+                    "organization_id": str(org.pk),
+                    "size": file.size,
+                    "content_type": file.content_type,
+                },
             )
     except Exception:
         try:
@@ -95,10 +116,15 @@ def save_private_file(*, owner, upload) -> StoredFile:
 
 
 @transaction.atomic
-def soft_delete_private_file(*, file: StoredFile, actor):
-    locked = StoredFile.objects.select_for_update().get(pk=file.pk)
-    if locked.deleted_at is not None:
-        return False
+def soft_delete_private_file(*, file: StoredFile, actor, organization):
+    org, membership = _locked_scope(actor=actor, organization_id=organization.pk)
+    locked = (
+        StoredFile.objects.select_for_update()
+        .filter(pk=file.pk, organization=org, deleted_at__isnull=True)
+        .first()
+    )
+    if locked is None or (locked.owner_id != actor.pk and membership.role not in FULL_ACCESS):
+        raise NotFound()
     locked.deleted_at = timezone.now()
     locked.save(update_fields=["deleted_at"])
     record_audit_event(
@@ -106,5 +132,6 @@ def soft_delete_private_file(*, file: StoredFile, actor):
         action="storage.file.deleted",
         target_type="storage.StoredFile",
         target_id=locked.pk,
+        changes={"organization_id": str(org.pk)},
     )
     return True

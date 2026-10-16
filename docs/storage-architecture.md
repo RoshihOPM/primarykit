@@ -1,30 +1,30 @@
-# Private Storage v0.1
+# Private Storage v0.2 (organization-scoped)
 
 ## Boundary
 
-`apps.storage` owns immutable upload metadata, private blob paths, owner authorization, soft deletion and controlled download. `users` provides identities; `audit` is optional via `apps.core.audit`.
+`apps.storage` owns immutable upload metadata, private blob paths, owner authorization, soft deletion and controlled download. `organizations` is required; `users` provides identities and `audit` remains optional.
 
 This is a reusable **file attachment service**, not a public CDN or direct presigned-upload system.
 
 ## Model
 
-`StoredFile`: UUID, owner FK PROTECT, random backend key, original filename, server-detected MIME, byte size, SHA-256, created timestamp, deleted timestamp.
+`StoredFile`: UUID, required organization FK PROTECT, owner FK PROTECT, random backend key, original filename, server-detected MIME, byte size, SHA-256, created timestamp, deleted timestamp.
 
-Never return object keys, bucket names or raw direct URLs in normal user API responses. The default owner policy allows only authenticated owners and active superusers. Staff alone cannot access another user's files.
+Never return object keys, bucket names or raw direct URLs in normal user API responses. Active organization membership is mandatory. Organization owners/admins can manage that company's files, while members/managers can manage only their own files. Global superuser status grants no cross-tenant exception.
 
 ## Routes
 
-- `POST /api/v1/files/`: multipart upload, field `file`.
-- `GET /api/v1/files/`: owner's own files (or all for superuser), paginated.
-- `GET /api/v1/files/{uuid}/`: metadata for authorized viewer.
-- `GET /api/v1/files/{uuid}/download/`: streaming response, private no-store, attachment disposition and nosniff.
-- `DELETE /api/v1/files/{uuid}/`: mark deleted, retain underlying object for retention / eventual cleanup.
+- `POST /api/v1/organizations/{org_id}/files/`: multipart upload, field `file`.
+- `GET /api/v1/organizations/{org_id}/files/`: own files (all tenant files for owner/admin), paginated.
+- `GET /api/v1/organizations/{org_id}/files/{uuid}/`: metadata for authorized viewer.
+- `GET /api/v1/organizations/{org_id}/files/{uuid}/download/`: streaming response, private no-store, attachment disposition and nosniff.
+- `DELETE /api/v1/organizations/{org_id}/files/{uuid}/`: mark deleted, retain underlying object for retention / eventual cleanup.
 
 ## Validation
 
 Default max 10 MiB. MIME is guessed from header magic and filename extension, not trusted from multipart `content_type`. Initially PNG/JPEG/WebP/PDF only, with settings allowlist. This is not a fully validating file parser, malware scanner or DLP system: production should add virus scanning, image decoders for dangerous uploads, archive restrictions and request-body limits at Nginx/API gateway.
 
-Random keys are `private/<uuid4>` and never include client filenames.
+Random keys are `private/<org_id>/<uuid4>` and never include client filenames.
 
 ## Storage backends
 
@@ -36,7 +36,7 @@ Do not configure a public bucket or Nginx static media alias. Django serves auth
 
 Blob upload precedes a DB `transaction.atomic` that creates metadata and audit event. On metadata/audit failure, the service attempts to delete the newly written blob. This is **compensating cleanup**, not a distributed transaction: storage may fail during compensation, leaving an orphan that needs scheduled cleanup.
 
-Deletion updates metadata and audit together, but deliberately does not delete the blob. A later audited purge/retention workflow will be needed for regulated production use.
+Deletion rechecks membership and file authorization under an organization lock, and updates metadata and audit atomically; the blob is retained. A later audited purge/retention workflow will be needed for regulated production use.
 
 ## Production checklist
 
@@ -44,12 +44,14 @@ Deletion updates metadata and audit together, but deliberately does not delete t
 - Verify private bucket ACL and block public access, endpoint TLS, key rotation and access credentials.
 - Put anti-virus/malware scanner, file retention, audit monitoring and gateway `client_max_body_size` limits in front of public uploads.
 - Prevent filename injection and enforce private authenticated downloads, with no long-lived public links.
-- App owner must not be inferred from user-supplied upload metadata.
+- The organization and owner must never be assigned from submitted upload metadata. Check membership again within every service-layer write.
 - If using S3, copy corresponding optional package install and lock changes into the new project's `uv.lock`.
 
 ## Migrations
 
-At project creation: `makemigrations users audit storage`, `migrate`; commit generated migrations in the new project's Git.
+For a new project, generate migrations for `users storage organizations` (plus selected optional apps), then migrate and commit the generated migration files.
+
+**Breaking upgrade:** the global API has been removed. Existing file rows have no organization. To upgrade a populated client database, first introduce a nullable organization FK; backfill each row to a verified organization using authoritative business records, flag ambiguous records for manual review, and verify there are no nulls or cross-company assignments before enforcing NOT NULL. Coordinate API clients' change to the organization-prefixed routes. Do not let `makemigrations` assign a single default tenant to existing files. Rehearse migration and rollback on a staging snapshot; do not discard previously committed migrations.
 
 ## SeaweedFS single-node S3 via Docker Compose
 
