@@ -97,7 +97,8 @@ def save_private_file(*, owner, upload, organization_id=None) -> StoredFile:
                 changes={
                     "organization_id": (
                         str(current_scope.organization_id)
-                        if current_scope.organization_id else None
+                        if current_scope.organization_id
+                        else None
                     ),
                     "size": file.size,
                     "content_type": file.content_type,
@@ -136,8 +137,6 @@ def soft_delete_private_file(*, file: StoredFile, actor, organization_id=None):
         action="storage.file.deleted",
         target_type="storage.StoredFile",
         target_id=locked.pk,
-        changes={
-            "organization_id": str(scope.organization_id) if scope.organization_id else None
-        },
+        changes={"organization_id": str(scope.organization_id) if scope.organization_id else None},
     )
     return True
