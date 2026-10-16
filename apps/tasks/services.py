@@ -69,7 +69,7 @@ def enqueue(
                 existing.code != code
                 or existing.payload != data
                 or existing.max_attempts != max_attempts
-                or existing.available_at != schedule
+                or (run_after is not None and existing.available_at != schedule)
             ):
                 raise ValueError("Conflicting idempotency key") from None
             return existing
