@@ -3,6 +3,7 @@
 import uuid
 
 from django.db import models
+from django.db.models import F, Q
 from django.utils import timezone
 
 
@@ -30,6 +31,14 @@ class BackgroundJob(models.Model):
 
     class Meta:
         constraints = [
+            models.CheckConstraint(
+                condition=Q(max_attempts__gte=1) & Q(max_attempts__lte=10),
+                name="tasks_max_attempts_valid",
+            ),
+            models.CheckConstraint(
+                condition=Q(attempts__lte=F("max_attempts")),
+                name="tasks_attempts_not_exceeded",
+            ),
             models.UniqueConstraint(
                 fields=("namespace", "idempotency_key"), name="tasks_namespace_idempotency"
             ),
