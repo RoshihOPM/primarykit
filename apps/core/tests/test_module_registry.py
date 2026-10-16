@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import pytest
+from django.conf import settings
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import override_settings
@@ -41,10 +42,12 @@ def test_optional_scoped_routes_are_registered_only_when_dependency_exists():
             "organizations" in installed
         )
     if "inventory" in installed:
-        assert (
-            "api/v1/organizations/<uuid:org_id>/inventory/",
-            "apps.inventory.urls",
-        ) in routes
+        prefix = (
+            "api/v1/organizations/<uuid:org_id>/inventory/"
+            if settings.INVENTORY_MODE == "tenant"
+            else "api/v1/inventory/"
+        )
+        assert (prefix, "apps.inventory.urls") in routes
 
 
 def test_registry_denies_missing_and_cyclic_modules():

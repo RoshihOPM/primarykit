@@ -36,6 +36,12 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
 
     settings = (target / "config/settings/base.py").read_text()
     urls = (target / "config/urls.py").read_text()
+    assert ('CATALOG_MODE = "tenant"' in settings) == (
+        "catalog" in selected and "organizations" in selected
+    )
+    assert ('INVENTORY_MODE = "tenant"' in settings) == (
+        {"inventory", "catalog", "organizations"} <= selected
+    )
     assert "*installed_module_apps()" in settings
     assert "module_routes()" in urls
     for name in selected:
