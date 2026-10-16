@@ -18,6 +18,7 @@ class Route:
     prefix: str
     requires: tuple[str, ...] = ()
     mode: str | None = None
+    urlconf: str | None = None
 
 
 @dataclass(frozen=True)
@@ -105,7 +106,7 @@ def module_routes() -> tuple[tuple[str, str], ...]:
             if route.mode is not None and route.mode != mode:
                 continue
             if all(dependency in installed for dependency in route.requires):
-                result.append((route.prefix, f"apps.{module.name}.urls"))
+                result.append((route.prefix, route.urlconf or f"apps.{module.name}.urls"))
     return tuple(result)
 
 

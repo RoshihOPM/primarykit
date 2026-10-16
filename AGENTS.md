@@ -52,3 +52,9 @@ PrimaryKit is a copy-based Django starter, not a separately deployed shared back
 - Independent `catalog` and `inventory` folders use pinned `CATALOG_MODE` / `INVENTORY_MODE` (`standalone` or `tenant`) selected before the first migration. Do not infer, flip or migrate modes in AppConfig.ready() or a registry import.
 - Standalone Catalog and Inventory must remain free of imports from Organizations and Catalog (for Inventory), including at model import time. All owner scope checks are mandatory at both API and transactional command boundaries; no implicit Django superuser bypass.
 - Tenant implementation remains a separate explicit adapter with original models, migrations and routes. Any mode conversion on a populated database needs an agreed and tested data migration, including historical immutable movements and idempotency partitions.
+
+## Statistics provider security
+
+- Optional `apps/<module>/statistics.py` contributes typed metrics through `apps.statistics.domain.Metric` / `Provider` when Statistics is installed. Statistics must never directly import feature ORM models. No provider should query the DB at import time.
+- Every provider query MUST filter by the authorized `MetricContext` owner or `organization`; tests must confirm cross-user, cross-tenant and superuser isolation. Account and audit aggregate counts are system-superuser only. Never allow arbitrary user-selected ORM field expressions, SQL, or module imports.
+- Mark each metric as a current `snapshot` or `period` aggregate. No silent approximation or historic stock inference from current balances. Company aggregates currently require active owner/admin membership; adding member-level aggregates requires an explicit product/privacy review.
