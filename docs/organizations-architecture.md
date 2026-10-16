@@ -55,7 +55,7 @@ API serializers never expose a writeable `organization`, `owner`, `created_by`
 or tenant-ID field on the mutations that derive these values from the path or
 logged-in identity.
 
-## Tenant integration — important non-goal
+## Tenant integration — explicit boundaries
 
 **Catalog and Inventory are now organization-scoped**, with strict nested API
 routes and company/branch service validation. Their source code requires this
@@ -67,9 +67,7 @@ backfill; see [Catalog](catalog-architecture.md) and
 multi-company product requires an explicit attachment/ACL design; do not expose
 file IDs across tenants or assume a user-owned file is company-owned.
 
-For client projects choose `organizations` by itself only if the business
-data is separately scoped. Until Catalog/Inventory are wired, do not expose
-global catalog/inventory endpoints to ordinary tenant users.
+Organizations may be selected independently. The generator automatically adds it when a project selects Catalog or Inventory. Do not expose legacy global endpoints in existing projects; use the scoped Catalog/Inventory endpoints only after verified tenant data backfill.
 
 ## Security, operations and migration guidance
 

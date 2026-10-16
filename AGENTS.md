@@ -30,7 +30,8 @@ PrimaryKit is a copy-based Django starter, not a separately deployed shared back
 - All mutations affecting money, balances, stock or authorization require transaction and concurrency analysis.
 - Each tenant API must filter both list/detail querysets by membership, validate foreign keys from the same tenant, and deny implicit global Group privileges.
 - Protect last active owner under a row lock; include negative IDOR and cross-branch tests.
-- Catalog/Inventory/Storage tenancy needs its own migration and tests; never imply it is automatic.
+- Catalog and Inventory require Organizations. Always scope list/detail querysets by organization and enforce tenant/branch checks inside transactional services; no unscoped catalog or inventory API is permitted.
+- Storage is currently *user-owner*-scoped, **not tenant-scoped**. Never describe it as safe company-owned file storage without an additional model and permission design.
 - Do not put migrations in the reusable **catalog**. Each generated client repo MUST version its own migrations.
 - Never copy third-party agent instructions or execute remote scripts without license/security review.
 - Agents may perform independent code/DB reviews in parallel **only when supported by the active runtime**. Changes to the same files must be coordinated; a PR is the final integration gate.
