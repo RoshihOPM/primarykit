@@ -70,8 +70,11 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
 
     assert 'name = "demo-api"' in (target / "pyproject.toml").read_text()
     assert 'name = "demo-api"' in (target / "uv.lock").read_text()
+    assert '"TITLE": "demo-api API"' in settings
     assert not (target / "scripts").exists()
     assert not (target / "apps/core/tests/test_project_generator.py").exists()
+    assert not (target / "apps/core/tests/test_doctor.py").exists()
+    assert (target / "apps/core/doctor.py").is_file()
     assert not (target / ".git").exists()
     assert not (target / ".env").exists()
     assert (target / ".env.example").exists()
