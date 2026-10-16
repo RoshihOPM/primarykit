@@ -6,6 +6,9 @@ from django.conf import settings
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 
+from .domain import EmailIntent
+from .gateways import DjangoEmailGateway
+
 logger = logging.getLogger(__name__)
 
 
@@ -15,14 +18,16 @@ class NotificationDeliveryError(Exception):
 
 def send_template_email(*, recipient: str, subject: str, template: str, context: dict) -> None:
     """Send plain text via Django 6.1 MAILERS; never log template context or tokens."""
-    body = render_to_string(template, context)
+    intent = EmailIntent(
+        recipient=recipient, subject=subject, template=template, context=context
+    )
+    body = render_to_string(intent.template, intent.context)
     try:
-        sent = send_mail(
-            subject,
-            body,
-            settings.DEFAULT_FROM_EMAIL,
-            [recipient],
-            using="default",
+        sent = DjangoEmailGateway(sender_func=send_mail).send(
+            recipient=intent.recipient,
+            subject=intent.subject,
+            body=body,
+            sender=settings.DEFAULT_FROM_EMAIL,
         )
         if sent != 1:
             raise NotificationDeliveryError("Mailer accepted no messages")
