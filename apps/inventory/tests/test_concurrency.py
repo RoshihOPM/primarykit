@@ -10,8 +10,8 @@ from rest_framework.exceptions import ValidationError
 from apps.catalog.models import CatalogItem, Category
 from apps.inventory.models import StockBalance, Warehouse
 from apps.inventory.services import execute_stock_operation
+from apps.organizations.models import Branch, Membership, Organization
 from apps.users.models import User
-from apps.organizations.models import Organization, Branch, Membership
 
 
 @pytest.mark.django_db(transaction=True)
