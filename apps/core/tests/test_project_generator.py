@@ -96,9 +96,7 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
     assert ("'redis>=6.2,<6.5'" in readme) == (
         {"cache", "celery_tasks"} <= apps or "celery_tasks" in apps
     )
-    assert ("uv add 'celery>=5.6,<6'" in readme) == (
-        "celery_tasks" in apps and "cache" not in apps
-    )
+    assert ("uv add 'celery>=5.6,<6'" in readme) == ("celery_tasks" in apps and "cache" not in apps)
 
     metadata = json.loads((target / "primarykit-origin.json").read_text())
     assert set(metadata["included_apps"]) == selected
