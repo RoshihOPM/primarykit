@@ -65,9 +65,7 @@ def validate_upload(upload):
 def _locked_scope(*, actor, organization_id):
     """Serialize organization membership updates and file mutations."""
     org = (
-        Organization.objects.select_for_update()
-        .filter(pk=organization_id, is_active=True)
-        .first()
+        Organization.objects.select_for_update().filter(pk=organization_id, is_active=True).first()
     )
     if org is None:
         raise NotFound()
@@ -125,9 +123,7 @@ def soft_delete_private_file(*, file: StoredFile, actor, organization):
         .filter(pk=file.pk, organization=org, deleted_at__isnull=True)
         .first()
     )
-    if locked is None or (
-        locked.owner_id != actor.pk and membership.role not in FULL_ACCESS
-    ):
+    if locked is None or (locked.owner_id != actor.pk and membership.role not in FULL_ACCESS):
         raise NotFound()
     locked.deleted_at = timezone.now()
     locked.save(update_fields=["deleted_at"])
