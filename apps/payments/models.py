@@ -32,6 +32,17 @@ class PaymentIntent(UUIDTimestampedModel):
         ]
 
 
+class ImmutablePaymentEventQuerySet(models.QuerySet):
+    def update(self, **kwargs):
+        raise ValidationError("Payment events are immutable.")
+
+    def delete(self):
+        raise ValidationError("Payment events are immutable.")
+
+    def bulk_update(self, objs, fields, batch_size=None):
+        raise ValidationError("Payment events are immutable.")
+
+
 class PaymentEvent(UUIDTimestampedModel):
     """Only privileged reconciliation service may append settlement evidence."""
 
@@ -45,6 +56,8 @@ class PaymentEvent(UUIDTimestampedModel):
     verified_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
     )
+
+    objects = ImmutablePaymentEventQuerySet.as_manager()
 
     def save(self, *args, **kwargs):
         if not self._state.adding:

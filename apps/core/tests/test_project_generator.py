@@ -12,6 +12,11 @@ from scripts.new_project import create_project
         set(),
         {"audit"},
         {"storage"},
+        {"orders"},
+        {"sales"},
+        {"payments"},
+        {"orders", "sales", "payments"},
+        {"statistics", "orders", "sales", "payments"},
         {"statistics"},
         {"statistics", "catalog"},
         {"statistics", "inventory"},
@@ -35,7 +40,10 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
     selected = dependency_closure(
         discover_modules(), {"core", "users", "notifications"} | set(apps)
     )
-    for app in ("rbac", "audit", "storage", "catalog", "inventory", "organizations"):
+    for app in (
+        "rbac", "audit", "storage", "catalog", "inventory", "organizations",
+        "orders", "sales", "payments",
+    ):
         assert (target / "apps" / app).exists() == (app in selected)
 
     settings = (target / "config/settings/base.py").read_text()
@@ -72,6 +80,9 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
         + (" catalog" if "catalog" in selected else "")
         + (" inventory" if "inventory" in selected else "")
         + (" organizations" if "organizations" in selected else "")
+        + (" orders" if "orders" in selected else "")
+        + (" sales" if "sales" in selected else "")
+        + (" payments" if "payments" in selected else "")
     )
     assert workflows.count(f"makemigrations {migration_apps} --noinput") == 2
     if "storage" in selected:

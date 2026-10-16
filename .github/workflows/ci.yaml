@@ -20,7 +20,7 @@ jobs:
       - name: Ruff format
         run: uv run ruff format --check .
       - name: Generate project-specific migrations for tests
-        run: uv run python manage.py makemigrations users audit storage catalog inventory organizations --noinput --settings=config.settings.test
+        run: uv run python manage.py makemigrations users audit storage catalog inventory organizations orders sales payments --noinput --settings=config.settings.test
       - name: Django checks
         run: uv run python manage.py check --settings=config.settings.test
       - name: Tests
@@ -77,6 +77,35 @@ jobs:
           uv run python manage.py makemigrations users --noinput --settings=config.settings.test
           uv run python manage.py check --settings=config.settings.test
           uv run python -c 'import os; os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.test"); import django; django.setup(); from django.urls import reverse; assert reverse("statistics-metrics") == "/api/v1/statistics/"'
+          uv run pytest
+          cd -
+          # Commerce modules must all boot and work when copied independently.
+          uv run python scripts/new_project.py /tmp/primarykit-orders-client --name orders-client --apps orders
+          cd /tmp/primarykit-orders-client
+          uv sync --locked --all-groups
+          uv run python manage.py makemigrations users orders --noinput --settings=config.settings.test
+          uv run python manage.py check --settings=config.settings.test
+          uv run pytest
+          cd -
+          uv run python scripts/new_project.py /tmp/primarykit-sales-client --name sales-client --apps sales
+          cd /tmp/primarykit-sales-client
+          uv sync --locked --all-groups
+          uv run python manage.py makemigrations users sales --noinput --settings=config.settings.test
+          uv run python manage.py check --settings=config.settings.test
+          uv run pytest
+          cd -
+          uv run python scripts/new_project.py /tmp/primarykit-payments-client --name payments-client --apps payments
+          cd /tmp/primarykit-payments-client
+          uv sync --locked --all-groups
+          uv run python manage.py makemigrations users payments --noinput --settings=config.settings.test
+          uv run python manage.py check --settings=config.settings.test
+          uv run pytest
+          cd -
+          uv run python scripts/new_project.py /tmp/primarykit-commerce-client --name commerce-client --apps orders sales payments statistics
+          cd /tmp/primarykit-commerce-client
+          uv sync --locked --all-groups
+          uv run python manage.py makemigrations users orders sales payments --noinput --settings=config.settings.test
+          uv run python manage.py check --settings=config.settings.test
           uv run pytest
           cd -
           # Statistics must work without any optional business module.
@@ -137,7 +166,7 @@ jobs:
       - name: PostgreSQL integration smoke test
         run: |
           docker compose up -d
-          docker compose exec -T api python manage.py makemigrations users audit storage catalog inventory organizations --noinput
+          docker compose exec -T api python manage.py makemigrations users audit storage catalog inventory organizations orders sales payments --noinput
           docker compose exec -T api python manage.py migrate --noinput
           docker compose exec -T api python manage.py check
           docker compose exec -T api uv run pytest --ds=config.settings.postgres_test

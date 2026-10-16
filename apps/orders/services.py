@@ -76,6 +76,15 @@ def cancel_order(*, actor, order_id):
     # The optional Payments integration must be checked while holding owner lock.
     from django.apps import apps
 
+    if apps.is_installed("apps.sales"):
+        from apps.sales.models import Sale
+
+        if Sale.objects.filter(
+            owner=owner, source_order_id=order.pk, status="recorded"
+        ).exists():
+            raise ValidationError(
+                {"status": "Order has a recorded sale and cannot be canceled."}
+            )
     if apps.is_installed("apps.payments"):
         from apps.payments.models import PaymentIntent
 
