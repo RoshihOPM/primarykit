@@ -18,9 +18,7 @@ jobs:
       - name: Offline detached-project doctor
         run: uv run python -m apps.core.doctor --strict
       - name: Ruff lint
-        run: |
-          uv run ruff check --diff apps/core/doctor.py || true
-          uv run ruff check .
+        run: uv run ruff check .
       - name: Ruff format
         run: uv run ruff format --check .
       - name: Generate project-specific migrations for tests
