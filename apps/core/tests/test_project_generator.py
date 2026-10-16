@@ -90,9 +90,7 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
     assert (target / "compose.celery.yaml").exists() == ("celery_tasks" in apps)
     assert (target / "compose.celery.prod.yaml").exists() == ("celery_tasks" in apps)
     if "cache" in apps:
-        assert "REDIS_CACHE_KEY_PREFIX=demo-api-dev" in (
-            target / ".env.example"
-        ).read_text()
+        assert "REDIS_CACHE_KEY_PREFIX=demo-api-dev" in (target / ".env.example").read_text()
     readme = (target / "README.md").read_text()
     assert ("uv add 'redis>=6,<7'" in readme) == ("cache" in apps)
     assert ("uv add 'celery[redis]>=5.6,<6'" in readme) == ("celery_tasks" in apps)
