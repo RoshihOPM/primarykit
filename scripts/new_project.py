@@ -24,7 +24,9 @@ URL_ROWS = {
 }
 
 
-STORAGE_TENANT_ROW = '    path("api/v1/organizations/<uuid:org_id>/", include("apps.storage.urls")),\n'
+STORAGE_TENANT_ROW = (
+    '    path("api/v1/organizations/<uuid:org_id>/", include("apps.storage.urls")),\n'
+)
 
 
 def _ignore_excluded(directory, names):
