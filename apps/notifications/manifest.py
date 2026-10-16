@@ -1,6 +1,6 @@
 """Portable PrimaryKit module manifest. Discovered automatically from apps/."""
 
-from apps.core.module_registry import Module, Route
+from apps.core.module_registry import Module
 
 MODULE = Module(
     name="notifications",

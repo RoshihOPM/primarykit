@@ -16,8 +16,6 @@ from tempfile import TemporaryDirectory
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
-from apps.core.module_registry import ModuleConfigurationError
-
 MODULE_NAME = re.compile(r"^[a-z][a-z0-9_]*$")
 
 

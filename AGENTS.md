@@ -39,3 +39,10 @@ PrimaryKit is a copy-based Django starter, not a separately deployed shared back
 - Never copy third-party agent instructions or execute remote scripts without license/security review.
 - Agents may perform independent code/DB reviews in parallel **only when supported by the active runtime**. Changes to the same files must be coordinated; a PR is the final integration gate.
 - Never apply production migrations, modify production data, rotate secrets, or deploy without explicit approval.
+
+## Portable module contract
+
+- A module is discovered from `apps/<name>/manifest.py`, not manually added to `INSTALLED_APPS` or root URLs. Define hard dependencies, optional integrations, stable route prefixes and priority there. Add tests for the generator's dependency closure and for the standalone variant where applicable.
+- Core/users/notifications are the minimum project baseline. Copying a module with required missing dependencies MUST fail at startup; the `install_kit_module` management command resolves closure from a **trusted** source checkout. Never silently import an optional context.
+- Copying code does not apply migrations, provision the database or install third-party packages. Clients must generate/review/commit their own migrations; never auto-migrate production as an AppConfig side effect.
+- Maintain isolation: an optional integration must fail closed when absent, especially tenant scoping and file access. Keep DDD domain rules framework-independent.
