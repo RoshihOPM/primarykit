@@ -8,9 +8,8 @@ from django.db import models
 
 class StoredFile(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    organization = models.ForeignKey(
-        "organizations.Organization", on_delete=models.PROTECT, related_name="stored_files"
-    )
+    # Opaque context ID: Storage works without installing Organizations.
+    organization_id = models.UUIDField(null=True, blank=True, db_index=True)
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
     object_key = models.CharField(max_length=160, unique=True, editable=False)
     original_name = models.CharField(max_length=255)
@@ -24,9 +23,9 @@ class StoredFile(models.Model):
         ordering = ("-created_at", "-id")
         indexes = [
             models.Index(
-                fields=["organization", "owner", "-created_at"], name="storage_org_owner_time_idx"
+                fields=["organization_id", "owner", "-created_at"], name="storage_org_owner_time_idx"
             ),
-            models.Index(fields=["organization", "-created_at"], name="storage_org_time_idx"),
+            models.Index(fields=["organization_id", "-created_at"], name="storage_org_time_idx"),
         ]
 
     def __str__(self):
