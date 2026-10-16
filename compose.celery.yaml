@@ -1,0 +1,51 @@
+# Optional Celery + RabbitMQ development overlay. Requires celery dependency in client.
+# docker compose -f compose.yaml -f compose.celery.yaml up -d --build
+services:
+  rabbitmq:
+    image: rabbitmq:4.1-management-alpine
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:?Set RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD}
+    ports:
+      - "127.0.0.1:${RABBITMQ_PORT:-5672}:5672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  api:
+    environment:
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL:?Set CELERY_BROKER_URL}
+      CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND:-}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  celery_worker:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: development
+    restart: unless-stopped
+    command: ["celery", "-A", "apps.celery_tasks.celery_app:app", "worker", "--loglevel=INFO", "--concurrency=2"]
+    env_file: .env
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.local
+      DATABASE_URL: postgresql://${POSTGRES_USER:-primarykit}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-primarykit}
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL:?Set CELERY_BROKER_URL}
+      CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND:-}
+    volumes:
+      - .:/app
+      - /app/.venv
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+volumes:
+  rabbitmq_data:
