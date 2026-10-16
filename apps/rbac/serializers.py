@@ -4,6 +4,8 @@ from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
+from .domain import parse_permission_code, unique_identifiers
+
 
 def assignable_permissions():
     """Explicit allowlist; never expose every installed Django permission by default."""
@@ -12,9 +14,10 @@ def assignable_permissions():
     codes = getattr(settings, "RBAC_ASSIGNABLE_PERMISSIONS", [])
     predicate = Q(pk__in=[])
     for value in codes:
-        if not isinstance(value, str) or value.count(".") != 1:
+        parsed = parse_permission_code(value)
+        if parsed is None:
             continue
-        app, code = value.split(".")
+        app, code = parsed
         predicate |= Q(content_type__app_label=app, codename=code)
     return Permission.objects.filter(predicate).select_related("content_type")
 
@@ -53,7 +56,7 @@ class RoleSerializer(serializers.ModelSerializer):
         return sorted(permission_code(permission) for permission in role.permissions.all())
 
     def validate_permission_codes(self, codes):
-        if len(codes) != len(set(codes)):
+        if not unique_identifiers(codes):
             raise serializers.ValidationError(_("Permission codes must be unique."))
         allowed = {permission_code(p): p for p in assignable_permissions()}
         unknown = set(codes).difference(allowed)
@@ -85,7 +88,7 @@ class UserRolesSerializer(serializers.Serializer):
     )
 
     def validate_role_ids(self, ids):
-        if len(ids) != len(set(ids)):
+        if not unique_identifiers(ids):
             raise serializers.ValidationError(_("Role IDs must be unique."))
         roles = list(Group.objects.filter(pk__in=ids))
         if len(roles) != len(ids):
