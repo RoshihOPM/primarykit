@@ -90,9 +90,19 @@ class StockCommandSerializer(serializers.Serializer):
         fields["item"].queryset = CatalogItem.objects.filter(
             organization=organization, is_active=True, category__is_active=True
         )
+        # Closing a reservation must still work after a warehouse is deactivated.
+        close_warehouses = Warehouse.objects.filter(organization=organization)
+        if membership.role not in ("owner", "admin"):
+            from apps.organizations.models import BranchAccess
+
+            close_warehouses = close_warehouses.filter(
+                branch_id__in=BranchAccess.objects.filter(
+                    membership=membership, branch__organization=organization
+                ).values_list("branch_id", flat=True)
+            )
         fields["reservation"].queryset = StockReservation.objects.filter(
             balance__organization=organization,
-            balance__warehouse__in=warehouses,
+            balance__warehouse__in=close_warehouses,
         )
         return fields
 
