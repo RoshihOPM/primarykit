@@ -25,6 +25,7 @@ def test_every_domain_is_framework_and_cross_context_independent():
         "orders",
         "sales",
         "payments",
+        "tasks",
     }
     for app_dir in APPS_ROOT.iterdir():
         domain = app_dir / "domain.py"
