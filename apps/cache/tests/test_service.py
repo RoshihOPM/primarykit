@@ -108,9 +108,7 @@ def test_json_values_are_typed_and_tenant_isolated():
     assert "tenant:A" not in actual_key and "listing:100" not in actual_key
     assert fake.ttls[actual_key] == 45
     assert actual_key.startswith("test-env:json:v1:")
-    assert scoped_key(namespace="tenant:A", key="x") != scoped_key(
-        namespace="tenant:B", key="x"
-    )
+    assert scoped_key(namespace="tenant:A", key="x") != scoped_key(namespace="tenant:B", key="x")
 
 
 def test_hash_fields_json_null_and_native_integer_increment():
