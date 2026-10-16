@@ -153,6 +153,8 @@ PASSWORD_RESET_TIMEOUT = env.int("PASSWORD_RESET_TIMEOUT", default=3600)
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="PrimaryKit <no-reply@example.test>")
 MAILERS = {"default": {"BACKEND": "django.core.mail.backends.console.EmailBackend"}}
 
+# Register only trusted application callables; tasks are internal, never user-invoked by name.
+BACKGROUND_JOB_HANDLERS = {}  # e.g. {"mail.send": "apps.myapp.jobs.send_email"}
 RBAC_ASSIGNABLE_PERMISSIONS = []  # Populate in the generated project.
 REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {
     "account_login": "5/min",
