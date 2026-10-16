@@ -1,18 +1,55 @@
-# Catalog v0.1 — universal products without one-table-to-rule-them-all
+# Catalog: organization-scoped product catalog
 
-`catalog` is an opt-in **independent Django app**. It does not imply inventory, listing advertisements, price calculation or tenancy.
+**Required dependency: Organizations.** Every `Category` and `CatalogItem`
+belongs to an `Organization` through a non-null FK. AttributeDefinition belongs to
+a category, inheriting the company boundary. Products and categories cannot be
+created without an organization. The client's request cannot set or change it.
 
-- `Category`: UUID, unique slug, name, active flag.
-- `AttributeDefinition`: typed `code`, category, type (text / integer / decimal / boolean), required flag.
-- `CatalogItem`: UUID, canonical SKU, category FK, name, description, typed/validated `attributes` JSON and active flag. Never use client-provided owner or permission fields.
+## API and access
 
-The public surface is authenticated reads; writes require active superuser. API endpoints:
-`/api/v1/catalog/categories/`, `/api/v1/catalog/attributes/`, `/api/v1/catalog/items/`. Only GET/POST/PATCH, no DELETE; deactivate items instead. Attributes definitions can be created but not changed via the API (changing definitions would invalidate existing items). Users without admin privileges cannot read inactive categories/items. Reads support category slug and exact SKU filter.
+All routes require an active membership, even for Django superusers:
 
-Attribute definitions live in relational tables. Typed values are kept in JSON as flexible catalog metadata; monetary or heavily-filtered domain fields should become indexed SQL columns in the consuming project. Item create and update validates attributes against definitions; no per-attribute custom SQL indexes or translations are supplied in v0.1. Changing a category's schema while items exist requires a data migration / explicit validation of existing items; no automatic retroactive revalidation.
+```
+/api/v1/organizations/{org_id}/catalog/categories/
+/api/v1/organizations/{org_id}/catalog/attributes/
+/api/v1/organizations/{org_id}/catalog/items/
+```
 
-Catalog doesn't contain price or inventory counts. These belong in domain-specific sales or the separate Inventory app. Inventory may optionally reference `CatalogItem` while preserving separate implementation boundaries.
+An authenticated, active member can read active items, categories and definitions
+of their company. Owners, admins and managers can also create/update items,
+categories and definitions; they can view inactive items and categories to
+reactivate them. No hard delete endpoint is provided.
 
-Audit event writes are part of the same transaction as API writes if Audit is installed. An explicit `CatalogAccess` permission restricts writes to superusers, and queryset filtering prevents inactive item leakage. No arbitrary per-object ACL and no tenant-scoped catalog in this generic baseline.
+Category `slug` and case-insensitive `CatalogItem.sku` are unique **per
+organization**, not globally. Identical codes may exist in two companies.
+Category and item organization FKs are checked on every API input;
+foreign UUIDs cannot retrieve or mutate another company's objects.
 
-Migration policy: generate and commit a new catalog migration **in each independent generated client repository**. CI generates migration artifacts for tests only.
+CatalogItem has a separate organization FK for fast indexed filtering; its
+category must belong to the same organization, checked by the serializer and
+model save. Direct SQL and `QuerySet.update()` can bypass this application
+check: restricted DB writers or additional DB triggers/RLS are appropriate
+for higher-assurance multi-tenant deployments.
+
+Type-safe category attributes (text, integer, decimal, boolean) stay in JSON;
+frequently filtered business fields should become explicitly indexed columns.
+Changing definition types for existing products requires a data migration and
+validation of all existing items. Catalog intentionally excludes prices, balance,
+lots, tax and accounting.
+
+## Breaking upgrade: migrate old standalone catalogs carefully
+
+Old global endpoints `/api/v1/catalog/*` are deliberately removed. Old
+global Catalog data has no known tenant, so PrimaryKit **never assigns it to a
+company automatically**.
+
+For an existing installation: first create the real organizations, plan a
+verified mapping for each category/item, then add nullable organization FKs in
+a client-specific expand migration, backfill after review, validate foreign
+category references and SKU duplicates, then set `NOT NULL` and enable the
+tenant route/queryset. Preserve all historical client migrations.
+Do not copy the new models and blindly invoke `makemigrations` on existing
+populated databases: that would request a one-off default or fail.
+
+Fresh generated projects create/commit `users organizations catalog`
+migrations directly.

@@ -57,13 +57,15 @@ logged-in identity.
 
 ## Tenant integration — important non-goal
 
-**This release does not yet enable multi-tenancy for Catalog or Inventory.**
-Those apps still have global rows and global superuser-only writes. Simply adding
-Organizations must **not** be described as isolating catalog items, warehouses,
-inventory operations or uploaded files. Real multi-tenancy requires a separate
-schema migration introducing tenant FKs, required organization-scoped querysets,
-cross-tenant FK validation, transaction-bound role checks and backfill from
-legacy unscoped rows, plus tests that prove no cross-company reads or writes.
+**Catalog and Inventory are now organization-scoped**, with strict nested API
+routes and company/branch service validation. Their source code requires this
+Organizations app. Existing client installations need controlled tenant
+backfill; see [Catalog](catalog-architecture.md) and
+[Inventory](inventory-architecture.md) for breaking migration steps.
+
+**Storage files are still owner-scoped, not organization-scoped**. Reuse in a
+multi-company product requires an explicit attachment/ACL design; do not expose
+file IDs across tenants or assume a user-owned file is company-owned.
 
 For client projects choose `organizations` by itself only if the business
 data is separately scoped. Until Catalog/Inventory are wired, do not expose

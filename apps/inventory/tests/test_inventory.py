@@ -212,12 +212,9 @@ def test_invalid_operation_shapes_and_over_reserved(stock):
 
 def test_non_admin_denied_every_inventory_endpoint(stock):
     _, viewer = identity("warehouse-viewer@example.com")
-    for name in (
-        "inventory-warehouses-list",
-        "inventory-balances-list",
-        "inventory-reservations-list",
-        "inventory-operations-list",
-    ):
+    for name in ("inventory-warehouses-list", "inventory-balances-list"):
+        assert viewer.get(reverse(name)).status_code == 200
+    for name in ("inventory-reservations-list", "inventory-operations-list"):
         assert viewer.get(reverse(name)).status_code == 403
     assert (
         viewer.post(
