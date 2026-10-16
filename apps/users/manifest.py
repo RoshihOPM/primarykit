@@ -6,8 +6,6 @@ MODULE = Module(
     name="users",
     requires=("core", "notifications"),
     optional=("audit",),
-    routes=(
-        Route("api/v1/"),
-    ),
+    routes=(Route("api/v1/"),),
     priority=10,
 )

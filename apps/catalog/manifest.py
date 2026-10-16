@@ -6,8 +6,6 @@ MODULE = Module(
     name="catalog",
     requires=("organizations",),
     optional=("audit",),
-    routes=(
-        Route("api/v1/organizations/<uuid:org_id>/catalog/"),
-    ),
+    routes=(Route("api/v1/organizations/<uuid:org_id>/catalog/"),),
     priority=50,
 )

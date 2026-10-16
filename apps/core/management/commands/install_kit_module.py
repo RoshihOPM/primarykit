@@ -33,7 +33,9 @@ def _declared_dependencies(source: Path, name: str) -> tuple[str, ...]:
             stmt.value
             for stmt in tree.body
             if isinstance(stmt, ast.Assign)
-            and any(isinstance(target, ast.Name) and target.id == "MODULE" for target in stmt.targets)
+            and any(
+                isinstance(target, ast.Name) and target.id == "MODULE" for target in stmt.targets
+            )
         ]
         if len(definitions) != 1 or not isinstance(definitions[0], ast.Call):
             raise ValueError("Expected one Module() declaration")
@@ -77,7 +79,9 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("module")
-        parser.add_argument("--source", required=True, type=Path, help="Trusted PrimaryKit checkout")
+        parser.add_argument(
+            "--source", required=True, type=Path, help="Trusted PrimaryKit checkout"
+        )
         parser.add_argument("--dry-run", action="store_true")
 
     def handle(self, *args, **options):

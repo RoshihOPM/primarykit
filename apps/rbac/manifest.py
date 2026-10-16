@@ -6,8 +6,6 @@ MODULE = Module(
     name="rbac",
     requires=("users",),
     optional=(),
-    routes=(
-        Route("api/v1/admin/rbac/"),
-    ),
+    routes=(Route("api/v1/admin/rbac/"),),
     priority=20,
 )

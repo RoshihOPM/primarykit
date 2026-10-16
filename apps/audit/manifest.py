@@ -6,8 +6,6 @@ MODULE = Module(
     name="audit",
     requires=("users",),
     optional=(),
-    routes=(
-        Route("api/v1/admin/audit/"),
-    ),
+    routes=(Route("api/v1/admin/audit/"),),
     priority=30,
 )

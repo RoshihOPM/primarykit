@@ -106,7 +106,9 @@ def dependency_closure(modules: dict[str, Module], selected: set[str]) -> set[st
 
     def add(name, chain=()):
         if name in chain:
-            raise ModuleConfigurationError(f"Cyclic module dependency: {' -> '.join((*chain, name))}")
+            raise ModuleConfigurationError(
+                f"Cyclic module dependency: {' -> '.join((*chain, name))}"
+            )
         if name in result:
             return
         module = modules.get(name)

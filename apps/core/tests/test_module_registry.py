@@ -37,9 +37,9 @@ def test_optional_scoped_routes_are_registered_only_when_dependency_exists():
     routes = set(module_routes())
     if "storage" in installed:
         assert ("api/v1/", "apps.storage.urls") in routes
-        assert (
-            ("api/v1/organizations/<uuid:org_id>/", "apps.storage.urls") in routes
-        ) == ("organizations" in installed)
+        assert (("api/v1/organizations/<uuid:org_id>/", "apps.storage.urls") in routes) == (
+            "organizations" in installed
+        )
     if "inventory" in installed:
         assert (
             "api/v1/organizations/<uuid:org_id>/inventory/",
@@ -69,7 +69,7 @@ def _fake_module(source: Path, name: str, requires=()):
     (folder / "__init__.py").write_text("")
     (folder / "apps.py").write_text("# portable module\n")
     (folder / "manifest.py").write_text(
-        f'from apps.core.module_registry import Module\n'
+        f"from apps.core.module_registry import Module\n"
         f'MODULE = Module(name="{name}", requires={requires!r})\n'
     )
 
