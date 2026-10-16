@@ -75,8 +75,8 @@ def test_inventory_domain_prevents_negative_and_over_reservation():
         StockPosition,
         StockRuleViolation,
         require_open_reservation,
-        validate_command_shape,
         validate_command_quantity,
+        validate_command_shape,
     )
 
     stock = StockPosition(on_hand=10, reserved=2)
