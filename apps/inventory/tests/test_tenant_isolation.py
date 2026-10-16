@@ -211,3 +211,30 @@ def test_revoked_manager_cannot_replay_idempotency(two_companies):
         == 404
     )
     assert StockBalance.objects.get(organization=t["a"]).on_hand == 5
+
+
+def test_existing_reservation_can_be_released_after_warehouse_deactivation(two_companies):
+    t = two_companies
+    command_url = url(t["a"], "inventory-operations-list")
+    receipt = {
+        "kind": "receive", "idempotency_key": "receipt-old-00001",
+        "warehouse": str(t["wh_a"].pk), "item": str(t["item_a"].pk), "quantity": 8,
+    }
+    assert t["api_a"].post(command_url, receipt, format="json").status_code == 200
+    receipt["kind"] = "reserve"
+    receipt["idempotency_key"] = "reserve-old-00001"
+    receipt["quantity"] = 4
+    reservation = t["api_a"].post(command_url, receipt, format="json")
+    assert reservation.status_code == 200
+    assert t["api_a"].patch(
+        url(t["a"], "inventory-warehouses-detail", pk=t["wh_a"].pk),
+        {"is_active": False}, format="json",
+    ).status_code == 200
+    release = t["api_a"].post(
+        command_url,
+        {"kind": "release", "idempotency_key": "release-old-00001",
+         "reservation": reservation.data["reservation_id"]}, format="json",
+    )
+    assert release.status_code == 200, release.data
+    balance = StockBalance.objects.get(organization=t["a"])
+    assert balance.on_hand == 8 and balance.reserved == 0
