@@ -1,6 +1,6 @@
+from django.apps import apps as django_apps
 from django.contrib import admin
-
-from apps.organizations.models import Membership
+from django.db.models import Q
 
 from .models import StoredFile
 
@@ -9,7 +9,7 @@ from .models import StoredFile
 class StoredFileAdmin(admin.ModelAdmin):
     list_display = (
         "created_at",
-        "organization",
+        "organization_id",
         "owner",
         "original_name",
         "size",
@@ -19,7 +19,7 @@ class StoredFileAdmin(admin.ModelAdmin):
     search_fields = ("id", "object_key", "original_name")
     readonly_fields = (
         "id",
-        "organization",
+        "organization_id",
         "owner",
         "object_key",
         "original_name",
@@ -31,16 +31,19 @@ class StoredFileAdmin(admin.ModelAdmin):
     )
 
     def get_queryset(self, request):
-        return (
-            super()
-            .get_queryset(request)
-            .filter(
+        # Django admin is never a backdoor across personal or tenant boundaries.
+        allowed = Q(organization_id__isnull=True, owner=request.user)
+        if django_apps.is_installed("apps.organizations"):
+            from apps.organizations.models import Membership
+
+            org_ids = Membership.objects.filter(
+                user=request.user,
+                is_active=True,
                 organization__is_active=True,
-                organization__memberships__user=request.user,
-                organization__memberships__is_active=True,
-                organization__memberships__role__in=(Membership.Role.OWNER, Membership.Role.ADMIN),
-            )
-        )
+                role__in=(Membership.Role.OWNER, Membership.Role.ADMIN),
+            ).values_list("organization_id", flat=True)
+            allowed |= Q(organization_id__in=org_ids)
+        return super().get_queryset(request).filter(allowed)
 
     def has_view_permission(self, request, obj=None):
         if not (request.user.is_active and request.user.is_superuser):

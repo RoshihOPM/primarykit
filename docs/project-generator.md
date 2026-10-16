@@ -24,7 +24,7 @@ uv run python scripts/new_project.py ../crm-api --name crm-api --git-init
 
 Always copied: `core`, `users`, `notifications`. Optional: `rbac`, `audit`, `storage`, `organizations`, `catalog`, `inventory`.
 
-`users` currently depends on `notifications` because account verification uses its email transport. Audit is optional (core facade is a no-op when not installed). Storage and Catalog depend on Organizations (and Users); RBAC depends on Users; Inventory depends on both Catalog and Organizations. These dependencies are automatically selected.
+`users` currently depends on `notifications` because account verification uses its email transport. Audit is optional (core facade is a no-op when not installed). Storage depends only on Users and works without Organizations; RBAC depends on Users. Catalog and Inventory depend on Organizations. These dependencies are automatically selected.
 
 ## What generator does
 
@@ -57,17 +57,12 @@ uv run pytest
 ```
 
 `--apps inventory` automatically includes `catalog` and `organizations`.
-`--apps storage` also selects `organizations` and creates organization-scoped file endpoints.
+`--apps storage` alone creates owner-private `/api/v1/files/` endpoints, without Organizations. If you also select Organizations, the generator adds `/api/v1/organizations/{org_id}/files/`. The two scopes use the same Storage service with separate authorization policies.
 Even `--apps catalog` includes `organizations`. API routes are scoped as
 `/api/v1/organizations/{org_id}/catalog/` and `/inventory/`.
 Creating a company via `POST /api/v1/organizations/` is the first step.
 
-**Storage upgrade warning:** Existing standalone Storage installations must adopt Organizations,
-assign every existing file to an explicitly verified organization, and migrate global
-`/api/v1/files/` clients to `/api/v1/organizations/{org_id}/files/`.
-Do not apply the new non-nullable organization FK to a populated file table
-without a staged nullable/backfill/validation/non-null migration. The generator
-never migrates existing applications automatically.
+**Storage schema change:** Storage holds an optional opaque `organization_id` UUID rather than a foreign key to another bounded context. Unscoped personal rows use null. Organization-scoped rows must always pass active membership checks; never trust a user-supplied organization id. Existing clients require a reviewed migration from the old mandatory FK, and must preserve their committed migration history.
 
 **Client upgrade warning:** copying a newer kit module into a pre-existing
 database requires an explicit data-migration plan. Never assign all existing

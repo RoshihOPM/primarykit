@@ -30,7 +30,7 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
     selected = set(apps)
     if "inventory" in selected:
         selected.add("catalog")
-    if "catalog" in selected or "storage" in selected:
+    if "catalog" in selected:
         selected.add("organizations")
     for app in ("rbac", "audit", "storage", "catalog", "inventory", "organizations"):
         assert (target / "apps" / app).exists() == (app in selected)
@@ -69,6 +69,14 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
         + (" organizations" if "organizations" in selected else "")
     )
     assert workflows.count(f"makemigrations {migration_apps} --noinput") == 2
+    assert ('path("api/v1/", include("apps.storage.urls"))' in urls) == ("storage" in selected)
+    tenant_route = 'path("api/v1/organizations/<uuid:org_id>/", include("apps.storage.urls"))'
+    assert (tenant_route in urls) == ("storage" in selected and "organizations" in selected)
+    if "storage" in selected:
+        assert (target / "apps/storage/tests/test_personal_storage.py").exists()
+        assert (target / "apps/storage/tests/test_storage.py").exists() == (
+            "organizations" in selected
+        )
 
 
 def test_generator_rejects_existing_directory_and_invalid_input(tmp_path):

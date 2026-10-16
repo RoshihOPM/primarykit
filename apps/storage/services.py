@@ -8,14 +8,11 @@ from django.conf import settings
 from django.core.files.storage import storages
 from django.db import transaction
 from django.utils import timezone
-from rest_framework.exceptions import NotFound
 
 from apps.core.audit import record_audit_event
-from apps.organizations.models import Organization
-from apps.organizations.permissions import get_active_membership
-from apps.organizations.scoping import FULL_ACCESS, organization_scope
 
 from .models import StoredFile
+from .policies import require_file_access, resolve_file_scope
 
 logger = logging.getLogger(__name__)
 
@@ -62,32 +59,29 @@ def validate_upload(upload):
     return filename, content_type
 
 
-def _locked_scope(*, actor, organization_id):
-    """Serialize organization membership updates and file mutations."""
-    org = (
-        Organization.objects.select_for_update().filter(pk=organization_id, is_active=True).first()
-    )
-    if org is None:
-        raise NotFound()
-    return org, get_active_membership(user=actor, organization=org)
-
-
-def save_private_file(*, owner, organization, upload) -> StoredFile:
-    """Verify membership twice and compensate a blob if persistence fails."""
-    organization_scope(user=owner, org_id=organization.pk)
+def save_private_file(*, owner, upload, organization_id=None) -> StoredFile:
+    """Verify access before upload and again before writing metadata."""
+    scope = resolve_file_scope(user=owner, organization_id=organization_id)
     filename, content_type = validate_upload(upload)
     digest = hashlib.sha256()
     for chunk in upload.chunks():
         digest.update(chunk)
     upload.seek(0)
     storage = storages["default"]
-    requested_key = f"private/{organization.pk}/{uuid.uuid4().hex}"
-    key = storage.save(requested_key, upload)
+    # Personal and company file keys are separated without revealing names.
+    prefix = (
+        f"organizations/{scope.organization_id}"
+        if scope.organization_id is not None
+        else f"users/{owner.pk}"
+    )
+    key = storage.save(f"private/{prefix}/{uuid.uuid4().hex}", upload)
     try:
         with transaction.atomic():
-            org, _ = _locked_scope(actor=owner, organization_id=organization.pk)
+            current_scope = resolve_file_scope(
+                user=owner, organization_id=scope.organization_id, lock=True
+            )
             file = StoredFile.objects.create(
-                organization=org,
+                organization_id=current_scope.organization_id,
                 owner=owner,
                 object_key=key,
                 original_name=filename,
@@ -101,7 +95,11 @@ def save_private_file(*, owner, organization, upload) -> StoredFile:
                 target_type="storage.StoredFile",
                 target_id=file.pk,
                 changes={
-                    "organization_id": str(org.pk),
+                    "organization_id": (
+                        str(current_scope.organization_id)
+                        if current_scope.organization_id
+                        else None
+                    ),
                     "size": file.size,
                     "content_type": file.content_type,
                 },
@@ -116,15 +114,22 @@ def save_private_file(*, owner, organization, upload) -> StoredFile:
 
 
 @transaction.atomic
-def soft_delete_private_file(*, file: StoredFile, actor, organization):
-    org, membership = _locked_scope(actor=actor, organization_id=organization.pk)
+def soft_delete_private_file(*, file: StoredFile, actor, organization_id=None):
+    scope = resolve_file_scope(user=actor, organization_id=organization_id, lock=True)
     locked = (
         StoredFile.objects.select_for_update()
-        .filter(pk=file.pk, organization=org, deleted_at__isnull=True)
+        .filter(
+            pk=file.pk,
+            organization_id=scope.organization_id,
+            deleted_at__isnull=True,
+        )
         .first()
     )
-    if locked is None or (locked.owner_id != actor.pk and membership.role not in FULL_ACCESS):
+    if locked is None:
+        from rest_framework.exceptions import NotFound
+
         raise NotFound()
+    require_file_access(file=locked, actor=actor, scope=scope)
     locked.deleted_at = timezone.now()
     locked.save(update_fields=["deleted_at"])
     record_audit_event(
@@ -132,6 +137,6 @@ def soft_delete_private_file(*, file: StoredFile, actor, organization):
         action="storage.file.deleted",
         target_type="storage.StoredFile",
         target_id=locked.pk,
-        changes={"organization_id": str(org.pk)},
+        changes={"organization_id": str(scope.organization_id) if scope.organization_id else None},
     )
     return True
