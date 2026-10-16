@@ -101,6 +101,7 @@ def create_project(
         # Generator remains with the source catalog only, not in client projects.
         shutil.rmtree(target / "scripts")
         (target / "apps" / "core" / "tests" / "test_project_generator.py").unlink()
+        (target / "apps" / "core" / "tests" / "test_doctor.py").unlink()
         # Installed apps and URLs are discovered from each copied manifest.py.
 
         migrations = " ".join(a for a in MIGRATION_APPS if a in selected)
