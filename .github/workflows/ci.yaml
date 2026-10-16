@@ -69,6 +69,22 @@ jobs:
           uv run python manage.py check --settings=config.settings.test
           uv run pytest
           cd -
+          # Statistics must work without any optional business module.
+          uv run python scripts/new_project.py /tmp/primarykit-statistics-client --name stats-client --apps statistics
+          cd /tmp/primarykit-statistics-client
+          uv sync --locked --all-groups
+          uv run python manage.py makemigrations users --noinput --settings=config.settings.test
+          uv run python manage.py check --settings=config.settings.test
+          uv run pytest
+          cd -
+          # Verify conditional standalone providers without tenant models.
+          uv run python scripts/new_project.py /tmp/primarykit-statistics-inventory --name stats-inventory --apps statistics inventory
+          cd /tmp/primarykit-statistics-inventory
+          uv sync --locked --all-groups
+          uv run python manage.py makemigrations users inventory --noinput --settings=config.settings.test
+          uv run python manage.py check --settings=config.settings.test
+          uv run pytest
+          cd -
           uv run python scripts/new_project.py /tmp/primarykit-catalog-client --name catalog-client --apps catalog
           cd /tmp/primarykit-catalog-client
           uv sync --locked --all-groups

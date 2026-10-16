@@ -25,7 +25,7 @@ class MetricContext:
 def build_context(*, actor, scope, org_id=None, params=None):
     if not actor or not actor.is_authenticated or not actor.is_active:
         raise NotFound()
-    params = params or {}
+    params = {} if params is None else params
     try:
         period = resolve_period(
             preset=params.get("period", "7d"),

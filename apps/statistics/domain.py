@@ -27,6 +27,8 @@ def resolve_period(*, preset: str, today: date, start: str | None, end: str | No
             raise MetricsValidationError("Custom period requires start and end.")
         try:
             first, last = date.fromisoformat(start), date.fromisoformat(end)
+            if first.isoformat() != start or last.isoformat() != end:
+                raise ValueError("Noncanonical ISO date")
         except ValueError as exc:
             raise MetricsValidationError("Dates must use YYYY-MM-DD.") from exc
         return Period(first, last, preset)
