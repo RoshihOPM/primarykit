@@ -48,6 +48,12 @@ PrimaryKit is a copy-based Django starter, not a separately deployed shared back
 - Run `python -m apps.core.doctor --strict` inside generated backends, as well as the usual tests. The doctor does not need Django startup, network access or a kit checkout, and is only a static preflight; it does not replace ORM migrations or runtime security tests.
 - See `docs/independent-projects.md`, `docs/doctor.md`, and `docs/architecture-recipes.md`.
 
+## Optional infrastructure modules
+
+- `apps/cache` is a standalone Django cache adapter; do not make Redis mandatory for generated clients. Redis is ephemeral and never authoritative for permissions or financial state.
+- `apps/celery_tasks` is independent of the PostgreSQL `apps/tasks` queue. RabbitMQ broker and Redis result backend are opt-in. Business task handlers belong to each generated client; publish after commit and use an outbox for delivery guarantees when required.
+- Select overlay Compose files explicitly; never expose Redis/RabbitMQ services to public interfaces or install optional broker dependencies into unrelated clients. See `docs/redis-cache.md` and `docs/celery-rabbitmq.md`.
+
 ## Portable module contract
 
 - A module is discovered from `apps/<name>/manifest.py`, not manually added to `INSTALLED_APPS` or root URLs. Define hard dependencies, optional integrations, stable route prefixes and priority there. Add tests for the generator's dependency closure and for the standalone variant where applicable.
