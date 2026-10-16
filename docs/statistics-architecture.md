@@ -53,20 +53,21 @@ only the core contract, plus its own models:
 
 ```python
 from apps.statistics.domain import Metric, Provider
+
 from .models import Order
+
 
 def _my_orders(context):
     return Order.objects.filter(
-        owner=context.actor, created_at__gte=context.since,
+        owner=context.actor,
+        created_at__gte=context.since,
         created_at__lt=context.until,
     ).count()
 
+
 PROVIDER = Provider(
     code="orders",
-    metrics=(
-        Metric("created", "Created orders", "count", "period",
-               ("personal",), _my_orders),
-    ),
+    metrics=(Metric("created", "Created orders", "count", "period", ("personal",), _my_orders),),
 )
 ```
 
