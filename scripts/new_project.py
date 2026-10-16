@@ -197,16 +197,25 @@ def create_project(
                 else ""
             )
             + (
-                "\nRedis cache: run `uv add 'redis>=6,<7'`, enable REDIS_CACHE_ENABLED, "
-                "then use compose.redis.yaml for local development.\n"
-                if "cache" in selected
+                "\nNative CacheService: install `uv add 'redis>=8,<9'` (Cache only), "
+                "set REDIS_CACHE_ENABLED=true and configure a unique Redis key prefix. "
+                "Use compose.redis.yaml for development.\n"
+                if "cache" in selected and "celery_tasks" not in selected
                 else ""
             )
             + (
-                "\nCelery: run `uv add 'celery[redis]>=5.6,<6'`, configure the "
-                "RabbitMQ broker, then use compose.celery.yaml for local development. "
-                "The database-backed Tasks module remains independent.\n"
-                if "celery_tasks" in selected
+                "\nCache + Celery: install `uv add 'celery[redis]>=5.6,<6' "
+                "'redis>=6.2,<6.5'` for the shared Redis result-backend stack. "
+                "The native CacheService works with this compatible redis-py line.\n"
+                if {"cache", "celery_tasks"} <= selected
+                else ""
+            )
+            + (
+                "\nCelery: install `uv add 'celery>=5.6,<6'` for RabbitMQ-only, "
+                "or `uv add 'celery[redis]>=5.6,<6' 'redis>=6.2,<6.5'` "
+                "if a Redis result backend is needed. Configure the broker and "
+                "use compose.celery.yaml. PostgreSQL Tasks remains independent.\n"
+                if "celery_tasks" in selected and "cache" not in selected
                 else ""
             )
             + "See docs/architecture.md and AGENTS.md for conventions.\n",
