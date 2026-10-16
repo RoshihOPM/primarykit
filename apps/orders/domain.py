@@ -1,7 +1,7 @@
 """Immutable priced order line decisions independent of Django and other contexts."""
 
-from dataclasses import dataclass
 import re
+from dataclasses import dataclass
 
 CURRENCY_RE = re.compile(r"^[A-Z]{3}$")
 SKU_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$")
