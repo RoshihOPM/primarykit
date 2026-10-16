@@ -13,7 +13,6 @@ import tomllib
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-
 REQUIRED = frozenset({"core", "users", "notifications"})
 MODULE_NAME = re.compile(r"^[a-z][a-z0-9_]*$")
 
