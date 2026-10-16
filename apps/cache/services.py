@@ -20,9 +20,7 @@ def get_cached(*, namespace: str, key: str, default=None, alias: str = "default"
     return caches[alias].get(scoped_key(namespace=namespace, key=key), default)
 
 
-def set_cached(
-    *, namespace: str, key: str, value, timeout: int, alias: str = "default"
-) -> None:
+def set_cached(*, namespace: str, key: str, value, timeout: int, alias: str = "default") -> None:
     if type(timeout) is not int or not 1 <= timeout <= MAX_TIMEOUT:
         raise ValueError("Cache TTL must be a positive integer up to 86400 seconds")
     caches[alias].set(scoped_key(namespace=namespace, key=key), value, timeout=timeout)
