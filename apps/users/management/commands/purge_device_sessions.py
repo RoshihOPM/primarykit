@@ -21,7 +21,6 @@ class Command(BaseCommand):
             raise ValueError("--days must be non-negative")
         cutoff = timezone.now() - timedelta(days=days)
         count, _ = DeviceSession.objects.filter(
-            Q(revoked_at__lt=cutoff)
-            | Q(revoked_at__isnull=True, expires_at__lt=cutoff)
+            Q(revoked_at__lt=cutoff) | Q(revoked_at__isnull=True, expires_at__lt=cutoff)
         ).delete()
         self.stdout.write(f"Purged {count} device session records.")
