@@ -8,9 +8,9 @@ from django.utils import timezone
 from rest_framework.exceptions import NotFound, ValidationError
 
 from apps.core.audit import record_audit_event
-from apps.organizations.models import BranchAccess, Organization
-from apps.organizations.permissions import get_active_membership
-from apps.organizations.scoping import require_warehouse_access, require_writer
+from apps.organizations.models import BranchAccess
+from apps.organizations.policy import TenantPolicy
+from apps.organizations.scoping import require_warehouse_access
 
 from .domain import (
     StockPosition,
@@ -192,10 +192,10 @@ def execute_stock_operation(*, actor, organization, data):
     ).hexdigest()
     try:
         with transaction.atomic():
-            locked_org = Organization.objects.select_for_update().get(pk=organization.pk)
-            membership = get_active_membership(user=actor, organization=locked_org)
-            require_writer(membership)
-            _assert_command_tenant(locked_org, membership, data)
+            policy = TenantPolicy.resolve(user=actor, organization_id=organization.pk, lock=True)
+            policy.require_write()
+            locked_org = policy.organization
+            _assert_command_tenant(locked_org, policy.membership, data)
             operation = InventoryOperation.objects.create(
                 organization=locked_org,
                 key=key,
@@ -225,8 +225,8 @@ def execute_stock_operation(*, actor, organization, data):
             ) from None
         # Deny replay if membership/branch access was revoked since original write.
         with transaction.atomic():
-            locked_org = Organization.objects.select_for_update().get(pk=organization.pk)
-            membership = get_active_membership(user=actor, organization=locked_org)
-            require_writer(membership)
-            _assert_command_tenant(locked_org, membership, data)
+            policy = TenantPolicy.resolve(user=actor, organization_id=organization.pk, lock=True)
+            policy.require_write()
+            locked_org = policy.organization
+            _assert_command_tenant(locked_org, policy.membership, data)
         return existing.result

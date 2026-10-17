@@ -12,6 +12,8 @@ PrimaryKit распознаёт любую доверенную папку `apps
 | `csv_exchange` | Схемонезависимый безопасный CSV parse/export | core | — |
 | `api_keys` | Scoped машинные ключи с owner scope и отзывом | users | audit |
 | `idempotency` | PostgreSQL идемпотентность команд с атомарным replay | core | — |
+| `workflows` | Чистый state machine, transactional transitions, opt-in history | core | audit, outbox |
+| `usage_quotas` | Атомарные квоты потребления, owner/tenant, снимки политик | users | organizations, statistics |
 | `http_integrations` | Явно разрешённые HTTPS host + безопасный retry | core | — |
 | `tasks` | Внутренняя очередь, транзакционное добавление и worker | core | — |
 | `outbox` | Транзакционная запись событий и retry delivery через Tasks | core, tasks | — |
@@ -27,6 +29,8 @@ PrimaryKit распознаёт любую доверенную папку `apps
 | `rbac` | Django Groups/Permissions | users | — |
 | `audit` | Неизменяемый журнал | users | — |
 | `storage` | Приватные личные/корпоративные файлы | users, core | organizations, audit |
+| `chat` | Приватные 1:1-диалоги, receipts и TTL | users | organizations, storage, realtime |
+| `realtime` | Опциональный WebSocket ASGI adapter, PostgreSQL event cursor | users | chat |
 | `catalog` | Категории, товары, атрибуты | users | organizations, audit |
 | `inventory` | Склады, SKU, остатки и резервы | users | catalog, organizations, audit |
 | `statistics` | Read-only метрики установленных модулей | users | catalog, inventory, storage, organizations |
@@ -42,6 +46,8 @@ PrimaryKit распознаёт любую доверенную папку `apps
 | --- | --- | --- |
 | Users | `/api/v1/` | JWT/аккаунт |
 | Storage | `/api/v1/files/` | Личные файлы |
+| Chat | `/api/v1/chats/` | Участники приватного диалога |
+| Realtime | `/ws/v1/chats/{dialogue_id}/` | Только участники при явном включении |
 | Organizations | `/api/v1/organizations/` | Организации |
 | Catalog | `/api/v1/catalog/` | Standalone |
 | Inventory | `/api/v1/inventory/` | Standalone |
@@ -51,7 +57,9 @@ PrimaryKit распознаёт любую доверенную папку `apps
 | Payments manual reconcile | `/api/v1/admin/payments/` | Только суперпользователь |
 | Statistics | `/api/v1/statistics/` | Только доступные метрики |
 
-Tasks, Cache и Celery не создают публичных API маршрутов; Celery и Redis не устанавливаются в клиенте автоматически. Tasks не создаёт публичных API маршрутов: `enqueue` вызывается только из доверенного кода приложения; worker запускается отдельно.
+Workflows не предоставляет публичных API маршрутов — клиент реализует API и разрешения для своего агрегата. [Подробнее](workflows.md).
+
+Usage Quotas предоставляет только серверные сервисы, без публичного API выдачи квот. Tasks, Cache и Celery не создают публичных API маршрутов; Celery и Redis не устанавливаются в клиенте автоматически. Tasks не создаёт публичных API маршрутов: `enqueue` вызывается только из доверенного кода приложения; worker запускается отдельно.
 
 Доступные маршруты можно увидеть после старта в Swagger `/api/docs/` (DEBUG). Если Organizations и нужные приложения включены в **tenant** режиме, Catalog и Inventory регистрируют корпоративные префиксы `/api/v1/organizations/{org_id}/catalog/` и `inventory/`. Statistics также имеет tenant и system API.
 
@@ -82,5 +90,7 @@ uv run python scripts/new_project.py ../b2b-api --name b2b-api \
 - `catalog` и `inventory` standalone не связывают SKU друг с другом автоматически; это разные контексты.
 
 **Важное правило:** `CATALOG_MODE` и `INVENTORY_MODE` фиксируются до первого `makemigrations`. Нельзя менять их у работающей БД простым флагом.
+
+Подробнее о чате и его ограничениях: [Private Chat & Realtime](chat-realtime.md).
 
 Подробнее: [Commerce](commerce-architecture.md), [Statistics](statistics-architecture.md), [Architecture](repository-guide.md).

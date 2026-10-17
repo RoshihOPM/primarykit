@@ -47,6 +47,7 @@ uv run python manage.py runserver
 | [Privacy retention](docs/privacy-retention.md) | Клиентские политики, правовые блокировки, dry-run и аудит |
 | [Transactional Outbox](docs/outbox-architecture.md) | Durable business events в PostgreSQL Tasks, idempotent dispatch |
 | [Signed Webhooks](docs/webhooks.md) | HMAC, PostgreSQL-защита от повторов и исходящие уведомления |
+| [Private Chat & Realtime](docs/chat-realtime.md) | Необязательные 1:1 диалоги и WebSocket с reconnect cursor |
 | [Redis Cache](docs/redis-cache.md) | Собственный CacheService на redis-py: JSON, Hashes, счётчики и TTL; Django Cache опционален |
 | [Distributed Rate Limiting](docs/rate-limiting.md) | Атомарные Redis-лимиты между Django workers |
 | [Observability](docs/observability.md) | Request IDs, структурированные JSON-логи, длительность запросов |
@@ -57,6 +58,8 @@ uv run python manage.py runserver
 | [CSV Exchange](docs/csv-exchange.md) | CSV injection, валидация, лимиты, клиентские транзакции |
 | [API Keys](docs/api-keys.md) | Ключи для machine-to-machine авторизации с проверкой permissions |
 | [Idempotency](docs/idempotency.md) | Транзакционные ключи от повторных запросов |
+| [Workflows](docs/workflows.md) | Переносимый state machine, scoped transitions, history и защита от гонок |
+| [Usage Quotas](docs/usage-quotas.md) | Бизнес-лимиты и атомарные PostgreSQL-счётчики (opt-in) |
 | [HTTP Integrations](docs/http-integrations.md) | Безопасные настройки исходящих HTTPS-запросов |
 | [Совместимость модулей](docs/module-compatibility.md) | Контракты, версионирование и ручной перенос исправлений |
 | [Production runbook](docs/production-operations.md) | Nginx, резервные копии, релизы и восстановление |
@@ -76,6 +79,8 @@ uv run python manage.py runserver
 | csv_exchange | Безопасный ограниченный CSV import/export без изменения БД |
 | api_keys | Хешированные API-ключи со scopes, истечением, ротацией и отзывом |
 | idempotency | Однократное выполнение PostgreSQL-команд и повторное получение результата |
+| workflows | Чистый автомат состояний с разрешениями, guards и необязательной историей переходов |
+| usage_quotas | PostgreSQL квоты по владельцу/организации, события расхода, снимки политики |
 | http_integrations | Контролируемый HTTPS-клиент сторонних API, retries, ограничения ответов |
 | tasks | Внутренняя PostgreSQL-очередь фоновых задач, отдельный worker, повторы и идемпотентность |
 | outbox | События бизнеса внутри транзакций PostgreSQL, доставка через Tasks |

@@ -27,7 +27,7 @@ jobs:
       - name: Ruff format
         run: uv run ruff format --check .
       - name: Generate project-specific migrations for tests
-        run: uv run python manage.py makemigrations users audit storage catalog inventory organizations orders sales payments tasks webhooks api_keys idempotency privacy --noinput --settings=config.settings.test
+        run: uv run python manage.py makemigrations users audit storage catalog inventory organizations orders sales payments tasks webhooks api_keys idempotency workflows usage_quotas chat privacy --noinput --settings=config.settings.test
       - name: Django checks
         run: uv run python manage.py check --settings=config.settings.test
       - name: Tests
@@ -96,6 +96,15 @@ jobs:
           uv sync --locked --all-groups
           uv run python -m apps.core.doctor --strict
           uv run python manage.py makemigrations users idempotency --noinput --settings=config.settings.test
+          uv run python manage.py check --settings=config.settings.test
+          uv run pytest
+          cd -
+          # Usage quotas work independently of Organizations and Statistics.
+          uv run python scripts/new_project.py /tmp/primarykit-quotas-client --name quotas-client --apps usage_quotas
+          cd /tmp/primarykit-quotas-client
+          uv sync --locked --all-groups
+          uv run python -m apps.core.doctor --strict
+          uv run python manage.py makemigrations users usage_quotas --noinput --settings=config.settings.test
           uv run python manage.py check --settings=config.settings.test
           uv run pytest
           cd -
@@ -289,6 +298,15 @@ jobs:
           uv run python manage.py makemigrations users organizations --noinput --settings=config.settings.test
           uv run python manage.py check --settings=config.settings.test
           uv run pytest
+      - name: Generated workflow-only client smoke
+        run: |
+          uv run python scripts/new_project.py /tmp/primarykit-workflow-client --name workflow-client --apps workflows
+          cd /tmp/primarykit-workflow-client
+          uv sync --locked --all-groups
+          uv run python -m apps.core.doctor --strict
+          uv run python manage.py makemigrations users workflows --noinput --settings=config.settings.test
+          uv run python manage.py migrate --noinput --settings=config.settings.test
+          uv run pytest -q apps/workflows
       # PRIMARYKIT-GENERATOR-SMOKE-END
       - name: Validate Docker Compose configurations
         run: |
@@ -308,7 +326,7 @@ jobs:
       - name: PostgreSQL integration smoke test
         run: |
           docker compose up -d
-          docker compose exec -T api python manage.py makemigrations users audit storage catalog inventory organizations orders sales payments tasks webhooks api_keys idempotency privacy --noinput
+          docker compose exec -T api python manage.py makemigrations users audit storage catalog inventory organizations orders sales payments tasks webhooks api_keys idempotency workflows usage_quotas chat privacy --noinput
           docker compose exec -T api python manage.py migrate --noinput
           docker compose exec -T api python manage.py check
           docker compose exec -T api uv run pytest --ds=config.settings.postgres_test

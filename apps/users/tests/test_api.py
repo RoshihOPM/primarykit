@@ -153,7 +153,8 @@ def test_logout_revokes_refresh_token(client):
 def test_cannot_revoke_someone_elses_refresh_token(client):
     one = create_user()
     two = create_user("two@example.com")
-    refresh = str(RefreshToken.for_user(one))
+    login = client.post(reverse("auth-login"), {"email": one.email, "password": PASSWORD})
+    refresh = login.data["refresh"]
     response = bearer_client(two).post(reverse("auth-logout"), {"refresh": refresh})
     assert response.status_code == 400
     assert client.post(reverse("auth-refresh"), {"refresh": refresh}).status_code == 200

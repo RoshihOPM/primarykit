@@ -157,6 +157,13 @@ PASSWORD_RESET_TIMEOUT = env.int("PASSWORD_RESET_TIMEOUT", default=3600)
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="PrimaryKit <no-reply@example.test>")
 MAILERS = {"default": {"BACKEND": "django.core.mail.backends.console.EmailBackend"}}
 
+# Both optional modules leave the baseline independent of Redis and brokers.
+if "apps.chat" in INSTALLED_APPS:
+    CHAT_RETENTION_DAYS = env.int("CHAT_RETENTION_DAYS", default=30)
+if "apps.realtime" in INSTALLED_APPS:
+    REALTIME_ENABLED = env.bool("REALTIME_ENABLED", default=False)
+    REALTIME_ALLOWED_ORIGINS = tuple(env.list("REALTIME_ALLOWED_ORIGINS", default=[]))
+
 # Register only trusted application callables; tasks are internal, never user-invoked by name.
 # Optional copied Redis cache module. With no explicit opt-in, Django uses local memory.
 if "apps.cache" in INSTALLED_APPS:
@@ -221,6 +228,10 @@ REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {
     "account_email_request": "3/hour",
     "account_email_confirm": "10/min",
 }
+if "apps.chat" in INSTALLED_APPS:
+    REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"].update(
+        {"chat_read": "120/min", "chat_write": "30/min"}
+    )
 
 
 SIMPLE_JWT = {
