@@ -50,3 +50,45 @@ class BackgroundJob(models.Model):
 
     def __str__(self):
         return f"{self.code} ({self.status})"
+
+
+class JobSchedule(models.Model):
+    """Recurring wall-clock definition; firing produces BackgroundJob rows."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    namespace = models.CharField(max_length=80, default="default")
+    name = models.CharField(max_length=100)
+    code = models.CharField(max_length=100)
+    payload = models.JSONField()
+    timezone_name = models.CharField(max_length=64, default="UTC")
+    hour = models.PositiveSmallIntegerField()
+    minute = models.PositiveSmallIntegerField()
+    weekdays = models.JSONField(default=list, blank=True)
+    max_attempts = models.PositiveSmallIntegerField(default=5)
+    next_run_at = models.DateTimeField()
+    is_enabled = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=("namespace", "name"), name="tasks_schedule_name_uniq"),
+            models.CheckConstraint(
+                condition=Q(hour__gte=0) & Q(hour__lte=23),
+                name="tasks_schedule_hour_valid",
+            ),
+            models.CheckConstraint(
+                condition=Q(minute__gte=0) & Q(minute__lte=59),
+                name="tasks_schedule_minute_valid",
+            ),
+            models.CheckConstraint(
+                condition=Q(max_attempts__gte=1) & Q(max_attempts__lte=10),
+                name="tasks_schedule_attempts_valid",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=("is_enabled", "next_run_at"), name="tasks_schedule_due_idx"),
+        ]
+
+    def __str__(self):
+        return f"{self.namespace}:{self.name}"
