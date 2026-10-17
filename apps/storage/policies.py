@@ -30,19 +30,12 @@ def resolve_file_scope(*, user, organization_id=None, lock=False) -> FileScope:
         raise NotFound()
 
     # Optional adapter imports belong at the boundary, never in models/services.
-    from apps.organizations.models import Organization
-    from apps.organizations.permissions import get_active_membership
+    from apps.organizations.policy import TenantPolicy
 
-    qs = Organization.objects
-    if lock:
-        qs = qs.select_for_update()
-    organization = qs.filter(pk=organization_id, is_active=True).first()
-    if organization is None:
-        raise NotFound()
-    membership = get_active_membership(user=user, organization=organization)
+    policy = TenantPolicy.resolve(user=user, organization_id=organization_id, lock=lock)
     return FileScope(
-        organization_id=organization.pk,
-        can_manage_all=membership.role in ("owner", "admin"),
+        organization_id=policy.organization.pk,
+        can_manage_all=policy.has_full_access,
     )
 
 

@@ -98,3 +98,42 @@ public deployments should add per-account creation quotas and abuse protection.
 The module deliberately does **not** provide an invitation email dispatch or a
 public signup-by-invitation workflow. Frontends should show invitations only to
 the logged-in, already verified recipient.
+
+## Reusable tenant permission policy adapter
+
+Business modules that select `organizations` use
+`apps.organizations.policy.TenantPolicy`; it reuses the existing
+`Organization`, `Membership`, `Branch` and `BranchAccess` tables.
+No second Role model, Django Group grants, global middleware or automatic
+superuser exception is introduced. Standalone Catalog/Inventory cannot import
+this adapter; Storage loads it only when its optional Organizations app exists.
+
+- **List and detail:** call `TenantPolicy.resolve(user=..., organization_id=...)`
+  with a *trusted server-side* path UUID, and use
+  `policy.scope_queryset(queryset, organization_field="organization")`
+  as the base queryset for both list and detail retrieval. For branch-bound
+  rows, provide `branch_field="branch"` (or the trusted ORM relation path).
+  The adapter filters inactive branches by default and checks both organization
+  identity and explicit grants for managers/members. App-level rules may
+  additionally hide inactive products or sensitive records.
+- **Actions and service commands:** within `transaction.atomic()`, call
+  `TenantPolicy.resolve(..., lock=True)` and `policy.require_write()` or
+  `policy.require_roles(...)`, then `policy.require_organization(object.organization_id)`
+  and `policy.require_branch(branch=object.branch)` as applicable. Validate
+  foreign-key tenant identity on every command, including idempotency replays.
+  Never trust only a serializer's pre-lock membership check.
+- **Consistency:** `lock=True` requires a transaction and locks the
+  Organization row *before* resolving membership. The Organizations mutation
+  services use the same lock for role changes and branch grants; any compliant
+  command therefore observes authorization before or after a committed
+  permission change, not a partially updated grant.
+- **Default deny:** missing/inactive organizations, disabled users, absent or
+  inactive memberships, cross-tenant identifiers and inaccessible branches
+  return HTTP 404. Active members with insufficient write/role privileges get
+  HTTP 403. Tenant membership is always authoritative, including for staff
+  and Django superusers.
+
+The adapter is deliberately opt-in per API and command boundary. Bypassing it
+with an unscoped queryset, a raw ORM update, or a custom service without the
+Organization lock is outside its guarantees; add the explicit check at every
+new entry point. No schema or API route change is required.
