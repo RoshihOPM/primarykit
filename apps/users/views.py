@@ -1,13 +1,14 @@
 from django.conf import settings
 from django.contrib.auth import update_session_auth_hash
 from django.db import transaction
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from rest_framework import generics, mixins, status, viewsets
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
@@ -15,11 +16,12 @@ from apps.core.audit import record_audit_event
 from apps.notifications.services import NotificationDeliveryError
 
 from .email_views import EmailFlowUnavailable
-from .models import User
+from .models import DeviceSession, User
 from .permissions import IsActiveSuperuser
 from .serializers import (
     AdminUserUpdateSerializer,
     ChangePasswordSerializer,
+    DeviceSessionReadSerializer,
     EmailTokenObtainPairSerializer,
     LogoutSerializer,
     PasswordBoundTokenRefreshSerializer,
@@ -27,6 +29,7 @@ from .serializers import (
     UserProfileUpdateSerializer,
     UserReadSerializer,
 )
+from .sessions import locked_session, revoke_all, revoke_on_password_change, revoke_one
 from .throttles import AccountRateThrottle
 
 
@@ -71,16 +74,50 @@ class LogoutView(APIView):
     throttle_classes = [AccountRateThrottle]
     throttle_scope = "account_refresh"
 
+    @transaction.atomic
     def post(self, request):
         serializer = LogoutSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:
+            # Same lock order as login/refresh/password-change/revoke-all.
+            owner = User.objects.select_for_update().get(pk=request.user.pk)
             refresh = RefreshToken(serializer.validated_data["refresh"])
-            if str(refresh["user_id"]) != str(request.user.pk):
+            if str(refresh["user_id"]) != str(owner.pk):
                 raise ValidationError({"refresh": _("Invalid refresh token.")})
+            session = locked_session(user=owner, refresh=refresh)
             refresh.blacklist()
-        except (TokenError, KeyError) as exc:
+            session.revoked_at = timezone.now()
+            session.save(update_fields=["revoked_at"])
+        except (InvalidToken, TokenError, KeyError, ValueError) as exc:
             raise ValidationError({"refresh": _("Invalid refresh token.")}) from exc
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class DeviceSessionListView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = DeviceSessionReadSerializer
+
+    def get_queryset(self):
+        return DeviceSession.objects.filter(
+            user=self.request.user,
+            revoked_at__isnull=True,
+            expires_at__gt=timezone.now(),
+        ).order_by("-created_at")
+
+
+class DeviceSessionRevokeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, session_id):
+        revoke_one(user=request.user, session_id=session_id)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class DeviceSessionRevokeAllView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        revoke_all(user=request.user)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -122,11 +159,14 @@ class ChangePasswordView(APIView):
 
     @transaction.atomic
     def post(self, request):
-        serializer = ChangePasswordSerializer(data=request.data, context={"request": request})
+        user = User.objects.select_for_update().get(pk=request.user.pk)
+        serializer = ChangePasswordSerializer(
+            data=request.data, context={"request": request, "user": user}
+        )
         serializer.is_valid(raise_exception=True)
-        user = request.user
         user.set_password(serializer.validated_data["new_password"])
         user.save(update_fields=["password"])
+        revoke_on_password_change(user=user)
         record_audit_event(
             actor=user,
             action="users.password.changed",
