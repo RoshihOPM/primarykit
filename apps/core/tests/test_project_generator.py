@@ -100,7 +100,9 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
     if "cache" in apps:
         assert "REDIS_CACHE_KEY_PREFIX=demo-api-dev" in (target / ".env.example").read_text()
     readme = (target / "README.md").read_text()
-    assert ("uv add 'redis>=8,<9'" in readme) == ("cache" in selected and "celery_tasks" not in selected)
+    assert ("uv add 'redis>=8,<9'" in readme) == (
+        "cache" in selected and "celery_tasks" not in selected
+    )
     assert ("'redis>=6.2,<6.5'" in readme) == (
         {"cache", "celery_tasks"} <= apps or "celery_tasks" in apps
     )
