@@ -9,7 +9,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
-from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.tokens import RefreshToken, UntypedToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from apps.core.audit import record_audit_event
@@ -81,11 +81,18 @@ class LogoutView(APIView):
         try:
             # Same lock order as login/refresh/password-change/revoke-all.
             owner = User.objects.select_for_update().get(pk=request.user.pk)
-            refresh = RefreshToken(serializer.validated_data["refresh"])
-            if str(refresh["user_id"]) != str(owner.pk):
+            raw_refresh = serializer.validated_data["refresh"]
+            # A concurrent rotation may already blacklist this signed refresh.
+            # Still revoke its session instead of leaving a live device behind.
+            refresh = UntypedToken(raw_refresh)
+            if refresh["token_type"] != "refresh" or str(refresh["user_id"]) != str(owner.pk):
                 raise ValidationError({"refresh": _("Invalid refresh token.")})
             session = locked_session(user=owner, refresh=refresh)
-            refresh.blacklist()
+            try:
+                RefreshToken(raw_refresh).blacklist()
+            except TokenError:
+                # Already blacklisted, but a valid signed refresh identifies the session.
+                pass
             session.revoked_at = timezone.now()
             session.save(update_fields=["revoked_at"])
         except (InvalidToken, TokenError, KeyError, ValueError) as exc:
