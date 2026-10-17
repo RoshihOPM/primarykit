@@ -48,15 +48,9 @@ def test_list_detail_patch_and_stock_commands_are_tenant_and_branch_scoped():
     Membership.objects.create(
         user=foreign_owner, organization=foreign_org, role=Membership.Role.OWNER
     )
-    allowed_branch = Branch.objects.create(
-        organization=org, code="allowed", name="Allowed"
-    )
-    blocked_branch = Branch.objects.create(
-        organization=org, code="blocked", name="Blocked"
-    )
-    foreign_branch = Branch.objects.create(
-        organization=foreign_org, code="foreign", name="Foreign"
-    )
+    allowed_branch = Branch.objects.create(organization=org, code="allowed", name="Allowed")
+    blocked_branch = Branch.objects.create(organization=org, code="blocked", name="Blocked")
+    foreign_branch = Branch.objects.create(organization=foreign_org, code="foreign", name="Foreign")
     BranchAccess.objects.create(membership=membership, branch=allowed_branch)
     allowed = Warehouse.objects.create(
         organization=org, branch=allowed_branch, code="allowed", name="Allowed"
@@ -67,16 +61,16 @@ def test_list_detail_patch_and_stock_commands_are_tenant_and_branch_scoped():
     foreign = Warehouse.objects.create(
         organization=foreign_org, branch=foreign_branch, code="foreign", name="Foreign"
     )
-    category = Category.objects.create(
-        organization=org, slug="parts", name="Parts"
-    )
+    category = Category.objects.create(organization=org, slug="parts", name="Parts")
     item = CatalogItem.objects.create(
         organization=org, category=category, sku="PART-A", name="Part"
     )
     client = api(manager)
     list_url = endpoint(org, "inventory-warehouses-list")
     assert client.get(list_url).data["count"] == 1
-    assert client.get(endpoint(org, "inventory-warehouses-detail", pk=allowed.pk)).status_code == 200
+    assert (
+        client.get(endpoint(org, "inventory-warehouses-detail", pk=allowed.pk)).status_code == 200
+    )
     for hidden in (blocked, foreign):
         detail_url = endpoint(org, "inventory-warehouses-detail", pk=hidden.pk)
         assert client.get(detail_url).status_code == 404
@@ -112,13 +106,18 @@ def test_list_detail_patch_and_stock_commands_are_tenant_and_branch_scoped():
 
     assert client.get(endpoint(foreign_org, "inventory-warehouses-list")).status_code == 404
     assert client.get(endpoint(org, "catalog-items-detail", pk=item.pk)).status_code == 200
-    assert api(foreign_owner).get(
-        endpoint(foreign_org, "catalog-items-detail", pk=item.pk)
-    ).status_code == 404
+    assert (
+        api(foreign_owner)
+        .get(endpoint(foreign_org, "catalog-items-detail", pk=item.pk))
+        .status_code
+        == 404
+    )
     membership.is_active = False
     membership.save(update_fields=["is_active"])
     assert client.get(list_url).status_code == 404
-    assert client.get(endpoint(org, "inventory-warehouses-detail", pk=allowed.pk)).status_code == 404
+    assert (
+        client.get(endpoint(org, "inventory-warehouses-detail", pk=allowed.pk)).status_code == 404
+    )
     assert client.post(command_url, {}, format="json").status_code == 404
 
 
@@ -128,6 +127,7 @@ def test_staff_and_superuser_without_membership_have_no_tenant_access():
     client = api(root)
     assert client.get(endpoint(org, "catalog-categories-list")).status_code == 404
     assert client.get(endpoint(org, "inventory-warehouses-list")).status_code == 404
-    assert client.post(
-        endpoint(org, "inventory-operations-list"), {}, format="json"
-    ).status_code == 404
+    assert (
+        client.post(endpoint(org, "inventory-operations-list"), {}, format="json").status_code
+        == 404
+    )
