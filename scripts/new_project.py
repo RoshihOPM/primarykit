@@ -220,7 +220,7 @@ def create_project(
             "and deployments. The source constructor is not needed at runtime.\n"
             "Optional primarykit-origin.json is only provenance metadata and may be deleted.\n\n"
             f"## Selected apps\n\n{', '.join(sorted(selected))}\n\n"
-            + (f"Preset: {preset}\n\n" if preset else "")
+            f"Preset: {preset or 'custom'}\n\n"
             "## Development startup\n\n"
             "```bash\n"
             "cp .env.example .env\n"
