@@ -48,6 +48,12 @@ PrimaryKit is a copy-based Django starter, not a separately deployed shared back
 - Run `python -m apps.core.doctor --strict` inside generated backends, as well as the usual tests. The doctor does not need Django startup, network access or a kit checkout, and is only a static preflight; it does not replace ORM migrations or runtime security tests.
 - See `docs/independent-projects.md`, `docs/doctor.md`, and `docs/architecture-recipes.md`.
 
+## Outbox event safety
+
+- `outbox` requires `tasks` and writes the event row within the caller's `transaction.atomic`; no RabbitMQ/Redis required and no second queue table.
+- Dispatch uses only allowlisted trusted handler paths. Consumers of outbox events **must** deduplicate by stable `event_id`; publishing to an external system is at-least-once, not exactly-once.
+- Never record passwords, tokens or raw sensitive PII in persisted event payloads.
+
 ## Optional infrastructure modules
 
 - `apps/cache` uses an independent redis-py CacheService as the default API (JSON, Hashes, counters). Django Cache and django-redis are optional bridges. Do not make Redis mandatory for generated clients. Redis is ephemeral and never authoritative for permissions or financial state.

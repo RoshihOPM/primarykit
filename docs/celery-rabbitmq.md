@@ -27,7 +27,7 @@ RabbitMQ с локальным паролем из `.env` и портом тол
 
 В транзакциях используйте `apps.celery_tasks.dispatch.send_after_commit(task, id, ...)`: событие публикуется **только после commit PostgreSQL**. Это предотвращает обработку незафиксированных данных, но **не гарантирует доставку** при падении API или недоступности брокера после commit.
 
-Для бизнес-критичных событий используйте transactional outbox (или DB-backed Tasks с осмысленным use-case), идемпотентный consumer, наблюдение за stuck/pending состояниями. Celery с `acks_late` и повторной доставкой является at-least-once, внешний запрос может выполняться повторно.
+Для бизнес-критичных событий используйте [transactional outbox](outbox-architecture.md) (или DB-backed Tasks с осмысленным use-case), идемпотентный consumer, наблюдение за stuck/pending состояниями. Celery с `acks_late` и повторной доставкой является at-least-once, внешний запрос может выполняться повторно.
 
 ## Защита и эксплуатация
 

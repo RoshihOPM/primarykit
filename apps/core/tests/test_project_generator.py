@@ -16,6 +16,7 @@ from scripts.new_project import create_project
         {"sales"},
         {"payments"},
         {"tasks"},
+        {"outbox"},
         {"cache"},
         {"celery_tasks"},
         {"cache", "celery_tasks"},
@@ -55,6 +56,7 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
         "sales",
         "payments",
         "tasks",
+        "outbox",
         "cache",
         "celery_tasks",
     ):
