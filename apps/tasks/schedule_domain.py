@@ -1,6 +1,6 @@
 """Pure recurring schedule validation and wall-clock/DST rules."""
 
-from datetime import datetime, time, timedelta, timezone
+from datetime import UTC, datetime, time, timedelta
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from apps.tasks.domain import require_aware_datetime
@@ -47,7 +47,7 @@ def next_fire_after(
         timezone_name=timezone_name, hour=hour, minute=minute, weekdays=weekdays
     )
     zone = ZoneInfo(timezone_name)
-    utc_after = after.astimezone(timezone.utc)
+    utc_after = after.astimezone(UTC)
     start = after.astimezone(zone).date()
 
     # 15 days covers a weekly run skipped by a spring DST gap.
@@ -56,7 +56,7 @@ def next_fire_after(
         if days and day.weekday() not in days:
             continue
         wall = datetime.combine(day, time(hour, minute))
-        instant = wall.replace(tzinfo=zone, fold=0).astimezone(timezone.utc)
+        instant = wall.replace(tzinfo=zone, fold=0).astimezone(UTC)
         if instant.astimezone(zone).replace(tzinfo=None) != wall:
             continue  # Local wall-clock time does not exist (DST spring gap).
         if instant > utc_after:
