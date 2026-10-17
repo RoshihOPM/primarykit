@@ -46,24 +46,36 @@ Handler вызывается с `(*, scope: str, kind: str, subject_id: UUID, ac
 ```python
 from uuid import uuid4
 from apps.privacy.services import (
-    preview, request_retention, execute_manually,
-    set_legal_hold, release_legal_hold, cancel_request,
+    preview,
+    request_retention,
+    execute_manually,
+    set_legal_hold,
+    release_legal_hold,
+    cancel_request,
 )
 
 plan = preview(
-    scope="client:one", kind="customer", subject_id=customer.id,
-    policy_code="customer_contact", action="redact", actor=admin,
+    scope="client:one",
+    kind="customer",
+    subject_id=customer.id,
+    policy_code="customer_contact",
+    action="redact",
+    actor=admin,
 )
 operation = request_retention(
-    scope="client:one", kind="customer", subject_id=customer.id,
-    policy_code="customer_contact", action="redact",
-    idempotency_key=uuid4(), actor=admin,
+    scope="client:one",
+    kind="customer",
+    subject_id=customer.id,
+    policy_code="customer_contact",
+    action="redact",
+    idempotency_key=uuid4(),
+    actor=admin,
 )
 execute_manually(request_id=operation.id, actor=admin)
-set_legal_hold(scope="client:one", kind="customer", subject_id=customer.id,
-               reason="legal", actor=admin)
-release_legal_hold(scope="client:one", kind="customer",
-                   subject_id=customer.id, actor=admin)
+set_legal_hold(
+    scope="client:one", kind="customer", subject_id=customer.id, reason="legal", actor=admin
+)
+release_legal_hold(scope="client:one", kind="customer", subject_id=customer.id, actor=admin)
 cancel_request(request_id=operation.id, actor=admin)
 ```
 

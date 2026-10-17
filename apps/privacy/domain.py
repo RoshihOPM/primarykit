@@ -27,9 +27,7 @@ def load_policy(code: str, config: dict) -> Policy:
     """Only deployment-owned settings select the handler and allowed operations."""
     if not isinstance(code, str) or not CODE.fullmatch(code):
         raise ValueError("Invalid policy code")
-    if not isinstance(config, dict) or set(config) != {
-        "kind", "actions", "grace_days", "handler"
-    }:
+    if not isinstance(config, dict) or set(config) != {"kind", "actions", "grace_days", "handler"}:
         raise ValueError("Invalid retention policy definition")
     kind, actions = config["kind"], config["actions"]
     days, handler = config["grace_days"], config["handler"]
@@ -47,8 +45,13 @@ def load_policy(code: str, config: dict) -> Policy:
         or not re.fullmatch(r"[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)+", handler)
     ):
         raise ValueError("Policy handler must be a trusted dotted import path")
-    normalized = {"code": code, "kind": kind, "actions": sorted(set(actions)),
-                  "grace_days": days, "handler": handler}
+    normalized = {
+        "code": code,
+        "kind": kind,
+        "actions": sorted(set(actions)),
+        "grace_days": days,
+        "handler": handler,
+    }
     fingerprint = hashlib.sha256(json.dumps(normalized, sort_keys=True).encode()).hexdigest()
     return Policy(code, kind, frozenset(actions), days, handler, fingerprint)
 

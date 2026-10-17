@@ -69,24 +69,34 @@ def client_policies(settings):
 @pytest.fixture
 def administrator(db):
     return User.objects.create_user(
-        email="privacy-admin@example.com", password="strong-pass-123",
-        is_superuser=True, is_staff=True, email_verified=True,
+        email="privacy-admin@example.com",
+        password="strong-pass-123",
+        is_superuser=True,
+        is_staff=True,
+        email_verified=True,
     )
 
 
 @pytest.fixture
 def subject(db):
     return User.objects.create_user(
-        email="privacy-target@example.com", password="strong-pass-123",
-        first_name="Confidential", email_verified=True,
+        email="privacy-target@example.com",
+        password="strong-pass-123",
+        first_name="Confidential",
+        email_verified=True,
     )
 
 
 def make_request(administrator, subject, **kwargs):
     return request_retention(
-        scope="client:one", kind="person", subject_id=subject.pk,
-        policy_code="person", action="redact",
-        idempotency_key=uuid.uuid4(), actor=administrator, **kwargs,
+        scope="client:one",
+        kind="person",
+        subject_id=subject.pk,
+        policy_code="person",
+        action="redact",
+        idempotency_key=uuid.uuid4(),
+        actor=administrator,
+        **kwargs,
     )
 
 
@@ -120,8 +130,14 @@ def test_dry_run_never_writes_or_calls_handler(administrator, subject):
     assert not BackgroundJob.objects.exists()
     subject.refresh_from_db()
     assert subject.first_name == "Confidential"
-    assert preview(scope="client:one", kind="person", subject_id=subject.pk,
-                   policy_code="person", action="redact", actor=administrator)["dry_run"]
+    assert preview(
+        scope="client:one",
+        kind="person",
+        subject_id=subject.pk,
+        policy_code="person",
+        action="redact",
+        actor=administrator,
+    )["dry_run"]
 
 
 @pytest.mark.django_db
@@ -134,13 +150,25 @@ def test_admin_only_and_deny_unknown_policy(administrator, subject):
     with pytest.raises(PermissionDenied):
         make_request(regular, subject)
     with pytest.raises(ValueError, match="Unknown"):
-        request_retention(scope="client:one", kind="person", subject_id=subject.pk,
-                          policy_code="unknown", action="delete",
-                          idempotency_key=uuid.uuid4(), actor=administrator)
+        request_retention(
+            scope="client:one",
+            kind="person",
+            subject_id=subject.pk,
+            policy_code="unknown",
+            action="delete",
+            idempotency_key=uuid.uuid4(),
+            actor=administrator,
+        )
     with pytest.raises(ValueError, match="denied"):
-        request_retention(scope="client:one", kind="organization", subject_id=subject.pk,
-                          policy_code="person", action="delete",
-                          idempotency_key=uuid.uuid4(), actor=administrator)
+        request_retention(
+            scope="client:one",
+            kind="organization",
+            subject_id=subject.pk,
+            policy_code="person",
+            action="delete",
+            idempotency_key=uuid.uuid4(),
+            actor=administrator,
+        )
     assert not PrivacyRequest.objects.exists()
 
 
@@ -166,9 +194,15 @@ def test_no_automatic_deletion_and_manual_completion(administrator, subject):
 @pytest.mark.django_db
 def test_idempotency_conflict_scope_and_only_one_active(administrator, subject):
     key = uuid.uuid4()
-    arguments = dict(scope="client:one", kind="person", subject_id=subject.pk,
-                     policy_code="person", action="redact", idempotency_key=key,
-                     actor=administrator)
+    arguments = dict(
+        scope="client:one",
+        kind="person",
+        subject_id=subject.pk,
+        policy_code="person",
+        action="redact",
+        idempotency_key=key,
+        actor=administrator,
+    )
     first = request_retention(**arguments)
     assert request_retention(**arguments).pk == first.pk
     with pytest.raises(ValueError, match="Conflicting"):
@@ -180,18 +214,27 @@ def test_idempotency_conflict_scope_and_only_one_active(administrator, subject):
 
 @pytest.mark.django_db
 def test_grace_prevents_early_execution_and_policy_drift(administrator, subject, settings):
-    request = request_retention(scope="client:one", kind="person",
-                               subject_id=subject.pk, policy_code="slow",
-                               action="redact", idempotency_key=uuid.uuid4(),
-                               actor=administrator)
+    request = request_retention(
+        scope="client:one",
+        kind="person",
+        subject_id=subject.pk,
+        policy_code="slow",
+        action="redact",
+        idempotency_key=uuid.uuid4(),
+        actor=administrator,
+    )
     with pytest.raises(ValueError, match="grace"):
         execute_manually(request_id=request.pk, actor=administrator)
     settings.PRIVACY_RETENTION_POLICIES = {
-        **POLICIES, "slow": {**POLICIES["slow"], "grace_days": 5},
+        **POLICIES,
+        "slow": {**POLICIES["slow"], "grace_days": 5},
     }
     with pytest.raises(ValueError, match="changed"):
-        execute_manually(request_id=request.pk, actor=administrator,
-                         now=request.execute_after + timedelta(seconds=1))
+        execute_manually(
+            request_id=request.pk,
+            actor=administrator,
+            now=request.execute_after + timedelta(seconds=1),
+        )
     request.refresh_from_db()
     assert request.status == PrivacyRequest.Status.PENDING
     subject.refresh_from_db()
@@ -200,15 +243,27 @@ def test_grace_prevents_early_execution_and_policy_drift(administrator, subject,
 
 @pytest.mark.django_db
 def test_legal_hold_before_and_during_request(administrator, subject):
-    set_legal_hold(scope="client:one", kind="person", subject_id=subject.pk,
-                   reason="legal", actor=administrator)
+    set_legal_hold(
+        scope="client:one",
+        kind="person",
+        subject_id=subject.pk,
+        reason="legal",
+        actor=administrator,
+    )
     request = make_request(administrator, subject)
     assert request.status == PrivacyRequest.Status.HELD
     assert not execute_manually(request_id=request.pk, actor=administrator)
-    assert preview(scope="client:one", kind="person", subject_id=subject.pk,
-                   policy_code="person", action="redact", actor=administrator)["legal_hold"]
-    release_legal_hold(scope="client:one", kind="person", subject_id=subject.pk,
-                       actor=administrator)
+    assert preview(
+        scope="client:one",
+        kind="person",
+        subject_id=subject.pk,
+        policy_code="person",
+        action="redact",
+        actor=administrator,
+    )["legal_hold"]
+    release_legal_hold(
+        scope="client:one", kind="person", subject_id=subject.pk, actor=administrator
+    )
     request.refresh_from_db()
     assert request.status == PrivacyRequest.Status.PENDING
     assert execute_manually(request_id=request.pk, actor=administrator)
@@ -237,14 +292,20 @@ def test_cancelled_request_is_immutable_to_stale_jobs(administrator, subject, se
 def test_hold_invalidates_enqueued_generation(administrator, subject, settings):
     settings.PRIVACY_AUTO_EXECUTION_ENABLED = True
     request = make_request(administrator, subject)
-    set_legal_hold(scope="client:one", kind="person", subject_id=subject.pk,
-                   reason="dispute", actor=administrator)
+    set_legal_hold(
+        scope="client:one",
+        kind="person",
+        subject_id=subject.pk,
+        reason="dispute",
+        actor=administrator,
+    )
     assert process_retention_job({"request_id": str(request.pk), "revision": 0}) is False
     assert run_next()
     subject.refresh_from_db()
     assert subject.first_name == "Confidential"
-    release_legal_hold(scope="client:one", kind="person", subject_id=subject.pk,
-                       actor=administrator)
+    release_legal_hold(
+        scope="client:one", kind="person", subject_id=subject.pk, actor=administrator
+    )
     assert BackgroundJob.objects.count() == 2
     assert run_next()
     request.refresh_from_db()
@@ -265,9 +326,15 @@ def test_automatic_flag_is_checked_at_execution(administrator, subject, settings
 @pytest.mark.django_db
 def test_failed_handler_rolls_back_and_jobs_can_retry(administrator, subject, settings):
     settings.PRIVACY_AUTO_EXECUTION_ENABLED = True
-    request = request_retention(scope="client:one", kind="person", subject_id=subject.pk,
-                                policy_code="broken", action="redact",
-                                idempotency_key=uuid.uuid4(), actor=administrator)
+    request = request_retention(
+        scope="client:one",
+        kind="person",
+        subject_id=subject.pk,
+        policy_code="broken",
+        action="redact",
+        idempotency_key=uuid.uuid4(),
+        actor=administrator,
+    )
     assert run_next()
     request.refresh_from_db()
     subject.refresh_from_db()
@@ -281,13 +348,21 @@ def test_failed_handler_rolls_back_and_jobs_can_retry(administrator, subject, se
 
 @pytest.mark.django_db
 def test_rejects_untrusted_job_payload_and_hold_reasons(administrator, subject):
-    for payload in ({}, {"request_id": "fake", "revision": 0},
-                    {"request_id": str(uuid.uuid4()), "revision": True}):
+    for payload in (
+        {},
+        {"request_id": "fake", "revision": 0},
+        {"request_id": str(uuid.uuid4()), "revision": True},
+    ):
         with pytest.raises(ValueError):
             process_retention_job(payload)
     with pytest.raises(ValueError):
-        set_legal_hold(scope="client:one", kind="person", subject_id=subject.pk,
-                       reason="customer email address", actor=administrator)
+        set_legal_hold(
+            scope="client:one",
+            kind="person",
+            subject_id=subject.pk,
+            reason="customer email address",
+            actor=administrator,
+        )
 
 
 @pytest.mark.django_db(transaction=True)
@@ -302,10 +377,15 @@ def test_postgresql_simultaneous_replay_yields_one_request(administrator, subjec
         close_old_connections()
         try:
             barrier.wait(timeout=8)
-            op = request_retention(scope="client:one", kind="person",
-                                   subject_id=subject.pk, policy_code="person",
-                                   action="redact", idempotency_key=key,
-                                   actor=administrator)
+            op = request_retention(
+                scope="client:one",
+                kind="person",
+                subject_id=subject.pk,
+                policy_code="person",
+                action="redact",
+                idempotency_key=key,
+                actor=administrator,
+            )
             ids.append(op.pk)
         except Exception as exc:
             errors.append(exc)

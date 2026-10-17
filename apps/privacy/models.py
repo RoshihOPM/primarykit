@@ -18,8 +18,9 @@ class PrivacySubject(models.Model):
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=("scope", "kind", "reference"),
-                                    name="privacy_unique_subject"),
+            models.UniqueConstraint(
+                fields=("scope", "kind", "reference"), name="privacy_unique_subject"
+            ),
         ]
 
 
@@ -31,13 +32,13 @@ class PrivacyRequest(models.Model):
         CANCELLED = "cancelled"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    subject = models.ForeignKey(PrivacySubject, on_delete=models.PROTECT,
-                                related_name="requests")
+    subject = models.ForeignKey(PrivacySubject, on_delete=models.PROTECT, related_name="requests")
     idempotency_key = models.UUIDField(unique=True)
     policy_code = models.CharField(max_length=64)
     policy_fingerprint = models.CharField(max_length=64)
-    action = models.CharField(max_length=12, choices=[(s, s) for s in
-                              ("redact", "anonymize", "delete")])
+    action = models.CharField(
+        max_length=12, choices=[(s, s) for s in ("redact", "anonymize", "delete")]
+    )
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.PENDING)
     execute_after = models.DateTimeField()
     revision = models.PositiveIntegerField(default=0)
@@ -47,11 +48,14 @@ class PrivacyRequest(models.Model):
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=("subject",),
-                                    condition=Q(status__in=("pending", "held")),
-                                    name="privacy_one_active_request"),
-            models.CheckConstraint(condition=Q(revision__gte=0),
-                                   name="privacy_revision_nonnegative"),
+            models.UniqueConstraint(
+                fields=("subject",),
+                condition=Q(status__in=("pending", "held")),
+                name="privacy_one_active_request",
+            ),
+            models.CheckConstraint(
+                condition=Q(revision__gte=0), name="privacy_revision_nonnegative"
+            ),
         ]
         indexes = [
             models.Index(fields=("status", "execute_after"), name="privacy_due_idx"),

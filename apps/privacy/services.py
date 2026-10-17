@@ -58,15 +58,19 @@ def _event(request, old_status, *, actor=None, action="status"):
 
 def _hold_event(subject, *, actor, action):
     record_event(
-        action=f"privacy.hold.{action}", target_type="privacy.PrivacySubject",
-        target_id=subject.pk, actor=actor, changes={"reason": subject.hold_reason},
+        action=f"privacy.hold.{action}",
+        target_type="privacy.PrivacySubject",
+        target_id=subject.pk,
+        actor=actor,
+        changes={"reason": subject.hold_reason},
     )
 
 
 def _queue(request):
     """Requires an explicit setting AND registered trusted Tasks handler."""
     enqueue(
-        code=JOB_CODE, namespace="privacy",
+        code=JOB_CODE,
+        namespace="privacy",
         payload={"request_id": str(request.pk), "revision": request.revision},
         idempotency_key=f"{request.pk}:{request.revision}",
         run_after=request.execute_after,
@@ -84,16 +88,21 @@ def preview(*, scope, kind, subject_id, policy_code, action, actor, now=None):
         scope=scope, kind=kind, reference=subject_id, legal_hold=True
     ).exists()
     return {
-        "scope": scope, "kind": kind, "subject_id": str(subject_id),
-        "policy": policy_code, "action": action, "execute_after": planned,
-        "legal_hold": held, "automatic": bool(getattr(settings,
-                                                    "PRIVACY_AUTO_EXECUTION_ENABLED", False)),
+        "scope": scope,
+        "kind": kind,
+        "subject_id": str(subject_id),
+        "policy": policy_code,
+        "action": action,
+        "execute_after": planned,
+        "legal_hold": held,
+        "automatic": bool(getattr(settings, "PRIVACY_AUTO_EXECUTION_ENABLED", False)),
         "dry_run": True,
     }
 
 
-def request_retention(*, scope, kind, subject_id, policy_code, action,
-                      idempotency_key, actor, dry_run=False, now=None):
+def request_retention(
+    *, scope, kind, subject_id, policy_code, action, idempotency_key, actor, dry_run=False, now=None
+):
     _admin(actor)
     subject_id, key = validate_reference(scope, kind, subject_id, idempotency_key)
     if key is None:
@@ -102,8 +111,15 @@ def request_retention(*, scope, kind, subject_id, policy_code, action,
     now = now or timezone.now()
     after = planned_execution(now, policy)
     if dry_run:
-        return preview(scope=scope, kind=kind, subject_id=subject_id,
-                       policy_code=policy_code, action=action, actor=actor, now=now)
+        return preview(
+            scope=scope,
+            kind=kind,
+            subject_id=subject_id,
+            policy_code=policy_code,
+            action=action,
+            actor=actor,
+            now=now,
+        )
     with transaction.atomic():
         subject, _ = PrivacySubject.objects.get_or_create(
             scope=scope, kind=kind, reference=subject_id
@@ -111,28 +127,39 @@ def request_retention(*, scope, kind, subject_id, policy_code, action,
         subject = PrivacySubject.objects.select_for_update().get(pk=subject.pk)
         prior = PrivacyRequest.objects.filter(idempotency_key=key).first()
         if prior is not None:
-            if (prior.subject_id != subject.pk or prior.policy_code != policy_code
-                    or prior.action != action or prior.policy_fingerprint != policy.fingerprint):
+            if (
+                prior.subject_id != subject.pk
+                or prior.policy_code != policy_code
+                or prior.action != action
+                or prior.policy_fingerprint != policy.fingerprint
+            ):
                 raise ValueError("Conflicting idempotency key")
             return prior
         if PrivacyRequest.objects.filter(
-            subject=subject, status__in=(PrivacyRequest.Status.PENDING,
-                                        PrivacyRequest.Status.HELD)
+            subject=subject, status__in=(PrivacyRequest.Status.PENDING, PrivacyRequest.Status.HELD)
         ).exists():
             raise ValueError("Subject already has an active privacy request")
         status = PrivacyRequest.Status.HELD if subject.legal_hold else PrivacyRequest.Status.PENDING
         try:
             with transaction.atomic():
                 request = PrivacyRequest.objects.create(
-                    subject=subject, idempotency_key=key, policy_code=policy_code,
-                    policy_fingerprint=policy.fingerprint, action=action,
-                    status=status, execute_after=after,
+                    subject=subject,
+                    idempotency_key=key,
+                    policy_code=policy_code,
+                    policy_fingerprint=policy.fingerprint,
+                    action=action,
+                    status=status,
+                    execute_after=after,
                 )
         except IntegrityError:
             # Concurrent replay may have been inserted under a different subject lock.
             prior = PrivacyRequest.objects.get(idempotency_key=key)
-            if (prior.subject_id != subject.pk or prior.policy_code != policy_code
-                    or prior.action != action or prior.policy_fingerprint != policy.fingerprint):
+            if (
+                prior.subject_id != subject.pk
+                or prior.policy_code != policy_code
+                or prior.action != action
+                or prior.policy_fingerprint != policy.fingerprint
+            ):
                 raise ValueError("Conflicting idempotency key") from None
             return prior
         _event(request, None, actor=actor, action="requested")
@@ -236,8 +263,12 @@ def _execute(request_id, *, now=None, revision=None, automatic=False):
         # Client handler must mutate its own DB rows idempotently, in this transaction.
         # No HTTP, broker or irreversible external side effects in the handler.
         handler = import_string(policy.handler)
-        handler(scope=subject.scope, kind=subject.kind,
-                subject_id=subject.reference, action=request.action)
+        handler(
+            scope=subject.scope,
+            kind=subject.kind,
+            subject_id=subject.reference,
+            action=request.action,
+        )
         old = request.status
         request.status = PrivacyRequest.Status.COMPLETED
         request.completed_at = now
