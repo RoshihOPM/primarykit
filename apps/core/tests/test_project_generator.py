@@ -31,6 +31,10 @@ from scripts.presets import PRESETS
         {"cache"},
         {"rate_limit"},
         {"celery_tasks"},
+        {"realtime"},
+        {"chat"},
+        {"chat", "realtime"},
+        {"chat", "organizations", "storage", "realtime"},
         {"cache", "celery_tasks"},
         {"orders", "sales", "payments"},
         {"statistics", "orders", "sales", "payments"},
@@ -81,6 +85,8 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
         "cache",
         "rate_limit",
         "celery_tasks",
+        "chat",
+        "realtime",
     ):
         assert (target / "apps" / app).exists() == (app in selected)
 
@@ -150,11 +156,16 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
         + (" api_keys" if "api_keys" in selected else "")
         + (" idempotency" if "idempotency" in selected else "")
         + (" workflows" if "workflows" in selected else "")
+        + (" chat" if "chat" in selected else "")
     )
     assert workflows.count(f"makemigrations {migration_apps} --noinput") == 2
     if "storage" in selected:
         assert (target / "apps/storage/tests/test_personal_storage.py").exists()
         assert (target / "apps/storage/tests/test_storage.py").exists()
+    if "chat" in selected:
+        assert (target / "apps/chat/tests/test_chat.py").exists()
+    if "realtime" in selected:
+        assert (target / "apps/realtime/asgi.py").exists()
 
 
 def test_generator_rejects_existing_directory_and_invalid_input(tmp_path):

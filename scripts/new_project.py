@@ -39,6 +39,7 @@ MIGRATION_APPS = (
     "idempotency",
     "workflows",
     "usage_quotas",
+    "chat",
 )
 # Statistics uses existing module data only; it has no persistence migrations.
 
@@ -154,7 +155,7 @@ def create_project(
         migrations = " ".join(a for a in MIGRATION_APPS if a in selected)
         workflow = target / ".github" / "workflows" / "ci.yaml"
         raw = workflow.read_text(encoding="utf-8")
-        phrase = "makemigrations users audit storage catalog inventory organizations orders sales payments tasks webhooks api_keys idempotency workflows usage_quotas --noinput"
+        phrase = "makemigrations users audit storage catalog inventory organizations orders sales payments tasks webhooks api_keys idempotency workflows usage_quotas chat --noinput"
         if raw.count(phrase) != 2:
             raise RuntimeError("CI migration template has changed")
         raw = raw.replace(phrase, f"makemigrations {migrations} --noinput")

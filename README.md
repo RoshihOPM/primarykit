@@ -46,6 +46,7 @@ uv run python manage.py runserver
 | [Фоновые задачи](docs/tasks-architecture.md) | Очередь, обработчики клиента, worker, ограничения доставки |
 | [Transactional Outbox](docs/outbox-architecture.md) | Durable business events в PostgreSQL Tasks, idempotent dispatch |
 | [Signed Webhooks](docs/webhooks.md) | HMAC, PostgreSQL-защита от повторов и исходящие уведомления |
+| [Private Chat & Realtime](docs/chat-realtime.md) | Необязательные 1:1 диалоги и WebSocket с reconnect cursor |
 | [Redis Cache](docs/redis-cache.md) | Собственный CacheService на redis-py: JSON, Hashes, счётчики и TTL; Django Cache опционален |
 | [Distributed Rate Limiting](docs/rate-limiting.md) | Атомарные Redis-лимиты между Django workers |
 | [Observability](docs/observability.md) | Request IDs, структурированные JSON-логи, длительность запросов |
