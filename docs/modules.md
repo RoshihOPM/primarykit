@@ -12,6 +12,7 @@ PrimaryKit распознаёт любую доверенную папку `apps
 | `csv_exchange` | Схемонезависимый безопасный CSV parse/export | core | — |
 | `api_keys` | Scoped машинные ключи с owner scope и отзывом | users | audit |
 | `idempotency` | PostgreSQL идемпотентность команд с атомарным replay | core | — |
+| `workflows` | Чистый state machine, transactional transitions, opt-in history | core | audit, outbox |
 | `http_integrations` | Явно разрешённые HTTPS host + безопасный retry | core | — |
 | `tasks` | Внутренняя очередь, транзакционное добавление и worker | core | — |
 | `outbox` | Транзакционная запись событий и retry delivery через Tasks | core, tasks | — |
@@ -49,6 +50,8 @@ PrimaryKit распознаёт любую доверенную папку `apps
 | Payments | `/api/v1/payments/` | Пользователь |
 | Payments manual reconcile | `/api/v1/admin/payments/` | Только суперпользователь |
 | Statistics | `/api/v1/statistics/` | Только доступные метрики |
+
+Workflows не предоставляет публичных API маршрутов — клиент реализует API и разрешения для своего агрегата. [Подробнее](workflows.md).
 
 Tasks, Cache и Celery не создают публичных API маршрутов; Celery и Redis не устанавливаются в клиенте автоматически. Tasks не создаёт публичных API маршрутов: `enqueue` вызывается только из доверенного кода приложения; worker запускается отдельно.
 
