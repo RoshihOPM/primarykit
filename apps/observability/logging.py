@@ -1,7 +1,7 @@
 """JSON log format without external logging dependencies."""
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from logging import Formatter
 
 from apps.observability.context import current_request_id
@@ -10,7 +10,7 @@ from apps.observability.context import current_request_id
 class JsonLogFormatter(Formatter):
     def format(self, record):
         payload = {
-            "timestamp": datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat(),
+            "timestamp": datetime.fromtimestamp(record.created, tz=UTC).isoformat(),
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),
