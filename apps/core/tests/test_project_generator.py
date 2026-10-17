@@ -23,6 +23,7 @@ from scripts.presets import PRESETS
         {"search"},
         {"csv_exchange"},
         {"api_keys"},
+        {"idempotency"},
         {"outbox"},
         {"webhooks"},
         {"cache"},
@@ -70,6 +71,7 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
         "search",
         "csv_exchange",
         "api_keys",
+        "idempotency",
         "outbox",
         "webhooks",
         "cache",
@@ -142,6 +144,7 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
         + (" tasks" if "tasks" in selected else "")
         + (" webhooks" if "webhooks" in selected else "")
         + (" api_keys" if "api_keys" in selected else "")
+        + (" idempotency" if "idempotency" in selected else "")
     )
     assert workflows.count(f"makemigrations {migration_apps} --noinput") == 2
     if "storage" in selected:
