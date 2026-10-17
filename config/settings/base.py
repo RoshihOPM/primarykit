@@ -176,6 +176,10 @@ if "apps.cache" in INSTALLED_APPS:
             )
         }
 
+# Redis fixed-window throttling is a separate opt-in module, not Django cache.
+if "apps.rate_limit" in INSTALLED_APPS:
+    SHARED_ACCOUNT_THROTTLE_ENABLED = env.bool("SHARED_ACCOUNT_THROTTLE_ENABLED", default=False)
+
 # Optional Celery adapter. No broker is connected during Django initialization.
 if "apps.celery_tasks" in INSTALLED_APPS:
     CELERY_BROKER_URL = env("CELERY_BROKER_URL", default="")
