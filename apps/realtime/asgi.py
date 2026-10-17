@@ -122,7 +122,7 @@ async def websocket_application(scope, receive, send):
             after = event["sequence"]
         try:
             inbound = await asyncio.wait_for(receive(), timeout=2)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             continue
         if inbound["type"] == "websocket.disconnect":
             return
