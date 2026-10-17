@@ -6,7 +6,6 @@ import uuid
 
 from asgiref.sync import iscoroutinefunction
 from django.utils.decorators import sync_and_async_middleware
-from django.utils.functional import lazy
 
 from apps.observability.context import request_id_var
 
