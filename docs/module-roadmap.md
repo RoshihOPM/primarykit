@@ -16,6 +16,7 @@ Updated: 2026-10-17. This is a future-improvement backlog, **not** a list of uni
 | Rate Limit / Observability | Shared Redis auth throttling, request IDs and JSON access logs | [Observability](observability.md) |
 | Feature Flags | Local, deny-by-default release toggles; no remote or database dependencies | [Feature Flags](feature-flags.md) |
 | Search | Explicitly owner/tenant-filtered PostgreSQL full-text search helper | [Search](search.md) |
+| CSV Exchange | Strict, bounded CSV import validation and formula-safe export primitives | [CSV Exchange](csv-exchange.md) |
 | Cache | Django cache facade and optional Redis backend | [Cache](redis-cache.md) |
 | Celery Tasks | RabbitMQ broker, optional Redis result backend, copyable worker adapter | [Celery](celery-rabbitmq.md) |
 | Statistics | Auto-discovered providers, scoped counts and date windows | [Statistics](statistics-architecture.md) |
@@ -60,7 +61,7 @@ For the full source-code/module contract, use [Repository Guide](repository-guid
 - Stronger shared throttling for public login, endpoints, tracing/metrics/alerts and restored backup testing.
 - Durable task queues, notifications/outbox and idempotent reconciliation for external side effects.
 - Module compatibility and reviewed manual upgrades are documented; automate diff reports only when they cannot overwrite client changes.
-- Planned separate optional modules: Export/Import and API Keys after threat models, ownership rules and explicit usage contracts.
+- Planned separate optional modules: API Keys after threat models, ownership rules and explicit usage contracts.
 
 ## Definition of done for new modules
 
