@@ -29,6 +29,7 @@
 - [Organizations](organizations-architecture.md) · [RBAC](rbac-architecture.md) · [Audit](audit-architecture.md)
 - [Catalog](catalog-architecture.md) · [Inventory](inventory-architecture.md) · [Storage](storage-architecture.md)
 - [Architecture](architecture.md) · [Agent workflow](agent-workflow.md) · [Module roadmap](module-roadmap.md)
+- [Feature Flags](feature-flags.md) · [Совместимость модулей](module-compatibility.md) · [Production operations](production-operations.md)
 
 ## Архитектурные решения
 

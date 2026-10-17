@@ -17,6 +17,7 @@ from scripts.new_project import create_project
         {"payments"},
         {"tasks"},
         {"observability"},
+        {"feature_flags"},
         {"outbox"},
         {"webhooks"},
         {"cache"},
@@ -60,6 +61,7 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
         "payments",
         "tasks",
         "observability",
+        "feature_flags",
         "outbox",
         "webhooks",
         "cache",
@@ -112,6 +114,8 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
 
     metadata = json.loads((target / "primarykit-origin.json").read_text())
     assert set(metadata["included_apps"]) == selected
+    assert metadata["source_version"] == "0.1.0"
+    assert ("Feature flags: configure FEATURE_FLAGS" in readme) == ("feature_flags" in apps)
     workflows = (target / ".github/workflows/ci.yaml").read_text()
     migration_apps = (
         "users"

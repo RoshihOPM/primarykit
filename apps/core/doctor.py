@@ -191,18 +191,48 @@ def inspect_project(root: Path) -> Report:
                         f"{module} tenant mode requires {', '.join(sorted(needed))}",
                     )
 
+    project_name = None
+    project_version = None
     pyproject = root / "pyproject.toml"
     if not pyproject.is_file():
         add("error", "pyproject_missing", "Missing pyproject.toml")
     else:
         try:
             project = tomllib.loads(pyproject.read_text(encoding="utf-8"))["project"]
+            project_name = project["name"]
+            project_version = project["version"]
             for value in project.get("dependencies", ()):
                 package = re.split(r"[\s\[<>=!~;]", value, maxsplit=1)[0]
                 if package.lower().replace("_", "-") == "primarykit":
                     add("error", "kit_dependency", "Remove runtime PrimaryKit dependency")
         except (OSError, ValueError, KeyError, TypeError) as exc:
             add("error", "invalid_pyproject", f"Invalid pyproject.toml: {exc}")
+
+    # The copied uv.lock must describe THIS project's virtual root package.
+    # A stale lock may pass static Django checks but fail uv sync --locked.
+    lock_path = root / "uv.lock"
+    if not lock_path.is_file():
+        add("error", "lock_missing", "uv.lock is required for reproducible builds")
+    else:
+        try:
+            lock = tomllib.loads(lock_path.read_text(encoding="utf-8"))
+            virtual_roots = [
+                package
+                for package in lock.get("package", ())
+                if package.get("source") == {"virtual": "."}
+            ]
+            if project_name is not None and (
+                len(virtual_roots) != 1
+                or virtual_roots[0].get("name") != project_name
+                or virtual_roots[0].get("version") != project_version
+            ):
+                add(
+                    "error",
+                    "lock_root_mismatch",
+                    "uv.lock virtual project name/version must match pyproject.toml",
+                )
+        except (OSError, ValueError, TypeError, AttributeError) as exc:
+            add("error", "invalid_lock", f"Invalid uv.lock: {exc}")
 
     for path in sorted(set(_runtime_imports(root))):
         add("error", "kit_import", f"Runtime import of source kit in {path}")

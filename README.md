@@ -49,6 +49,9 @@ uv run python manage.py runserver
 | [Observability](docs/observability.md) | Request IDs, структурированные JSON-логи, длительность запросов |
 | [Celery + RabbitMQ](docs/celery-rabbitmq.md) | Независимый worker, брокер, необязательные результаты Redis |
 | [Статистика](docs/statistics-architecture.md) | Как бизнес-модули отдают метрики |
+| [Feature Flags](docs/feature-flags.md) | Безопасные feature toggles, не заменяют авторизацию |
+| [Совместимость модулей](docs/module-compatibility.md) | Контракты, версионирование и ручной перенос исправлений |
+| [Production runbook](docs/production-operations.md) | Nginx, резервные копии, релизы и восстановление |
 | [Развёртывание](docs/deployment.md) | Dev/prod, nginx, переменные и эксплуатационные ограничения |
 | [Правила агентов](AGENTS.md) | Код-стайл, тесты, архитектурные границы |
 | [ADR](docs/adr/0001-copy-based-modular-monolith.md) | Решения и архитектурные компромиссы |
@@ -60,6 +63,7 @@ uv run python manage.py runserver
 | Модуль | Что умеет |
 | --- | --- |
 | **core** | Настройки проекта, абстрактные модели, healthcheck, registry |
+| feature_flags | Локальные feature flags без БД и внешних сервисов, выключены по умолчанию |
 | tasks | Внутренняя PostgreSQL-очередь фоновых задач, отдельный worker, повторы и идемпотентность |
 | outbox | События бизнеса внутри транзакций PostgreSQL, доставка через Tasks |
 | webhooks | Подписанные входящие и исходящие Webhooks с replay protection |

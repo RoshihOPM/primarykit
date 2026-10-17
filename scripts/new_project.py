@@ -7,6 +7,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tomllib
 from pathlib import Path
 
 SOURCE_ROOT = Path(__file__).resolve().parents[1]
@@ -165,9 +166,12 @@ def create_project(
         _replace_one(target / "pyproject.toml", 'name = "primarykit"', f'name = "{name}"')
         _replace_one(target / "uv.lock", 'name = "primarykit"', f'name = "{name}"')
 
+        source_version = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))[
+            "project"
+        ]["version"]
         metadata = {
             "origin": "RoshihOPM/primarykit",
-            "source_version": "0.1.0",
+            "source_version": source_version,
             "included_apps": sorted(selected),
             "migration_policy": "Generate once and commit all client migrations",
         }
@@ -217,6 +221,12 @@ def create_project(
                 "if a Redis result backend is needed. Configure the broker and "
                 "use compose.celery.yaml. PostgreSQL Tasks remains independent.\n"
                 if "celery_tasks" in selected and "cache" not in selected
+                else ""
+            )
+            + (
+                "\nFeature flags: configure FEATURE_FLAGS in your own Django settings; "
+                "missing flags are disabled and never grant permissions.\n"
+                if "feature_flags" in selected
                 else ""
             )
             + "See docs/architecture.md and AGENTS.md for conventions.\n",

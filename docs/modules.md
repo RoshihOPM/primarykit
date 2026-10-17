@@ -7,6 +7,7 @@ PrimaryKit распознаёт любую доверенную папку `apps
 | Имя | Бизнес-назначение | Обязательные зависимости* | Optional integration |
 | --- | --- | --- | --- |
 | `core` | Соглашения и registry | — | — |
+| `feature_flags` | Локальные feature flags для контролируемых релизов | core | — |
 | `tasks` | Внутренняя очередь, транзакционное добавление и worker | core | — |
 | `outbox` | Транзакционная запись событий и retry delivery через Tasks | core, tasks | — |
 | `webhooks` | HMAC inbound receipts and outbound delivery | core, outbox | — |
