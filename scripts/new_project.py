@@ -33,6 +33,7 @@ MIGRATION_APPS = (
     "payments",
     "tasks",
     "webhooks",
+    "api_keys",
 )
 # Statistics uses existing module data only; it has no persistence migrations.
 
@@ -115,7 +116,7 @@ def create_project(
         migrations = " ".join(a for a in MIGRATION_APPS if a in selected)
         workflow = target / ".github" / "workflows" / "ci.yaml"
         raw = workflow.read_text(encoding="utf-8")
-        phrase = "makemigrations users audit storage catalog inventory organizations orders sales payments tasks webhooks --noinput"
+        phrase = "makemigrations users audit storage catalog inventory organizations orders sales payments tasks webhooks api_keys --noinput"
         if raw.count(phrase) != 2:
             raise RuntimeError("CI migration template has changed")
         raw = raw.replace(phrase, f"makemigrations {migrations} --noinput")
@@ -227,6 +228,13 @@ def create_project(
                 "\nFeature flags: configure FEATURE_FLAGS in your own Django settings; "
                 "missing flags are disabled and never grant permissions.\n"
                 if "feature_flags" in selected
+                else ""
+            )
+            + (
+                "\nAPI keys: configure API_KEY_SCOPE_PERMISSIONS and your own authorized "
+                "issuance/revocation endpoints. No credentials are exposed by default. "
+                "Create and commit client-owned api_keys migrations.\n"
+                if "api_keys" in selected
                 else ""
             )
             + "See docs/architecture.md and AGENTS.md for conventions.\n",

@@ -21,6 +21,7 @@ from scripts.new_project import SOURCE_ROOT, create_project
         {"feature_flags"},
         {"search"},
         {"csv_exchange"},
+        {"api_keys"},
         {"outbox"},
         {"webhooks"},
         {"cache"},
@@ -67,6 +68,7 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
         "feature_flags",
         "search",
         "csv_exchange",
+        "api_keys",
         "outbox",
         "webhooks",
         "cache",
@@ -135,6 +137,7 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
         + (" payments" if "payments" in selected else "")
         + (" tasks" if "tasks" in selected else "")
         + (" webhooks" if "webhooks" in selected else "")
+        + (" api_keys" if "api_keys" in selected else "")
     )
     assert workflows.count(f"makemigrations {migration_apps} --noinput") == 2
     if "storage" in selected:
