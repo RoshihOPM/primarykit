@@ -1,5 +1,6 @@
 from django.contrib.auth.password_validation import validate_password
 from django.db import IntegrityError, transaction
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import AuthenticationFailed
@@ -13,7 +14,8 @@ from apps.core.audit import record_audit_event
 
 from .domain import may_authenticate, may_deactivate
 from .email_services import send_verification_email
-from .models import User
+from .models import DeviceSession, User
+from .sessions import create_session, expires_at, locked_session
 
 
 class UserReadSerializer(serializers.ModelSerializer):
@@ -63,6 +65,7 @@ class RegisterSerializer(serializers.Serializer):
 
 
 class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
+    @transaction.atomic
     def validate(self, attrs):
         attrs[self.username_field] = User.objects.normalize_identity(attrs[self.username_field])
         tokens = super().validate(attrs)
@@ -70,17 +73,34 @@ class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
             raise AuthenticationFailed(
                 self.error_messages["no_active_account"], code="no_active_account"
             )
-        return tokens
+        # Serialize session creation against password changes and revoke-all.
+        owner = User.objects.select_for_update().get(pk=self.user.pk)
+        if (
+            not may_authenticate(active=owner.is_active, verified=owner.email_verified)
+            or owner.password != self.user.password
+        ):
+            raise AuthenticationFailed(
+                self.error_messages["no_active_account"], code="no_active_account"
+            )
+        refresh = RefreshToken(tokens["refresh"])
+        request = self.context.get("request")
+        create_session(
+            user=owner,
+            refresh=refresh,
+            user_agent=request.META.get("HTTP_USER_AGENT", "") if request else "",
+        )
+        return {"refresh": str(refresh), "access": str(refresh.access_token)}
 
 
 class PasswordBoundTokenRefreshSerializer(TokenRefreshSerializer):
-    """SimpleJWT 5.5.1 does not compare password revocation during refresh."""
+    """Require an active, account-owned session and one-time refresh rotation."""
 
+    @transaction.atomic
     def validate(self, attrs):
         try:
             refresh = RefreshToken(attrs["refresh"])
             user_id = refresh[api_settings.USER_ID_CLAIM]
-            user = User.objects.get(pk=user_id, is_active=True)
+            user = User.objects.select_for_update().get(pk=user_id, is_active=True)
         except (TokenError, KeyError, ValueError, User.DoesNotExist) as exc:
             raise InvalidToken(_("Token is invalid or expired.")) from exc
 
@@ -92,7 +112,35 @@ class PasswordBoundTokenRefreshSerializer(TokenRefreshSerializer):
         ) != get_md5_hash_password(user.password):
             raise InvalidToken(_("Token is invalid or expired."))
 
-        return super().validate(attrs)
+        session = locked_session(user=user, refresh=refresh)
+        # Re-evaluate the blacklist *under* the session lock to prevent concurrent
+        # refresh requests from both consuming the same token.
+        try:
+            RefreshToken(attrs["refresh"])
+        except TokenError as exc:
+            raise InvalidToken(_("Token is invalid or expired.")) from exc
+        tokens = super().validate(attrs)
+        session.last_seen_at = timezone.now()
+        if "refresh" in tokens:
+            session.expires_at = expires_at(RefreshToken(tokens["refresh"]))
+        session.save(update_fields=["last_seen_at", "expires_at"])
+        return tokens
+
+
+class DeviceSessionReadSerializer(serializers.ModelSerializer):
+    is_current = serializers.SerializerMethodField()
+
+    class Meta:
+        model = DeviceSession
+        fields = (
+            "id", "browser", "os", "device_type", "created_at",
+            "last_seen_at", "expires_at", "is_current",
+        )
+        read_only_fields = fields
+
+    def get_is_current(self, session):
+        token = getattr(self.context["request"], "auth", None)
+        return bool(token and str(token.get("sid", "")) == str(session.pk))
 
 
 class ChangePasswordSerializer(serializers.Serializer):
@@ -100,7 +148,7 @@ class ChangePasswordSerializer(serializers.Serializer):
     new_password = serializers.CharField(write_only=True, trim_whitespace=False)
 
     def validate(self, attrs):
-        user = self.context["request"].user
+        user = self.context.get("user") or self.context["request"].user
         if not user.check_password(attrs["current_password"]):
             raise serializers.ValidationError({"current_password": _("Invalid current password.")})
         validate_password(attrs["new_password"], user=user)
