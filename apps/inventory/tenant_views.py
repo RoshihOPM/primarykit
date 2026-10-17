@@ -7,15 +7,7 @@ from rest_framework.permissions import SAFE_METHODS
 from rest_framework.response import Response
 
 from apps.core.audit import record_audit_event
-from apps.organizations.models import Organization
-from apps.organizations.permissions import get_active_membership
-from apps.organizations.scoping import (
-    FULL_ACCESS,
-    WRITERS,
-    branch_ids_for,
-    organization_scope,
-    require_writer,
-)
+from apps.organizations.policy import FULL_ACCESS, WRITERS, TenantPolicy
 
 from .models import InventoryOperation, StockBalance, StockReservation, Warehouse
 from .serializers import (
@@ -31,32 +23,37 @@ from .services import execute_stock_operation
 class InventoryScopeMixin:
     def initial(self, request, *args, **kwargs):
         super().initial(request, *args, **kwargs)
-        _, membership = self.get_scope()
         if request.method not in SAFE_METHODS:
-            require_writer(membership)
+            self.get_policy().require_write()
 
     def lock_and_check_writer(self):
-        org = Organization.objects.select_for_update().get(pk=self.get_scope()[0].pk)
-        membership = get_active_membership(user=self.request.user, organization=org)
-        require_writer(membership)
-        return org
+        policy = TenantPolicy.resolve(
+            user=self.request.user, organization_id=self.kwargs["org_id"], lock=True
+        )
+        policy.require_write()
+        return policy.organization
+
+    def get_policy(self):
+        if not hasattr(self, "_tenant_policy"):
+            self._tenant_policy = TenantPolicy.resolve(
+                user=self.request.user, organization_id=self.kwargs["org_id"]
+            )
+        return self._tenant_policy
 
     def get_scope(self):
-        if not hasattr(self, "_tenant_scope"):
-            self._tenant_scope = organization_scope(
-                user=self.request.user, org_id=self.kwargs["org_id"]
-            )
-        return self._tenant_scope
+        policy = self.get_policy()
+        return policy.organization, policy.membership
 
     def get_accessible_warehouses(self):
-        organization, membership = self.get_scope()
-        qs = Warehouse.objects.filter(organization=organization)
-        if membership.role not in FULL_ACCESS:
-            qs = qs.filter(
-                is_active=True,
-                branch__is_active=True,
-                branch_id__in=branch_ids_for(membership),
-            )
+        policy = self.get_policy()
+        qs = policy.scope_queryset(
+            Warehouse.objects.all(),
+            organization_field="organization",
+            branch_field="branch",
+            active_branches=not policy.has_full_access,
+        )
+        if not policy.has_full_access:
+            qs = qs.filter(is_active=True)
         return qs
 
 
@@ -142,7 +139,7 @@ class OperationViewSet(
 
     def create(self, request, *args, **kwargs):
         organization, membership = self.get_scope()
-        require_writer(membership)
+        self.get_policy().require_write()
         serializer = StockCommandSerializer(data=request.data, context={"view": self})
         serializer.is_valid(raise_exception=True)
         result = execute_stock_operation(
