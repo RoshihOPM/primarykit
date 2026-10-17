@@ -167,6 +167,21 @@ def test_logout_blacklists_refresh_and_retires_session(client):
     assert client.post(reverse("auth-refresh"), {"refresh": tokens["refresh"]}).status_code == 401
 
 
+def test_logout_after_concurrent_rotation_still_revokes_device(client):
+    member = new_user()
+    token = login(client, member)
+    rotated = client.post(reverse("auth-refresh"), {"refresh": token["refresh"]})
+    assert rotated.status_code == 200
+    # The original refresh has been blacklisted by rotation, but still
+    # legitimately identifies the device session for explicit logout.
+    assert api(token["access"]).post(
+        reverse("auth-logout"), {"refresh": token["refresh"]}
+    ).status_code == 204
+    assert client.post(
+        reverse("auth-refresh"), {"refresh": rotated.data["refresh"]}
+    ).status_code == 401
+
+
 def test_change_password_revokes_all_sessions(client):
     member = new_user()
     t1, t2 = login(client, member), login(client, member)
