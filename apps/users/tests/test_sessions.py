@@ -9,6 +9,7 @@ from django.db import connection
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework.test import APIClient
+from rest_framework_simplejwt.token_blacklist.models import OutstandingToken
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.users.models import DeviceSession, User
@@ -151,6 +152,25 @@ def test_refresh_rotates_and_retains_session_id(client):
     assert (
         api(response.data["access"]).get(reverse("users-sessions")).data["results"][0]["is_current"]
     )
+
+
+def test_jwt_outstanding_table_contains_only_jti_not_raw_refresh(client):
+    member = new_user()
+    original = login(client, member)
+    jti_first = RefreshToken(original["refresh"])["jti"]
+    assert OutstandingToken.objects.get(jti=jti_first).token == ""
+
+    rotated = client.post(reverse("auth-refresh"), {"refresh": original["refresh"]})
+    assert rotated.status_code == 200
+    jti_second = RefreshToken(rotated.data["refresh"])["jti"]
+    assert jti_first != jti_second
+    assert OutstandingToken.objects.get(jti=jti_second).token == ""
+
+    result = api(rotated.data["access"]).post(
+        reverse("auth-logout"), {"refresh": rotated.data["refresh"]}
+    )
+    assert result.status_code == 204
+    assert not OutstandingToken.objects.filter(user=member).exclude(token="").exists()
 
 
 def test_legacy_refresh_without_session_is_rejected(client):
