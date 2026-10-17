@@ -228,7 +228,7 @@ jobs:
           PRIMARYKIT_INFRA_INTEGRATION=1 \
           REDIS_CACHE_URL=redis://127.0.0.1:6379/14 \
           CELERY_BROKER_URL=amqp://worker:local-worker-only-change-me@127.0.0.1:5672// \
-          uv run --no-sync pytest -q apps/cache/tests/test_redis_integration.py apps/celery_tasks/tests/test_broker_integration.py
+          uv run --no-sync pytest -q apps/cache/tests/test_redis_integration.py apps/rate_limit/tests/test_redis_integration.py apps/celery_tasks/tests/test_broker_integration.py
           # Cache-only client can use redis-py 8.x without Celery Redis-extra constraints.
           PRIMARYKIT_INFRA_INTEGRATION=1 REDIS_CACHE_URL=redis://127.0.0.1:6379/14 uv run --no-sync --with "redis>=8,<9" pytest -q apps/cache/tests/test_redis_integration.py
       - name: SeaweedFS S3 provider integration test
