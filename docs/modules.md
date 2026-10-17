@@ -11,7 +11,8 @@ PrimaryKit распознаёт любую доверенную папку `apps
 | `search` | PostgreSQL text search с явной фильтрацией owner/tenant | core | — |
 | `csv_exchange` | Схемонезависимый безопасный CSV parse/export | core | — |
 | `api_keys` | Scoped машинные ключи с owner scope и отзывом | users | audit |
-| `idempotency` | PostgreSQL идемпотентность команд с атомарным replay | core | — |\n| `usage_quotas` | Атомарные квоты потребления, owner/tenant, снимки политик | users | organizations, statistics |
+| `idempotency` | PostgreSQL идемпотентность команд с атомарным replay | core | — |
+| `usage_quotas` | Атомарные квоты потребления, owner/tenant, снимки политик | users | organizations, statistics |
 | `http_integrations` | Явно разрешённые HTTPS host + безопасный retry | core | — |
 | `tasks` | Внутренняя очередь, транзакционное добавление и worker | core | — |
 | `outbox` | Транзакционная запись событий и retry delivery через Tasks | core, tasks | — |

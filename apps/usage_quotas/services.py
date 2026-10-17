@@ -51,6 +51,13 @@ def _scope_id(value) -> uuid.UUID:
         raise QuotaRuleError("Invalid scope identifier.") from exc
 
 
+def _parse_policy_id(value) -> uuid.UUID:
+    try:
+        return uuid.UUID(str(value))
+    except (TypeError, ValueError, AttributeError) as exc:
+        raise NotFound() from exc
+
+
 def _authorized(*, actor, policy: UsagePolicy) -> None:
     if not actor or not actor.is_authenticated or not actor.is_active:
         raise NotFound()
@@ -136,7 +143,7 @@ def provision_quota(
 
 def get_quota_status(*, actor, policy_id) -> UsageResult:
     """Read a policy's current counter with explicit actor scope authorization."""
-    policy = UsagePolicy.objects.filter(pk=policy_id).first()
+    policy = UsagePolicy.objects.filter(pk=_parse_policy_id(policy_id)).first()
     if policy is None:
         raise NotFound()
     _authorized(actor=actor, policy=policy)
@@ -188,7 +195,9 @@ def consume_usage(*, actor, policy_id, event_key: str, units: int = 1) -> UsageR
     event_key = validate_event_key(event_key)
     _require_postgres()
     with transaction.atomic():
-        policy = UsagePolicy.objects.select_for_update().filter(pk=policy_id).first()
+        policy = UsagePolicy.objects.select_for_update().filter(
+            pk=_parse_policy_id(policy_id)
+        ).first()
         if policy is None:
             raise NotFound()
         _authorized(actor=actor, policy=policy)

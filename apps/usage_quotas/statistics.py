@@ -1,6 +1,6 @@
 """Opt-in statistics integration. The metrics service authorizes the context."""
 
-from django.db.models import Sum
+from django.db.models import Q, Sum
 from django.utils import timezone
 
 from apps.statistics.domain import Metric, Provider
@@ -17,9 +17,7 @@ def _policies(context):
         base = base.filter(scope="tenant", tenant_id=context.organization.pk)
     else:
         return 0
-    return base.filter(expires_at__isnull=True).count() + base.filter(
-        expires_at__gt=now
-    ).count()
+    return base.filter(Q(expires_at__isnull=True) | Q(expires_at__gt=now)).count()
 
 
 def _consumed(context):

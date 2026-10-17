@@ -55,7 +55,8 @@ uv run python manage.py runserver
 | [Search](docs/search.md) | PostgreSQL-поиск с явной областью доступа и лимитами |
 | [CSV Exchange](docs/csv-exchange.md) | CSV injection, валидация, лимиты, клиентские транзакции |
 | [API Keys](docs/api-keys.md) | Ключи для machine-to-machine авторизации с проверкой permissions |
-| [Idempotency](docs/idempotency.md) | Транзакционные ключи от повторных запросов |\n| [Usage Quotas](docs/usage-quotas.md) | Бизнес-лимиты и атомарные PostgreSQL-счётчики (opt-in) |
+| [Idempotency](docs/idempotency.md) | Транзакционные ключи от повторных запросов |
+| [Usage Quotas](docs/usage-quotas.md) | Бизнес-лимиты и атомарные PostgreSQL-счётчики (opt-in) |
 | [HTTP Integrations](docs/http-integrations.md) | Безопасные настройки исходящих HTTPS-запросов |
 | [Совместимость модулей](docs/module-compatibility.md) | Контракты, версионирование и ручной перенос исправлений |
 | [Production runbook](docs/production-operations.md) | Nginx, резервные копии, релизы и восстановление |
@@ -74,7 +75,8 @@ uv run python manage.py runserver
 | search | PostgreSQL full-text search с явным server-side owner/tenant scope |
 | csv_exchange | Безопасный ограниченный CSV import/export без изменения БД |
 | api_keys | Хешированные API-ключи со scopes, истечением, ротацией и отзывом |
-| idempotency | Однократное выполнение PostgreSQL-команд и повторное получение результата |\n| usage_quotas | PostgreSQL квоты по владельцу/организации, события расхода, снимки политики |
+| idempotency | Однократное выполнение PostgreSQL-команд и повторное получение результата |
+| usage_quotas | PostgreSQL квоты по владельцу/организации, события расхода, снимки политики |
 | http_integrations | Контролируемый HTTPS-клиент сторонних API, retries, ограничения ответов |
 | tasks | Внутренняя PostgreSQL-очередь фоновых задач, отдельный worker, повторы и идемпотентность |
 | outbox | События бизнеса внутри транзакций PostgreSQL, доставка через Tasks |
