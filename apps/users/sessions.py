@@ -85,9 +85,7 @@ def locked_session(*, user: User, refresh) -> DeviceSession:
 def revoke_one(*, user: User, session_id: uuid.UUID) -> None:
     User.objects.select_for_update().get(pk=user.pk)
     session = (
-        DeviceSession.objects.select_for_update()
-        .filter(pk=session_id, user_id=user.pk)
-        .first()
+        DeviceSession.objects.select_for_update().filter(pk=session_id, user_id=user.pk).first()
     )
     if session is None:
         raise Http404
