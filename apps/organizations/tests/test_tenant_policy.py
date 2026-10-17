@@ -166,6 +166,7 @@ def test_members_cannot_write_and_owners_can_read_any_branch(tenants):
         policy.require_branch(branch=tenants["foreign_branch"])
 
 
+@pytest.mark.django_db(transaction=True)
 def test_locked_scope_requires_transaction_and_rechecks_active_membership(tenants):
     actor = tenants["writer"]
     org = tenants["first"]
