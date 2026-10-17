@@ -74,6 +74,12 @@ PrimaryKit is a copy-based Django starter, not a separately deployed shared back
 - `apps/celery_tasks` is independent of the PostgreSQL `apps/tasks` queue. RabbitMQ broker and Redis result backend are opt-in. Business task handlers belong to each generated client; publish after commit and use an outbox for delivery guarantees when required.
 - Select overlay Compose files explicitly; never expose Redis/RabbitMQ services to public interfaces or install optional broker dependencies into unrelated clients. See `docs/redis-cache.md` and `docs/celery-rabbitmq.md`.
 
+## Copied-module compatibility and feature flags
+
+- Treat manifest dependencies, routes, API schemas, settings and migrations as compatibility contracts. Follow `docs/module-compatibility.md`; never silently upgrade a generated client.
+- Feature flags are local deployment/release toggles, **not** authorization, tenant isolation, pricing or financial controls. Unknown flags fail closed, and per-client configurations remain client-owned.
+- Keep production instructions as reviewed examples. Do not assume a configured reverse proxy, backup system or secrets manager exists in client environments.
+
 ## Portable module contract
 
 - A module is discovered from `apps/<name>/manifest.py`, not manually added to `INSTALLED_APPS` or root URLs. Define hard dependencies, optional integrations, stable route prefixes and priority there. Add tests for the generator's dependency closure and for the standalone variant where applicable.

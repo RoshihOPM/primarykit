@@ -1,9 +1,10 @@
 import json
+import tomllib
 
 import pytest
 
 from apps.core.module_registry import dependency_closure, discover_modules
-from scripts.new_project import create_project
+from scripts.new_project import SOURCE_ROOT, create_project
 
 
 @pytest.mark.parametrize(
@@ -17,6 +18,7 @@ from scripts.new_project import create_project
         {"payments"},
         {"tasks"},
         {"observability"},
+        {"feature_flags"},
         {"outbox"},
         {"webhooks"},
         {"cache"},
@@ -60,6 +62,7 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
         "payments",
         "tasks",
         "observability",
+        "feature_flags",
         "outbox",
         "webhooks",
         "cache",
@@ -112,6 +115,9 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
 
     metadata = json.loads((target / "primarykit-origin.json").read_text())
     assert set(metadata["included_apps"]) == selected
+    source_project = tomllib.loads((SOURCE_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    assert metadata["source_version"] == source_project["project"]["version"]
+    assert ("Feature flags: configure FEATURE_FLAGS" in readme) == ("feature_flags" in apps)
     workflows = (target / ".github/workflows/ci.yaml").read_text()
     migration_apps = (
         "users"

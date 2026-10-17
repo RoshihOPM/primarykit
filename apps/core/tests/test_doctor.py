@@ -67,6 +67,18 @@ def test_doctor_rejects_runtime_kit_import_and_package_dependency(tmp_path):
     assert {"kit_import", "kit_dependency"} <= {item.code for item in report.findings}
 
 
+def test_doctor_requires_matching_uv_lock(tmp_path):
+    target = _project(tmp_path)
+    lock_path = target / "uv.lock"
+    source = lock_path.read_text()
+    assert 'name = "customer-backend"' in source
+    lock_path.write_text(source.replace('name = "customer-backend"', 'name = "wrong-backend"', 1))
+    assert "lock_root_mismatch" in {item.code for item in inspect_project(target).findings}
+
+    lock_path.unlink()
+    assert "lock_missing" in {item.code for item in inspect_project(target).findings}
+
+
 def test_doctor_stale_metadata_is_warning_and_strict_fails(tmp_path):
     target = _project(tmp_path)
     metadata = target / "primarykit-origin.json"
