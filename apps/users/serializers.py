@@ -133,8 +133,14 @@ class DeviceSessionReadSerializer(serializers.ModelSerializer):
     class Meta:
         model = DeviceSession
         fields = (
-            "id", "browser", "os", "device_type", "created_at",
-            "last_seen_at", "expires_at", "is_current",
+            "id",
+            "browser",
+            "os",
+            "device_type",
+            "created_at",
+            "last_seen_at",
+            "expires_at",
+            "is_current",
         )
         read_only_fields = fields
 
