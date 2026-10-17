@@ -5,7 +5,7 @@ The client registers trusted handler paths for named events. A handler receives
 """
 
 from django.conf import settings
-from django.db import connection, transaction
+from django.db import connection
 from django.utils.module_loading import import_string
 
 from apps.outbox.domain import delivery_key, validated_envelope
