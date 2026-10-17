@@ -8,13 +8,13 @@ from pathlib import Path
 
 CONTRACT_FILES = frozenset(
     {
-    "manifest.py",
-    "models.py",
-    "urls.py",
-    "domain.py",
-    "services.py",
-    "serializers.py",
-    "permissions.py",
+        "manifest.py",
+        "models.py",
+        "urls.py",
+        "domain.py",
+        "services.py",
+        "serializers.py",
+        "permissions.py",
         "authentication.py",
     }
 )
