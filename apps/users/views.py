@@ -9,7 +9,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
-from rest_framework_simplejwt.tokens import RefreshToken, UntypedToken
+from rest_framework_simplejwt.tokens import UntypedToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from apps.core.audit import record_audit_event
@@ -29,7 +29,13 @@ from .serializers import (
     UserProfileUpdateSerializer,
     UserReadSerializer,
 )
-from .sessions import locked_session, revoke_all, revoke_on_password_change, revoke_one
+from .sessions import (
+    SessionRefreshToken,
+    locked_session,
+    revoke_all,
+    revoke_on_password_change,
+    revoke_one,
+)
 from .throttles import AccountRateThrottle
 
 
@@ -89,7 +95,7 @@ class LogoutView(APIView):
                 raise ValidationError({"refresh": _("Invalid refresh token.")})
             session = locked_session(user=owner, refresh=refresh)
             try:
-                RefreshToken(raw_refresh).blacklist()
+                SessionRefreshToken(raw_refresh).blacklist()
             except TokenError:
                 # Already blacklisted, but a valid signed refresh identifies the session.
                 pass
