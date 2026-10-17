@@ -11,7 +11,7 @@ from django.test import override_settings
 from apps.tasks.models import BackgroundJob, JobSchedule
 from apps.tasks.schedule_domain import next_fire_after, validate_calendar
 from apps.tasks.scheduler import _SCHEDULER_LOCK, fire_due, register_schedule
-from apps.tasks.services import claim_next, complete, run_next
+from apps.tasks.services import claim_next, complete, fail, run_next
 
 UTC = utc.utc
 HANDLERS = {
@@ -292,3 +292,32 @@ def test_postgresql_leader_lock_is_nonblocking():
     assert BackgroundJob.objects.count() == 1
     definition.refresh_from_db()
     assert definition.next_run_at == at(2026, 10, 19, 9)
+
+
+@pytest.mark.django_db
+@override_settings(BACKGROUND_JOB_HANDLERS=HANDLERS)
+def test_schedule_job_exponential_retry_and_exhaustion():
+    schedule(name="retry", code="test.fail", max_attempts=2)
+    now = at(2026, 10, 18, 9)
+    assert fire_due(now=now) == 1
+    job = BackgroundJob.objects.get()
+    first = claim_next(now=now, lease_seconds=30)
+    assert fail(job.pk, first.lease_token, RuntimeError("sensitive"), now=now)
+    job.refresh_from_db()
+    assert job.status == BackgroundJob.Status.PENDING
+    assert job.last_error == "RuntimeError"
+    assert job.available_at == now + timedelta(seconds=2)
+    assert claim_next(now=now + timedelta(seconds=1)) is None
+    second = claim_next(now=now + timedelta(seconds=2), lease_seconds=30)
+    assert second is not None
+    assert fail(
+        job.pk,
+        second.lease_token,
+        RuntimeError("sensitive"),
+        now=now + timedelta(seconds=2),
+    )
+    job.refresh_from_db()
+    assert job.status == BackgroundJob.Status.FAILED
+    assert job.attempts == 2
+    assert claim_next(now=now + timedelta(days=1)) is None
+    assert BackgroundJob.objects.count() == 1
