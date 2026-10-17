@@ -44,6 +44,7 @@ uv run python manage.py runserver
 | [OpenAPI contract check](docs/api-compatibility.md) | Сравнение старой и новой схемы API до клиента |
 | [Commerce: Orders, Sales, Payments](docs/commerce-architecture.md) | API, состояния, деньги, инварианты, безопасность |
 | [Фоновые задачи](docs/tasks-architecture.md) | Очередь, обработчики клиента, worker, ограничения доставки |
+| [Privacy retention](docs/privacy-retention.md) | Клиентские политики, правовые блокировки, dry-run и аудит |
 | [Transactional Outbox](docs/outbox-architecture.md) | Durable business events в PostgreSQL Tasks, idempotent dispatch |
 | [Signed Webhooks](docs/webhooks.md) | HMAC, PostgreSQL-защита от повторов и исходящие уведомления |
 | [Private Chat & Realtime](docs/chat-realtime.md) | Необязательные 1:1 диалоги и WebSocket с reconnect cursor |
@@ -83,6 +84,7 @@ uv run python manage.py runserver
 | http_integrations | Контролируемый HTTPS-клиент сторонних API, retries, ограничения ответов |
 | tasks | Внутренняя PostgreSQL-очередь фоновых задач, отдельный worker, повторы и идемпотентность |
 | outbox | События бизнеса внутри транзакций PostgreSQL, доставка через Tasks |
+| privacy | Политики клиентского хранения PII, dry-run, legal hold и аудит без автоудаления по умолчанию |
 | webhooks | Подписанные входящие и исходящие Webhooks с replay protection |
 | cache | Native redis-py CacheService (JSON, Hashes и счётчики), необязательный Django Cache bridge |
 | rate_limit | Общие Redis-лимиты login/register/password endpoints |

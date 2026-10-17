@@ -18,6 +18,7 @@ from scripts.presets import PRESETS
         {"sales"},
         {"payments"},
         {"tasks"},
+        {"privacy"},
         {"observability"},
         {"feature_flags"},
         {"search"},
@@ -72,6 +73,7 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
         "sales",
         "payments",
         "tasks",
+        "privacy",
         "observability",
         "feature_flags",
         "search",
@@ -143,7 +145,7 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
     workflows = (target / ".github/workflows/ci.yaml").read_text()
     migration_apps = (
         "users"
-        + (" audit" if "audit" in apps else "")
+        + (" audit" if "audit" in selected else "")
         + (" storage" if "storage" in apps else "")
         + (" catalog" if "catalog" in selected else "")
         + (" inventory" if "inventory" in selected else "")
@@ -157,6 +159,7 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
         + (" idempotency" if "idempotency" in selected else "")
         + (" workflows" if "workflows" in selected else "")
         + (" chat" if "chat" in selected else "")
+        + (" privacy" if "privacy" in selected else "")
     )
     assert workflows.count(f"makemigrations {migration_apps} --noinput") == 2
     if "storage" in selected:
