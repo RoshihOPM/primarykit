@@ -7,7 +7,6 @@ from rest_framework.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenRefreshSerializer
 from rest_framework_simplejwt.settings import api_settings
-from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.utils import get_md5_hash_password
 
 from apps.core.audit import record_audit_event
@@ -15,7 +14,7 @@ from apps.core.audit import record_audit_event
 from .domain import may_authenticate, may_deactivate
 from .email_services import send_verification_email
 from .models import DeviceSession, User
-from .sessions import create_session, expires_at, locked_session
+from .sessions import SessionRefreshToken, create_session, expires_at, locked_session
 
 
 class UserReadSerializer(serializers.ModelSerializer):
@@ -65,6 +64,8 @@ class RegisterSerializer(serializers.Serializer):
 
 
 class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
+    token_class = SessionRefreshToken
+
     @transaction.atomic
     def validate(self, attrs):
         attrs[self.username_field] = User.objects.normalize_identity(attrs[self.username_field])
@@ -82,7 +83,7 @@ class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
             raise AuthenticationFailed(
                 self.error_messages["no_active_account"], code="no_active_account"
             )
-        refresh = RefreshToken(tokens["refresh"])
+        refresh = SessionRefreshToken(tokens["refresh"])
         request = self.context.get("request")
         create_session(
             user=owner,
@@ -93,12 +94,14 @@ class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
 
 
 class PasswordBoundTokenRefreshSerializer(TokenRefreshSerializer):
+    token_class = SessionRefreshToken
+
     """Require an active, account-owned session and one-time refresh rotation."""
 
     @transaction.atomic
     def validate(self, attrs):
         try:
-            refresh = RefreshToken(attrs["refresh"])
+            refresh = SessionRefreshToken(attrs["refresh"])
             user_id = refresh[api_settings.USER_ID_CLAIM]
             user = User.objects.select_for_update().get(pk=user_id, is_active=True)
         except (TokenError, KeyError, ValueError, User.DoesNotExist) as exc:
@@ -116,13 +119,13 @@ class PasswordBoundTokenRefreshSerializer(TokenRefreshSerializer):
         # Re-evaluate the blacklist *under* the session lock to prevent concurrent
         # refresh requests from both consuming the same token.
         try:
-            RefreshToken(attrs["refresh"])
+            SessionRefreshToken(attrs["refresh"])
         except TokenError as exc:
             raise InvalidToken(_("Token is invalid or expired.")) from exc
         tokens = super().validate(attrs)
         session.last_seen_at = timezone.now()
         if "refresh" in tokens:
-            session.expires_at = expires_at(RefreshToken(tokens["refresh"]))
+            session.expires_at = expires_at(SessionRefreshToken(tokens["refresh"]))
         session.save(update_fields=["last_seen_at", "expires_at"])
         return tokens
 
