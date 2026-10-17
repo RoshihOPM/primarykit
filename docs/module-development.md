@@ -75,3 +75,7 @@ uv run pytest apps/reviews
 В `docs/` добавьте: назначение, API и request samples, права, зависимости, модели и миграции, ограничения. В [modules.md](modules.md) добавьте строку модуля. Обновите `README.md`, если появилось крупное направление. PR должен пройти Ruff, pytest, генерируемые проекты, Docker, PostgreSQL; для Storage — и S3 provider integration.
 
 Не меняйте схему у работающего клиента переключением settings без миграции данных. Оригинальные initial migrations клиента должны храниться в его Git.
+
+## Source-only module scaffolding
+
+New source catalog modules can be started with `python scripts/module_scaffold.py create reviews --requires users --dry-run` followed by the same command without `--dry-run`. For a static dependency graph use `python scripts/module_scaffold.py graph --format dot`. The CLI never creates migrations or changes an existing module. Details: [Module scaffold and dependency graph](module-scaffold.md).
