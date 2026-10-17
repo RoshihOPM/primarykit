@@ -146,7 +146,7 @@ def request_retention(*, scope, kind, subject_id, policy_code, action,
 def set_legal_hold(*, scope, kind, subject_id, reason, actor):
     _admin(actor)
     subject_id, _ = validate_reference(scope, kind, subject_id)
-    if reason not in HOLD_REASONS:
+    if not isinstance(reason, str) or reason not in HOLD_REASONS:
         raise ValueError("Use an approved, non-PII legal hold reason code")
     with transaction.atomic():
         subject, _ = PrivacySubject.objects.get_or_create(

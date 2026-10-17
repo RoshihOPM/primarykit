@@ -44,7 +44,7 @@ def load_policy(code: str, config: dict) -> Policy:
     if (
         not isinstance(handler, str)
         or len(handler) > 255
-        or not re.fullmatch(r"[a-zA-Z_][\\w]*(\\.[a-zA-Z_][\\w]*)+", handler)
+        or not re.fullmatch(r"[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)+", handler)
     ):
         raise ValueError("Policy handler must be a trusted dotted import path")
     normalized = {"code": code, "kind": kind, "actions": sorted(set(actions)),

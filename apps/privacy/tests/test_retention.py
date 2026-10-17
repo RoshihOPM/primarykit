@@ -156,6 +156,8 @@ def test_no_automatic_deletion_and_manual_completion(administrator, subject):
     assert subject.first_name == ""
     assert User.objects.filter(pk=subject.pk).exists()  # no unconditional cascade
     assert request.status == PrivacyRequest.Status.COMPLETED
+    with pytest.raises(ValueError, match="cannot be undone"):
+        cancel_request(request_id=request.pk, actor=administrator)
     assert AuditEvent.objects.filter(action="privacy.requested").count() == 1
     assert AuditEvent.objects.filter(action="privacy.completed").count() == 1
     assert not AuditEvent.objects.filter(changes__icontains="Confidential").exists()
@@ -226,15 +228,9 @@ def test_cancelled_request_is_immutable_to_stale_jobs(administrator, subject, se
     assert request.status == PrivacyRequest.Status.CANCELLED
     subject.refresh_from_db()
     assert subject.first_name == "Confidential"
-    with pytest.raises(ValueError, match="cannot be undone"):
-        execute_manually(request_id=request.pk, actor=administrator) if False else (
-            _try_completed_cancel(request, administrator)
-        )
-
-
-def _try_completed_cancel(request, administrator):
-    # Cancellation is idempotent; a completed request may not be cancelled.
-    return cancel_request(request_id=request.pk, actor=administrator)
+    assert cancel_request(request_id=request.pk, actor=administrator).status == (
+        PrivacyRequest.Status.CANCELLED
+    )
 
 
 @pytest.mark.django_db

@@ -206,6 +206,12 @@ OUTBOX_EVENT_HANDLERS = {}  # e.g. {"lead.created": "apps.leads.events.publish_c
 if "apps.outbox" in INSTALLED_APPS:
     BACKGROUND_JOB_HANDLERS["outbox.dispatch"] = "apps.outbox.services.dispatch"
 
+# Privacy is opt-in: no policy or automatic execution exists by default.
+if "apps.privacy" in INSTALLED_APPS:
+    PRIVACY_RETENTION_POLICIES = {}
+    PRIVACY_AUTO_EXECUTION_ENABLED = False
+    BACKGROUND_JOB_HANDLERS["privacy.execute"] = "apps.privacy.services.process_retention_job"
+
 RBAC_ASSIGNABLE_PERMISSIONS = []  # Populate in the generated project.
 REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {
     "account_login": "5/min",
