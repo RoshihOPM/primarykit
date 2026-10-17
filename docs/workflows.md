@@ -33,7 +33,9 @@ ORDER_FLOW = WorkflowDefinition(
     terminal=frozenset({"approved", "rejected"}),
     transitions=(
         TransitionRule(
-            "draft", "approve", "approved",
+            "draft",
+            "approve",
+            "approved",
             permission=lambda ctx: ctx.actor.can_approve_orders,
             guard=lambda ctx: ctx.aggregate.total_is_valid,
         ),
