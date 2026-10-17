@@ -51,7 +51,7 @@ def visible_dialogues(user):
     allowed_ids = Membership.objects.filter(
         user=user, is_active=True, organization__is_active=True
     ).values_list("organization_id", flat=True)
-
+    return query.filter(Q(organization_id__isnull=True) | Q(organization_id__in=allowed_ids))
 
 
 def get_dialogue(*, actor, dialogue_id, lock=False):

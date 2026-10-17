@@ -61,7 +61,16 @@ def test_private_dialogue_idor_including_staff_and_superuser():
     for stranger in (outsider, admin):
         assert stranger.get(reverse("chat-list")).data["count"] == 0
         assert stranger.get(reverse("chat-detail", kwargs={"pk": chat_id})).status_code == 404
-
+        assert (
+            stranger.post(
+                reverse("chat-messages", kwargs={"pk": chat_id}), {"body": "hijack"}
+            ).status_code
+            == 404
+        )
+        assert (
+            stranger.post(reverse("chat-read", kwargs={"pk": chat_id}), {"sequence": 0}).status_code
+            == 404
+        )
     assert APIClient().get(reverse("chat-list")).status_code in (401, 403)
 
 
