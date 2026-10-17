@@ -1,8 +1,11 @@
 import hashlib
+from concurrent.futures import ThreadPoolExecutor
+from threading import Barrier
 from datetime import timedelta
 
 import pytest
 from django.core.exceptions import PermissionDenied, ValidationError
+from django.db import close_old_connections, connection, connections
 from django.test import RequestFactory, override_settings
 from django.utils import timezone
 from rest_framework.exceptions import AuthenticationFailed
@@ -118,3 +121,54 @@ def test_scope_policy_change_fails_closed():
     key.save(update_fields=["expires_at"])
     with pytest.raises(AuthenticationFailed):
         verify_api_key(token, required_scope="reports.read")
+
+
+@override_settings(API_KEY_SCOPE_PERMISSIONS=POLICIES)
+def test_issue_is_bound_to_the_actor_not_an_owner_id():
+    actor = user(superuser=True)
+    other = user("unrelated@example.test", superuser=True)
+    record, _token = issue_api_key(
+        actor=actor, name="restricted", scopes=("reports.read",), expires_at=expires()
+    )
+    assert record.owner_id == actor.pk
+    assert not ApiKey.objects.filter(pk=record.pk, owner=other).exists()
+    with pytest.raises(TypeError):
+        issue_api_key(
+            actor=actor,
+            owner=other,
+            name="forbidden",
+            scopes=("reports.read",),
+            expires_at=expires(),
+        )
+
+
+@pytest.mark.django_db(transaction=True)
+@override_settings(API_KEY_SCOPE_PERMISSIONS=POLICIES)
+def test_concurrent_rotations_have_single_winner_on_postgresql():
+    if connection.vendor != "postgresql":
+        pytest.skip("Row locking requires PostgreSQL")
+    owner = user(superuser=True)
+    original, _token = issue_api_key(
+        actor=owner, name="worker", scopes=("reports.read",), expires_at=expires()
+    )
+    gate = Barrier(2)
+
+    def rotate_once():
+        close_old_connections()
+        try:
+            own_user = User.objects.get(pk=owner.pk)
+            gate.wait(timeout=15)
+            try:
+                new_record, _new_token = rotate_api_key(
+                    actor=own_user, key_id=original.pk, expires_at=expires()
+                )
+            except PermissionDenied:
+                return None
+            return new_record.pk
+        finally:
+            connections.close_all()
+
+    with ThreadPoolExecutor(max_workers=2) as workers:
+        results = list(workers.map(lambda _index: rotate_once(), range(2)))
+    assert sum(result is not None for result in results) == 1
+    assert ApiKey.objects.filter(owner=owner, revoked_at__isnull=True).count() == 1
