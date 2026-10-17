@@ -78,7 +78,7 @@ class CategoryViewSet(AuditedCatalogViewSet):
     audit_target_type = "catalog.Category"
 
     def get_queryset(self):
-        organization, membership = self.get_scope()
+        _, membership = self.get_scope()
         queryset = self.get_policy().scope_queryset(
             super().get_queryset(), organization_field="organization"
         )
@@ -93,7 +93,7 @@ class CatalogItemViewSet(AuditedCatalogViewSet):
     audit_target_type = "catalog.CatalogItem"
 
     def get_queryset(self):
-        organization, membership = self.get_scope()
+        _, membership = self.get_scope()
         queryset = self.get_policy().scope_queryset(
             super().get_queryset(), organization_field="organization"
         )
@@ -120,7 +120,7 @@ class AttributeDefinitionViewSet(
     http_method_names = ("get", "post", "head", "options")
 
     def get_queryset(self):
-        organization, membership = self.get_scope()
+        _, membership = self.get_scope()
         queryset = self.get_policy().scope_queryset(
             super().get_queryset(), organization_field="category__organization"
         )
