@@ -1,8 +1,8 @@
 """Transactional adapter for client-owned aggregate state.
 
-    No generic public endpoint: the caller supplies an authorization policy and
-    an appropriately scoped queryset. All callbacks run inside the transaction.
-    Use Outbox for external effects, not network requests in audit_hook.
+No generic public endpoint: the caller supplies an authorization policy and
+an appropriately scoped queryset. All callbacks run inside the transaction.
+Use Outbox for external effects, not network requests in audit_hook.
 """
 
 from collections.abc import Callable, Mapping
