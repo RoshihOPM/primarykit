@@ -125,3 +125,21 @@ uv run python scripts/new_project.py ../company-stats --name company-stats --app
 ```
 
 Statistics adds **no database tables**, and no extra required Catalog/Inventory/Organizations modules. Its local `manifest.py` auto-registers the personal, conditional tenant, and system statistics routes. Installed modules with `statistics.py` provide their own safe metric definitions. Personal and tenant mode providers respect the project's pinned schema choice. See [Statistics architecture](statistics-architecture.md).
+
+## Presets, dry run and compatibility diff
+
+Available starter profiles: `minimal`, `crm`, `marketplace`, `saas`,
+`commerce`. Presets select modules, **not** business logic. The commerce
+preset is a demonstration only: no payment provider, tax engine or stock
+reservation orchestration is configured.
+
+```bash
+python scripts/new_project.py --list-presets
+python scripts/new_project.py ../my-api --name my-api --preset crm --dry-run
+python scripts/new_project.py ../my-api --name my-api --preset crm --apps webhooks
+python scripts/module_upgrade.py --project ../my-api --json
+```
+
+`--dry-run` prints the dependency closure, schema modes and planned migrations
+without creating a project or writing any file. Real generation records baseline
+file digests used by the **read-only** upgrade checker.

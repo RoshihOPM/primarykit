@@ -39,7 +39,8 @@ uv run python manage.py runserver
 | [Каталог модулей](docs/modules.md) | Что даёт каждая папка, обязательные и необязательные зависимости |
 | [Как устроена репа](docs/repository-guide.md) | Архитектура, manifest, Django/DDD, переносимость |
 | [Создание и подключение модулей](docs/module-development.md) | Пошаговая разработка своего Django-приложения |
-| [Генератор проектов](docs/project-generator.md) | CLI-аргументы, выбор модулей, миграции, `--git-init` |
+| [Генератор проектов](docs/project-generator.md) | CLI-аргументы, пресеты, dry-run, миграции, `--git-init` |
+| [Module upgrade check](docs/module-upgrades.md) | Offline diff и анализ риска без перезаписи клиентских файлов |
 | [Commerce: Orders, Sales, Payments](docs/commerce-architecture.md) | API, состояния, деньги, инварианты, безопасность |
 | [Фоновые задачи](docs/tasks-architecture.md) | Очередь, обработчики клиента, worker, ограничения доставки |
 | [Transactional Outbox](docs/outbox-architecture.md) | Durable business events в PostgreSQL Tasks, idempotent dispatch |

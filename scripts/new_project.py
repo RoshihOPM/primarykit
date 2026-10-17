@@ -2,6 +2,7 @@
 """Copy a standalone PrimaryKit Django backend with selected optional apps."""
 
 import argparse
+import hashlib
 import json
 import re
 import shutil
@@ -17,6 +18,7 @@ if __package__ in (None, ""):
 
 from apps.core.doctor import inspect_project  # noqa: E402
 from apps.core.module_registry import dependency_closure, discover_modules  # noqa: E402
+from scripts.presets import PRESETS  # noqa: E402
 
 REQUIRED_APPS = frozenset({"core", "users", "notifications"})
 AVAILABLE_MODULES = discover_modules()
@@ -71,20 +73,51 @@ def _replace_one(path: Path, old: str, new: str):
     path.write_text(source.replace(old, new), encoding="utf-8")
 
 
+def project_plan(*, requested_apps: set[str], preset: str | None = None) -> dict:
+    """Resolve a preset without changing either the kit or the destination."""
+    if preset is not None and preset not in PRESETS:
+        raise ValueError(f"Unknown preset: {preset}")
+    apps = set(requested_apps) | set(PRESETS[preset]["apps"] if preset else ())
+    if not apps <= OPTIONAL_APPS:
+        raise ValueError("Unknown optional apps: " + ", ".join(sorted(apps - OPTIONAL_APPS)))
+    selected = dependency_closure(AVAILABLE_MODULES, set(REQUIRED_APPS) | apps)
+    return {
+        "preset": preset,
+        "requested_apps": sorted(apps),
+        "included_apps": sorted(selected),
+        "catalog_mode": "tenant" if {"catalog", "organizations"} <= selected else "standalone",
+        "inventory_mode": (
+            "tenant" if {"inventory", "catalog", "organizations"} <= selected else "standalone"
+        ),
+        "migrations": [app for app in MIGRATION_APPS if app in selected],
+    }
+
+
+def _module_fingerprints(root: Path, selected: set[str]) -> dict[str, dict[str, str]]:
+    """Persist initial module file digests, not client secrets or file contents."""
+    result = {}
+    for name in sorted(selected):
+        folder = root / "apps" / name
+        result[name] = {
+            file.relative_to(folder).as_posix(): hashlib.sha256(file.read_bytes()).hexdigest()
+            for file in sorted(folder.rglob("*.py"))
+            if "migrations" not in file.parts and "__pycache__" not in file.parts
+        }
+    return result
+
+
 def create_project(
     destination: Path,
     *,
     name: str,
     optional_apps: set[str] | frozenset[str] = frozenset(),
     git_init: bool = False,
+    preset: str | None = None,
 ) -> Path:
     """Copy the template. No network, package install, migrations or deployment."""
     if not re.fullmatch(r"[a-z][a-z0-9-]{1,62}", name):
         raise ValueError("Project name must be lowercase kebab-case, 2-63 characters")
-    if not set(optional_apps).issubset(OPTIONAL_APPS):
-        raise ValueError(
-            "Unknown optional apps: " + ", ".join(sorted(set(optional_apps) - OPTIONAL_APPS))
-        )
+    plan = project_plan(requested_apps=set(optional_apps), preset=preset)
 
     target = destination.expanduser().resolve()
     root = SOURCE_ROOT.resolve()
@@ -93,7 +126,7 @@ def create_project(
     if target.exists():
         raise FileExistsError(f"Destination already exists: {target}")
 
-    selected = dependency_closure(AVAILABLE_MODULES, set(REQUIRED_APPS) | set(optional_apps))
+    selected = set(plan["included_apps"])
     target.parent.mkdir(parents=True, exist_ok=True)
     try:
         shutil.copytree(root, target, ignore=_ignore_excluded)
@@ -130,10 +163,8 @@ def create_project(
 
         # Pin app schemas before the first migration; later module copies cannot
         # implicitly switch personal data into tenant-owned tables.
-        catalog_mode = "tenant" if {"catalog", "organizations"} <= selected else "standalone"
-        inventory_mode = (
-            "tenant" if {"inventory", "catalog", "organizations"} <= selected else "standalone"
-        )
+        catalog_mode = plan["catalog_mode"]
+        inventory_mode = plan["inventory_mode"]
         if catalog_mode != "tenant":
             _replace_one(
                 target / "config/settings/base.py",
@@ -173,7 +204,9 @@ def create_project(
         metadata = {
             "origin": "RoshihOPM/primarykit",
             "source_version": source_version,
+            "preset": preset,
             "included_apps": sorted(selected),
+            "module_fingerprints": _module_fingerprints(target, selected),
             "migration_policy": "Generate once and commit all client migrations",
         }
         (target / "primarykit-origin.json").write_text(
@@ -186,6 +219,7 @@ def create_project(
             "and deployments. The source constructor is not needed at runtime.\n"
             "Optional primarykit-origin.json is only provenance metadata and may be deleted.\n\n"
             f"## Selected apps\n\n{', '.join(sorted(selected))}\n\n"
+            + (f"Preset: {preset}\n\n" if preset else "")
             "## Development startup\n\n"
             "```bash\n"
             "cp .env.example .env\n"
@@ -266,18 +300,30 @@ def main():
     parser = argparse.ArgumentParser(
         description="Create independent Django backend from PrimaryKit"
     )
-    parser.add_argument("destination", type=Path, help="New project directory (must not exist)")
-    parser.add_argument("--name", required=True, help="New pyproject name, e.g. auto-market")
+    parser.add_argument("destination", type=Path, nargs="?", help="New project directory")
+    parser.add_argument("--name", help="New pyproject name, e.g. auto-market")
+    parser.add_argument("--preset", choices=sorted(PRESETS), help="Optional starter profile")
+    parser.add_argument("--list-presets", action="store_true", help="Show available profiles")
+    parser.add_argument("--dry-run", action="store_true", help="Print plan without any filesystem writes")
     parser.add_argument("--apps", nargs="*", choices=sorted(OPTIONAL_APPS), default=[])
     parser.add_argument("--git-init", action="store_true", help="Initialize new Git main branch")
     args = parser.parse_args()
+    if args.list_presets:
+        print(json.dumps(PRESETS, indent=2, ensure_ascii=False))
+        return
+    if not args.name or args.destination is None:
+        parser.error("destination and --name are required unless --list-presets is set")
+    if args.dry_run:
+        print(json.dumps(project_plan(requested_apps=set(args.apps), preset=args.preset), indent=2))
+        return
     target = create_project(
         args.destination,
         name=args.name,
         optional_apps=set(args.apps),
         git_init=args.git_init,
+        preset=args.preset,
     )
-    copied = dependency_closure(AVAILABLE_MODULES, set(REQUIRED_APPS) | set(args.apps))
+    copied = set(project_plan(requested_apps=set(args.apps), preset=args.preset)["included_apps"])
     print(f"Created {target} with apps: {', '.join(sorted(copied))}")
     print(
         "Next: run python -m apps.core.doctor --strict, configure .env, "
