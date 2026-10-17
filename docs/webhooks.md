@@ -46,6 +46,7 @@ Client adapter:
 ```python
 from apps.webhooks.outbound import deliver
 
+
 def publish_lead_created(body, *, event_id):
     deliver(event_type="lead.created", data=body, event_id=event_id)
 ```
