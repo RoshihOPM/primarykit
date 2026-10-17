@@ -15,6 +15,7 @@
 6. **[Orders, Sales и Payments](commerce-architecture.md)** — жизненный цикл, деньги, схема API, что НЕ делает платежный модуль.
 7. **[Tasks](tasks-architecture.md)** — встроенная переносимая очередь, отдельный worker, ограничения at-least-once.
 7a. **[Outbox](outbox-architecture.md)** — durable events в одной транзакции с бизнес-данными.
+7b. **[Webhooks](webhooks.md)** — HMAC-подписанные входящие/исходящие интеграции.
 8. **[Redis Cache](redis-cache.md)** — опциональный кэш и правила namespace, инвалидации и Redis.
 8a. **[Rate Limiting](rate-limiting.md)** — Redis-лимиты авторизации между воркерами.
 8b. **[Observability](observability.md)** — server-side request IDs и JSON-логи.
