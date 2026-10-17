@@ -17,6 +17,7 @@ from scripts.new_project import create_project
         {"payments"},
         {"tasks"},
         {"cache"},
+        {"rate_limit"},
         {"celery_tasks"},
         {"cache", "celery_tasks"},
         {"orders", "sales", "payments"},
@@ -56,6 +57,7 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
         "payments",
         "tasks",
         "cache",
+        "rate_limit",
         "celery_tasks",
     ):
         assert (target / "apps" / app).exists() == (app in selected)
@@ -86,7 +88,7 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
     assert not (target / ".env").exists()
     assert (target / ".env.example").exists()
     assert (target / "compose.seaweedfs.yaml").exists() == ("storage" in apps)
-    assert (target / "compose.redis.yaml").exists() == bool({"cache", "celery_tasks"} & apps)
+    assert (target / "compose.redis.yaml").exists() == bool({"cache", "celery_tasks", "rate_limit"} & apps)
     assert (target / "compose.celery.yaml").exists() == ("celery_tasks" in apps)
     assert (target / "compose.celery.prod.yaml").exists() == ("celery_tasks" in apps)
     if "cache" in apps:
