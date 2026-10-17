@@ -2,7 +2,9 @@
 
 from rest_framework.exceptions import NotFound
 
-from .policy import FULL_ACCESS, WRITERS, TenantPolicy
+from .policy import FULL_ACCESS as FULL_ACCESS
+from .policy import WRITERS as WRITERS
+from .policy import TenantPolicy
 
 
 def organization_scope(*, user, org_id):
