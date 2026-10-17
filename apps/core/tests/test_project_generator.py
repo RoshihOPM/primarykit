@@ -18,6 +18,7 @@ from scripts.new_project import create_project
         {"tasks"},
         {"observability"},
         {"outbox"},
+        {"webhooks"},
         {"cache"},
         {"rate_limit"},
         {"celery_tasks"},
@@ -60,6 +61,7 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
         "tasks",
         "observability",
         "outbox",
+        "webhooks",
         "cache",
         "rate_limit",
         "celery_tasks",
@@ -122,6 +124,7 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
         + (" sales" if "sales" in selected else "")
         + (" payments" if "payments" in selected else "")
         + (" tasks" if "tasks" in selected else "")
+        + (" webhooks" if "webhooks" in selected else "")
     )
     assert workflows.count(f"makemigrations {migration_apps} --noinput") == 2
     if "storage" in selected:

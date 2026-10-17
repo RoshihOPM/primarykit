@@ -43,6 +43,7 @@ uv run python manage.py runserver
 | [Commerce: Orders, Sales, Payments](docs/commerce-architecture.md) | API, состояния, деньги, инварианты, безопасность |
 | [Фоновые задачи](docs/tasks-architecture.md) | Очередь, обработчики клиента, worker, ограничения доставки |
 | [Transactional Outbox](docs/outbox-architecture.md) | Durable business events в PostgreSQL Tasks, idempotent dispatch |
+| [Signed Webhooks](docs/webhooks.md) | HMAC, PostgreSQL-защита от повторов и исходящие уведомления |
 | [Redis Cache](docs/redis-cache.md) | Собственный CacheService на redis-py: JSON, Hashes, счётчики и TTL; Django Cache опционален |
 | [Distributed Rate Limiting](docs/rate-limiting.md) | Атомарные Redis-лимиты между Django workers |
 | [Observability](docs/observability.md) | Request IDs, структурированные JSON-логи, длительность запросов |
@@ -61,6 +62,7 @@ uv run python manage.py runserver
 | **core** | Настройки проекта, абстрактные модели, healthcheck, registry |
 | tasks | Внутренняя PostgreSQL-очередь фоновых задач, отдельный worker, повторы и идемпотентность |
 | outbox | События бизнеса внутри транзакций PostgreSQL, доставка через Tasks |
+| webhooks | Подписанные входящие и исходящие Webhooks с replay protection |
 | cache | Native redis-py CacheService (JSON, Hashes и счётчики), необязательный Django Cache bridge |
 | rate_limit | Общие Redis-лимиты login/register/password endpoints |
 | observability | Генерация request IDs и HTTP метрики в JSON-логах |

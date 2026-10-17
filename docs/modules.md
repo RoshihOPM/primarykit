@@ -9,6 +9,7 @@ PrimaryKit распознаёт любую доверенную папку `apps
 | `core` | Соглашения и registry | — | — |
 | `tasks` | Внутренняя очередь, транзакционное добавление и worker | core | — |
 | `outbox` | Транзакционная запись событий и retry delivery через Tasks | core, tasks | — |
+| `webhooks` | HMAC inbound receipts and outbound delivery | core, outbox | — |
 | `cache` | Native redis-py CacheService, JSON, Hashes, counters; optional Django Cache bridge | core | — |
 | `rate_limit` | Redis-backed shared authentication protection | core, cache | — |
 | `observability` | Correlation IDs, structured HTTP access logs | core | — |
