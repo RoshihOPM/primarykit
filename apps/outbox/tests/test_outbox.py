@@ -26,16 +26,23 @@ def test_pure_event_envelope_and_idempotency():
         event_type="lead.created", body={"id": 1}, namespace="org:1", idempotency_key="same"
     )
     assert one == two
-    assert one["event_id"] != validated_envelope(
-        event_type="lead.created", body={"id": 1}, namespace="org:2", idempotency_key="same"
-    )["event_id"]
+    assert (
+        one["event_id"]
+        != validated_envelope(
+            event_type="lead.created", body={"id": 1}, namespace="org:2", idempotency_key="same"
+        )["event_id"]
+    )
     assert delivery_key("lead.created", "customer@example.test").startswith("outbox:")
     assert "customer" not in delivery_key("lead.created", "customer@example.test")
     with pytest.raises(ValueError):
-        validated_envelope(event_type="bad event", body={}, namespace="default", idempotency_key=None)
+        validated_envelope(
+            event_type="bad event", body={}, namespace="default", idempotency_key=None
+        )
     with pytest.raises(ValueError):
         validated_envelope(
-            event_type="lead.created", body={"data": object()}, namespace="default",
+            event_type="lead.created",
+            body={"data": object()},
+            namespace="default",
             idempotency_key=None,
         )
 
@@ -58,11 +65,15 @@ def test_durable_dispatch_and_replay_safe_identity():
     DELIVERED.clear()
     with transaction.atomic():
         one = emit(
-            event_type="lead.created", body={"id": 21}, namespace="org:1",
+            event_type="lead.created",
+            body={"id": 21},
+            namespace="org:1",
             idempotency_key="request-21",
         )
         repeated = emit(
-            event_type="lead.created", body={"id": 21}, namespace="org:1",
+            event_type="lead.created",
+            body={"id": 21},
+            namespace="org:1",
             idempotency_key="request-21",
         )
     assert repeated.id == one.id
@@ -77,7 +88,9 @@ def test_durable_dispatch_and_replay_safe_identity():
     with pytest.raises(ValueError, match="Conflicting"):
         with transaction.atomic():
             emit(
-                event_type="lead.created", body={"id": 22}, namespace="org:1",
+                event_type="lead.created",
+                body={"id": 22},
+                namespace="org:1",
                 idempotency_key="request-21",
             )
 
