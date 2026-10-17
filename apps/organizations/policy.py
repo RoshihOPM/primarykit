@@ -14,9 +14,7 @@ from rest_framework.exceptions import NotFound, PermissionDenied
 from .models import BranchAccess, Membership, Organization
 from .permissions import get_active_membership
 
-WRITERS = frozenset(
-    {Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.MANAGER}
-)
+WRITERS = frozenset({Membership.Role.OWNER, Membership.Role.ADMIN, Membership.Role.MANAGER})
 FULL_ACCESS = frozenset({Membership.Role.OWNER, Membership.Role.ADMIN})
 
 
@@ -105,9 +103,7 @@ class TenantPolicy:
         scoped = queryset.filter(**{organization_field: self.organization})
         if branch_field is None:
             return scoped
-        scoped = scoped.filter(
-            **{f"{branch_field}__organization": self.organization}
-        )
+        scoped = scoped.filter(**{f"{branch_field}__organization": self.organization})
         if active_branches:
             scoped = scoped.filter(**{f"{branch_field}__is_active": True})
         if not self.has_full_access:
