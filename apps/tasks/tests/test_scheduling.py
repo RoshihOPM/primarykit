@@ -67,9 +67,9 @@ def test_calendar_normalization_and_naive_rejected():
 
 
 def test_daily_calendar_and_weekday_filter():
-    assert next_fire_after(
-        after=at(2026, 10, 18, 10), timezone_name="UTC", hour=9, minute=0
-    ) == at(2026, 10, 19, 9)
+    assert next_fire_after(after=at(2026, 10, 18, 10), timezone_name="UTC", hour=9, minute=0) == at(
+        2026, 10, 19, 9
+    )
     # 2026-10-18 is a Sunday: only Mondays can run.
     assert next_fire_after(
         after=at(2026, 10, 18, 10),
@@ -107,9 +107,9 @@ def test_fall_dst_fold_fires_only_first_0130():
         minute=30,
     )
     assert first == at(2026, 11, 1, 5, 30)
-    assert next_fire_after(
-        after=first, timezone_name="America/New_York", hour=1, minute=30
-    ) == at(2026, 11, 2, 6, 30)
+    assert next_fire_after(after=first, timezone_name="America/New_York", hour=1, minute=30) == at(
+        2026, 11, 2, 6, 30
+    )
     assert next_fire_after(
         after=at(2026, 11, 1, 6), timezone_name="America/New_York", hour=1, minute=30
     ) == at(2026, 11, 2, 6, 30)
