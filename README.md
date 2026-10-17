@@ -43,6 +43,7 @@ uv run python manage.py runserver
 | [Commerce: Orders, Sales, Payments](docs/commerce-architecture.md) | API, состояния, деньги, инварианты, безопасность |
 | [Фоновые задачи](docs/tasks-architecture.md) | Очередь, обработчики клиента, worker, ограничения доставки |
 | [Transactional Outbox](docs/outbox-architecture.md) | Durable business events в PostgreSQL Tasks, idempotent dispatch |
+| [Signed Webhooks](docs/webhooks.md) | HMAC, входящие receipts от повторов и исходящая доставка через Outbox |
 | [Redis Cache](docs/redis-cache.md) | Собственный CacheService на redis-py: JSON, Hashes, счётчики и TTL; Django Cache опционален |
 | [Celery + RabbitMQ](docs/celery-rabbitmq.md) | Независимый worker, брокер, необязательные результаты Redis |
 | [Статистика](docs/statistics-architecture.md) | Как бизнес-модули отдают метрики |
@@ -59,6 +60,7 @@ uv run python manage.py runserver
 | **core** | Настройки проекта, абстрактные модели, healthcheck, registry |
 | tasks | Внутренняя PostgreSQL-очередь фоновых задач, отдельный worker, повторы и идемпотентность |
 | outbox | События бизнеса внутри транзакций PostgreSQL, доставка через Tasks |
+| webhooks | Подписанные исходящие/входящие webhook с PostgreSQL deduplication |
 | cache | Native redis-py CacheService (JSON, Hashes и счётчики), необязательный Django Cache bridge |
 | celery_tasks | Отдельный Celery-адаптер с RabbitMQ и необязательным Redis result backend |
 | **users** | JWT, email auth, профиль, восстановление |
