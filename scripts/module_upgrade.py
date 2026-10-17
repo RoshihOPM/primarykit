@@ -27,7 +27,7 @@ def _hashes(folder: Path) -> dict[str, str]:
     return {
         file.relative_to(folder).as_posix(): hashlib.sha256(file.read_bytes()).hexdigest()
         for file in sorted(folder.rglob("*.py"))
-        if "migrations" not in file.parts and "__pycache__" not in file.parts
+        if not {"migrations", "tests", "__pycache__"} & set(file.parts)
     }
 
 

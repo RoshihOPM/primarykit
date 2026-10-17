@@ -4,7 +4,7 @@ PrimaryKit projects are independent copies of source code. Upgrades are **review
 client pull requests**, not automatic `pip update`, database migrations, deployment
 or overwrites of client code.
 
-Newly generated clients record SHA-256 snapshots of copied Python files in
+Newly generated clients record SHA-256 snapshots of copied runtime Python files (excluding tests and migrations) in
 `primarykit-origin.json`. This provenance contains **hashes only**, no secrets,
 and is entirely optional at runtime.
 
