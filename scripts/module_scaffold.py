@@ -26,7 +26,9 @@ def _source_apps(root: Path) -> Path:
     """Refuse to operate on a generated client or arbitrary directory."""
     apps = root / "apps"
     if not (apps / "__init__.py").is_file() or not (root / "scripts/new_project.py").is_file():
-        raise ValueError("Expected a PrimaryKit source checkout with apps/ and scripts/new_project.py")
+        raise ValueError(
+            "Expected a PrimaryKit source checkout with apps/ and scripts/new_project.py"
+        )
     return apps
 
 
@@ -218,9 +220,7 @@ def main(argv: list[str] | None = None) -> int:
         else:
             result = dependency_graph()
             print(
-                json.dumps(result, indent=2)
-                if args.format == "json"
-                else dependency_dot(result),
+                json.dumps(result, indent=2) if args.format == "json" else dependency_dot(result),
                 end="\n" if args.format == "json" else "",
             )
     except (ValueError, FileExistsError, OSError, SyntaxError, KeyError, TypeError) as exc:
