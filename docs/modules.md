@@ -26,6 +26,8 @@ PrimaryKit распознаёт любую доверенную папку `apps
 | `rbac` | Django Groups/Permissions | users | — |
 | `audit` | Неизменяемый журнал | users | — |
 | `storage` | Приватные личные/корпоративные файлы | users, core | organizations, audit |
+| `chat` | Приватные 1:1-диалоги, receipts и TTL | users | organizations, storage, realtime |
+| `realtime` | Опциональный WebSocket ASGI adapter, PostgreSQL event cursor | users | chat |
 | `catalog` | Категории, товары, атрибуты | users | organizations, audit |
 | `inventory` | Склады, SKU, остатки и резервы | users | catalog, organizations, audit |
 | `statistics` | Read-only метрики установленных модулей | users | catalog, inventory, storage, organizations |
@@ -41,6 +43,8 @@ PrimaryKit распознаёт любую доверенную папку `apps
 | --- | --- | --- |
 | Users | `/api/v1/` | JWT/аккаунт |
 | Storage | `/api/v1/files/` | Личные файлы |
+| Chat | `/api/v1/chats/` | Участники приватного диалога |
+| Realtime | `/ws/v1/chats/{dialogue_id}/` | Только участники при явном включении |
 | Organizations | `/api/v1/organizations/` | Организации |
 | Catalog | `/api/v1/catalog/` | Standalone |
 | Inventory | `/api/v1/inventory/` | Standalone |
@@ -81,5 +85,7 @@ uv run python scripts/new_project.py ../b2b-api --name b2b-api \
 - `catalog` и `inventory` standalone не связывают SKU друг с другом автоматически; это разные контексты.
 
 **Важное правило:** `CATALOG_MODE` и `INVENTORY_MODE` фиксируются до первого `makemigrations`. Нельзя менять их у работающей БД простым флагом.
+
+Подробнее о чате и его ограничениях: [Private Chat & Realtime](chat-realtime.md).
 
 Подробнее: [Commerce](commerce-architecture.md), [Statistics](statistics-architecture.md), [Architecture](repository-guide.md).

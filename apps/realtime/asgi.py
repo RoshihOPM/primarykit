@@ -13,7 +13,6 @@ from uuid import UUID
 from asgiref.sync import sync_to_async
 from django.apps import apps as django_apps
 from django.conf import settings
-from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from apps.users.authentication import VerifiedJWTAuthentication
 
@@ -103,7 +102,7 @@ async def websocket_application(scope, receive, send):
         await sync_to_async(_read_events)(
             user_id=user.pk, dialogue_id=dialogue_id, after=after
         )
-    except (asyncio.TimeoutError, ValueError, TypeError, KeyError, Exception) as exc:
+    except Exception:
         # Authentication/authorization errors are intentionally indistinguishable.
         return await _close(send, 4401)
 
