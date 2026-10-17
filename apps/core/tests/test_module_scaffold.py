@@ -129,7 +129,7 @@ def test_scaffold_rejects_invalid_requirements(kit_root, requires):
 def test_graph_json_and_dot_are_deterministic_and_show_optional_edges(kit_root):
     folder = kit_root / "apps" / "core"
     (folder / "manifest.py").write_text(
-        'from apps.core.module_registry import Module\n'
+        "from apps.core.module_registry import Module\n"
         'MODULE = Module(name="core", optional=("notifications", "absent_module"))\n'
     )
     graph = dependency_graph(kit_root)
@@ -207,15 +207,27 @@ def test_source_scaffold_doctor_and_manifest_registry_integration(kit_root):
     env = {**os.environ, "PYTHONPATH": str(kit_root)}
     doctor_result = subprocess.run(
         [sys.executable, "-m", "apps.core.doctor", "--strict", "--json"],
-        cwd=kit_root, env=env, capture_output=True, text=True, check=False,
+        cwd=kit_root,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
     )
     assert doctor_result.returncode == 0, doctor_result.stdout + doctor_result.stderr
     result = subprocess.run(
-        [sys.executable, "-c", "from apps.core.module_registry import discover_modules, resolve_modules; "
-         "modules=discover_modules(); assert 'reviews' in modules; "
-         "assert modules['reviews'].requires == ('users',); "
-         "resolve_modules(modules)"],
-        cwd=kit_root, env=env, capture_output=True, text=True, check=False,
+        [
+            sys.executable,
+            "-c",
+            "from apps.core.module_registry import discover_modules, resolve_modules; "
+            "modules=discover_modules(); assert 'reviews' in modules; "
+            "assert modules['reviews'].requires == ('users',); "
+            "resolve_modules(modules)",
+        ],
+        cwd=kit_root,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
     )
     assert result.returncode == 0, result.stdout + result.stderr
 
@@ -230,7 +242,9 @@ def test_cli_create_dry_run_and_graph_outputs(kit_root, monkeypatch, capsys):
             name, root=kit_root, requires=requires, dry_run=dry_run
         ),
     )
-    monkeypatch.setattr(module_scaffold, "dependency_graph", lambda *args, **kwargs: original_graph(kit_root))
+    monkeypatch.setattr(
+        module_scaffold, "dependency_graph", lambda *args, **kwargs: original_graph(kit_root)
+    )
     assert module_scaffold.main(["create", "reviews", "--requires", "users", "--dry-run"]) == 0
     assert json.loads(capsys.readouterr().out)["dry_run"] is True
     assert not (kit_root / "apps/reviews").exists()
