@@ -5,6 +5,7 @@ from datetime import timedelta
 from uuid import uuid4
 
 import pytest
+from django.apps import apps as django_apps
 from django.core.management import call_command
 from django.db import connection, connections
 from django.test import override_settings
@@ -117,6 +118,8 @@ def test_invalid_recipient_and_unverified_or_disabled_identity():
 
 
 def test_tenant_boundaries_and_membership_revocation():
+    if not django_apps.is_installed("apps.organizations"):
+        pytest.skip("Tenant integration requires optional Organizations.")
     from apps.organizations.models import Membership, Organization
 
     alice, a = account("tenant-chat-a@example.test")
@@ -146,6 +149,8 @@ def test_tenant_boundaries_and_membership_revocation():
 
 
 def test_attachment_owner_scope_and_revocation():
+    if not django_apps.is_installed("apps.storage"):
+        pytest.skip("Attachment integration requires optional Storage.")
     from apps.storage.models import StoredFile
 
     alice, a = account("att-a@example.test")

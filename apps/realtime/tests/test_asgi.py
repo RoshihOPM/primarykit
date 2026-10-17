@@ -4,10 +4,10 @@ import asyncio
 import json
 
 import pytest
+from django.apps import apps as django_apps
 from django.test import override_settings
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from apps.chat.services import create_dialogue, send_message
 from apps.realtime.asgi import websocket_application
 from apps.users.models import User
 
@@ -37,6 +37,8 @@ async def connection(path, frames, *, query=b"", origin=None):
 
 @override_settings(REALTIME_ENABLED=True, REALTIME_ALLOWED_ORIGINS=("https://example.test",))
 def test_ws_rejects_foreign_origins_and_tokens_in_query():
+    if not django_apps.is_installed("apps.chat"):
+        pytest.skip("Chat module is not installed.")
     path = "/ws/v1/chats/00000000-0000-0000-0000-000000000001/"
     assert asyncio.run(connection(path, [], origin="https://evil.test"))[-1]["code"] == 4403
     assert asyncio.run(connection(path, [], query=b"token=bad"))[-1]["code"] == 4400
@@ -45,11 +47,14 @@ def test_ws_rejects_foreign_origins_and_tokens_in_query():
 @override_settings(REALTIME_ENABLED=False)
 def test_ws_requires_opt_in():
     path = "/ws/v1/chats/00000000-0000-0000-0000-000000000001/"
-    assert asyncio.run(connection(path, []))[-1]["code"] == 4403
+    expected = 4403 if django_apps.is_installed("apps.chat") else 4404
+    assert asyncio.run(connection(path, []))[-1]["code"] == expected
 
 
 @override_settings(REALTIME_ENABLED=True)
 def test_ws_anonymous_connection_never_gets_ready():
+    if not django_apps.is_installed("apps.chat"):
+        pytest.skip("Chat module is not installed.")
     path = "/ws/v1/chats/00000000-0000-0000-0000-000000000001/"
     frames = [
         {"type": "websocket.connect"},
@@ -65,6 +70,10 @@ def test_ws_anonymous_connection_never_gets_ready():
 
 @override_settings(REALTIME_ENABLED=True)
 def test_ws_verified_scope_replay_and_other_user_denial():
+    if not django_apps.is_installed("apps.chat"):
+        pytest.skip("Chat module is not installed.")
+    from apps.chat.services import create_dialogue, send_message
+
     user = User.objects.create_user(
         email="ws-member-a@example.test", password="long-password-728", email_verified=True
     )
@@ -105,3 +114,10 @@ def test_ws_verified_scope_replay_and_other_user_denial():
     blocked = asyncio.run(connection(path, frames(stranger)))
     assert blocked[-1]["code"] == 4401
     assert all(item["type"] != "websocket.send" for item in blocked)
+
+
+def test_realtime_without_chat_fails_closed():
+    if django_apps.is_installed("apps.chat"):
+        pytest.skip("Real-time only project required.")
+    path = "/ws/v1/chats/00000000-0000-0000-0000-000000000001/"
+    assert asyncio.run(connection(path, []))[-1]["code"] == 4404
