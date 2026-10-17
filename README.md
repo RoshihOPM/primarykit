@@ -51,6 +51,7 @@ uv run python manage.py runserver
 | [Статистика](docs/statistics-architecture.md) | Как бизнес-модули отдают метрики |
 | [Feature Flags](docs/feature-flags.md) | Безопасные feature toggles, не заменяют авторизацию |
 | [Search](docs/search.md) | PostgreSQL-поиск с явной областью доступа и лимитами |
+| [CSV Exchange](docs/csv-exchange.md) | CSV injection, валидация, лимиты, клиентские транзакции |
 | [Совместимость модулей](docs/module-compatibility.md) | Контракты, версионирование и ручной перенос исправлений |
 | [Production runbook](docs/production-operations.md) | Nginx, резервные копии, релизы и восстановление |
 | [Развёртывание](docs/deployment.md) | Dev/prod, nginx, переменные и эксплуатационные ограничения |
@@ -66,6 +67,7 @@ uv run python manage.py runserver
 | **core** | Настройки проекта, абстрактные модели, healthcheck, registry |
 | feature_flags | Локальные feature flags без БД и внешних сервисов, выключены по умолчанию |
 | search | PostgreSQL full-text search с явным server-side owner/tenant scope |
+| csv_exchange | Безопасный ограниченный CSV import/export без изменения БД |
 | tasks | Внутренняя PostgreSQL-очередь фоновых задач, отдельный worker, повторы и идемпотентность |
 | outbox | События бизнеса внутри транзакций PostgreSQL, доставка через Tasks |
 | webhooks | Подписанные входящие и исходящие Webhooks с replay protection |
