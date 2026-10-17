@@ -55,6 +55,7 @@ uv run python manage.py runserver
 | [CSV Exchange](docs/csv-exchange.md) | CSV injection, валидация, лимиты, клиентские транзакции |
 | [API Keys](docs/api-keys.md) | Ключи для machine-to-machine авторизации с проверкой permissions |
 | [Idempotency](docs/idempotency.md) | Транзакционные ключи от повторных запросов |
+| [HTTP Integrations](docs/http-integrations.md) | Безопасные настройки исходящих HTTPS-запросов |
 | [Совместимость модулей](docs/module-compatibility.md) | Контракты, версионирование и ручной перенос исправлений |
 | [Production runbook](docs/production-operations.md) | Nginx, резервные копии, релизы и восстановление |
 | [Развёртывание](docs/deployment.md) | Dev/prod, nginx, переменные и эксплуатационные ограничения |
@@ -73,6 +74,7 @@ uv run python manage.py runserver
 | csv_exchange | Безопасный ограниченный CSV import/export без изменения БД |
 | api_keys | Хешированные API-ключи со scopes, истечением, ротацией и отзывом |
 | idempotency | Однократное выполнение PostgreSQL-команд и повторное получение результата |
+| http_integrations | Контролируемый HTTPS-клиент сторонних API, retries, ограничения ответов |
 | tasks | Внутренняя PostgreSQL-очередь фоновых задач, отдельный worker, повторы и идемпотентность |
 | outbox | События бизнеса внутри транзакций PostgreSQL, доставка через Tasks |
 | webhooks | Подписанные входящие и исходящие Webhooks с replay protection |
