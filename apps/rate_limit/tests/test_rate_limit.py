@@ -27,15 +27,21 @@ class FakeService:
 def test_atomic_counter_namespaces_and_retries(monkeypatch):
     client = FakeRedis()
     monkeypatch.setattr("apps.rate_limit.services.get_cache_service", lambda: FakeService(client))
-    assert check_limit(scope="login", identity="ip:10.1.1.1", max_requests=2, window_seconds=60) == (
+    assert check_limit(
+        scope="login", identity="ip:10.1.1.1", max_requests=2, window_seconds=60
+    ) == (
         True,
         None,
     )
-    assert check_limit(scope="login", identity="ip:10.1.1.1", max_requests=2, window_seconds=60) == (
+    assert check_limit(
+        scope="login", identity="ip:10.1.1.1", max_requests=2, window_seconds=60
+    ) == (
         True,
         None,
     )
-    assert check_limit(scope="login", identity="ip:10.1.1.1", max_requests=2, window_seconds=60) == (
+    assert check_limit(
+        scope="login", identity="ip:10.1.1.1", max_requests=2, window_seconds=60
+    ) == (
         False,
         60,
     )
@@ -56,8 +62,7 @@ def test_network_error_fail_closed(monkeypatch):
         def eval(self, *args):
             raise ConnectionError("do not leak secrets")
 
-    monkeypatch.setattr("apps.rate_limit.services.get_cache_service",
-                        lambda: FakeService(Broken()))
+    monkeypatch.setattr("apps.rate_limit.services.get_cache_service", lambda: FakeService(Broken()))
     with pytest.raises(RateLimiterUnavailable, match="temporarily unavailable"):
         check_limit(scope="login", identity="ip:1.1.1.1", max_requests=1, window_seconds=60)
 
