@@ -138,7 +138,7 @@ def test_register_is_idempotent_and_namespaced_without_reset():
 
 @pytest.mark.django_db
 @override_settings(BACKGROUND_JOB_HANDLERS=HANDLERS)
-def test_due_firing_into_existing_queue_and_run_worker():
+def test_due_firing_into_existing_queue_and_run_worker(monkeypatch):
     from apps.tasks.tests.test_jobs import RESULTS
 
     RESULTS.clear()
@@ -152,6 +152,7 @@ def test_due_firing_into_existing_queue_and_run_worker():
     assert job.available_at == at(2026, 10, 18, 9)
     assert job.max_attempts == 2
     assert job.idempotency_key.startswith(f"schedule:{definition.pk.hex}:")
+    monkeypatch.setattr("apps.tasks.services.timezone.now", lambda: at(2026, 10, 18, 10))
     assert run_next() is True
     job.refresh_from_db()
     assert job.status == BackgroundJob.Status.SUCCEEDED
