@@ -33,12 +33,8 @@ def tenants():
     membership = Membership.objects.create(
         organization=first, user=writer, role=Membership.Role.MANAGER
     )
-    first_branch = Branch.objects.create(
-        organization=first, code="first", name="First branch"
-    )
-    other_branch = Branch.objects.create(
-        organization=first, code="other", name="Other branch"
-    )
+    first_branch = Branch.objects.create(organization=first, code="first", name="First branch")
+    other_branch = Branch.objects.create(organization=first, code="other", name="Other branch")
     foreign_branch = Branch.objects.create(
         organization=second, code="foreign", name="Foreign branch"
     )
@@ -85,12 +81,8 @@ def test_disabled_user_membership_and_organization_fail_closed(tenants):
 
 
 def test_policy_scopes_list_detail_and_requires_explicit_organization_field(tenants):
-    policy = TenantPolicy.resolve(
-        user=tenants["writer"], organization_id=tenants["first"].pk
-    )
-    queryset = policy.scope_queryset(
-        Branch.objects.all(), organization_field="organization"
-    )
+    policy = TenantPolicy.resolve(user=tenants["writer"], organization_id=tenants["first"].pk)
+    queryset = policy.scope_queryset(Branch.objects.all(), organization_field="organization")
     assert set(queryset.values_list("pk", flat=True)) == {
         tenants["first_branch"].pk,
         tenants["other_branch"].pk,
@@ -101,9 +93,7 @@ def test_policy_scopes_list_detail_and_requires_explicit_organization_field(tena
 
 
 def test_branch_list_and_detail_require_grant_and_matching_tenant(tenants):
-    policy = TenantPolicy.resolve(
-        user=tenants["writer"], organization_id=tenants["first"].pk
-    )
+    policy = TenantPolicy.resolve(user=tenants["writer"], organization_id=tenants["first"].pk)
     granted = tenants["first_branch"]
     ungranted = tenants["other_branch"]
     foreign = tenants["foreign_branch"]
@@ -124,9 +114,7 @@ def test_branch_list_and_detail_require_grant_and_matching_tenant(tenants):
 
 
 def test_inactive_branch_and_revoked_grant_are_not_accessible(tenants):
-    policy = TenantPolicy.resolve(
-        user=tenants["writer"], organization_id=tenants["first"].pk
-    )
+    policy = TenantPolicy.resolve(user=tenants["writer"], organization_id=tenants["first"].pk)
     branch = tenants["first_branch"]
     branch.is_active = False
     branch.save(update_fields=["is_active"])
@@ -146,9 +134,7 @@ def test_inactive_branch_and_revoked_grant_are_not_accessible(tenants):
 
 def test_members_cannot_write_and_owners_can_read_any_branch(tenants):
     membership = tenants["membership"]
-    policy = TenantPolicy.resolve(
-        user=tenants["writer"], organization_id=tenants["first"].pk
-    )
+    policy = TenantPolicy.resolve(user=tenants["writer"], organization_id=tenants["first"].pk)
     policy.require_write()
     membership.role = Membership.Role.MEMBER
     membership.save(update_fields=["role"])
@@ -158,9 +144,7 @@ def test_members_cannot_write_and_owners_can_read_any_branch(tenants):
         ).require_write()
     membership.role = Membership.Role.OWNER
     membership.save(update_fields=["role"])
-    policy = TenantPolicy.resolve(
-        user=tenants["writer"], organization_id=tenants["first"].pk
-    )
+    policy = TenantPolicy.resolve(user=tenants["writer"], organization_id=tenants["first"].pk)
     policy.require_branch(branch=tenants["other_branch"])
     with pytest.raises(NotFound):
         policy.require_branch(branch=tenants["foreign_branch"])
