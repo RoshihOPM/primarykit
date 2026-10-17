@@ -23,9 +23,7 @@ def only_postgres():
 
 
 def member(email):
-    return User.objects.create_user(
-        email=email, password="Long-password-98", email_verified=True
-    )
+    return User.objects.create_user(email=email, password="Long-password-98", email_verified=True)
 
 
 def period():
@@ -39,8 +37,12 @@ def test_simultaneous_consumption_cannot_overspend():
     actor = member("quota-racer@tests.test")
     start, end = period()
     policy = provision_quota(
-        scope="owner", scope_id=actor.pk, code="jobs",
-        period_start=start, period_end=end, limit_units=1,
+        scope="owner",
+        scope_id=actor.pk,
+        code="jobs",
+        period_start=start,
+        period_end=end,
+        limit_units=1,
     )
     barrier = Barrier(2)
 
@@ -69,8 +71,12 @@ def test_simultaneous_duplicate_event_returns_one_replay():
     actor = member("quota-replay-racer@tests.test")
     start, end = period()
     policy = provision_quota(
-        scope="owner", scope_id=actor.pk, code="jobs",
-        period_start=start, period_end=end, limit_units=3,
+        scope="owner",
+        scope_id=actor.pk,
+        code="jobs",
+        period_start=start,
+        period_end=end,
+        limit_units=3,
     )
     barrier = Barrier(2)
 
@@ -103,8 +109,12 @@ def test_concurrent_provisioning_rejects_overlapping_windows():
             barrier.wait(timeout=15)
             try:
                 provision_quota(
-                    scope="owner", scope_id=actor.pk, code="jobs",
-                    period_start=start, period_end=end, limit_units=4,
+                    scope="owner",
+                    scope_id=actor.pk,
+                    code="jobs",
+                    period_start=start,
+                    period_end=end,
+                    limit_units=4,
                 )
                 return "ok"
             except QuotaConflict:
@@ -135,17 +145,22 @@ def test_tenant_scope_membership_and_deactivation_idor():
     Membership.objects.create(organization=other, user=outsider, role="owner")
     start, end = period()
     policy = provision_quota(
-        scope="tenant", scope_id=organization.pk, code="exports",
-        period_start=start, period_end=end, limit_units=4,
+        scope="tenant",
+        scope_id=organization.pk,
+        code="exports",
+        period_start=start,
+        period_end=end,
+        limit_units=4,
     )
     for actor in (outsider, superuser):
         with pytest.raises(NotFound):
             consume_usage(actor=actor, policy_id=policy.id, event_key="steal")
         with pytest.raises(NotFound):
             get_quota_status(actor=actor, policy_id=policy.id)
-    assert consume_usage(
-        actor=owner, policy_id=policy.id, event_key="own", units=2
-    ).remaining_units == 2
+    assert (
+        consume_usage(actor=owner, policy_id=policy.id, event_key="own", units=2).remaining_units
+        == 2
+    )
     membership = Membership.objects.get(organization=organization, user=owner)
     membership.is_active = False
     membership.save(update_fields=["is_active"])
@@ -154,6 +169,10 @@ def test_tenant_scope_membership_and_deactivation_idor():
     assert UsageCounter.objects.get(policy=policy).used_units == 2
     with pytest.raises(QuotaRuleError):
         provision_quota(
-            scope="tenant", scope_id=uuid4(), code="exports",
-            period_start=start, period_end=end, limit_units=1,
+            scope="tenant",
+            scope_id=uuid4(),
+            code="exports",
+            period_start=start,
+            period_end=end,
+            limit_units=1,
         )

@@ -39,7 +39,8 @@ def test_idempotency_key_validation(invalid):
 
 def test_json_snapshot_metadata_bounds_and_serialization():
     assert normalize_metadata({"tier": "example", "revision": 1}) == {
-        "revision": 1, "tier": "example"
+        "revision": 1,
+        "tier": "example",
     }
     for invalid in ({"a": float("nan")}, {"x": object()}, {"x": "y" * 5000}, []):
         with pytest.raises(QuotaRuleError):
@@ -54,14 +55,20 @@ def test_start_inclusive_end_and_expiration_exclusive():
     assert is_in_window(now=start, start=start, end=end, expires_at=expires)
     assert not is_in_window(now=expires, start=start, end=end, expires_at=expires)
     assert not is_in_window(now=end, start=start, end=end, expires_at=None)
-    assert not is_in_window(now=start - timedelta(microseconds=1), start=start,
-                            end=end, expires_at=None)
+    assert not is_in_window(
+        now=start - timedelta(microseconds=1), start=start, end=end, expires_at=None
+    )
 
 
 def test_invalid_timestamps_fail_closed():
     start = datetime(2026, 10, 1, tzinfo=UTC)
     end = start + timedelta(days=1)
-    for args in ((end, start, None), (start, start, None), (start.replace(tzinfo=None),
-                 end, None), (start, end, start), (start, end, start.replace(tzinfo=None))):
+    for args in (
+        (end, start, None),
+        (start, start, None),
+        (start.replace(tzinfo=None), end, None),
+        (start, end, start),
+        (start, end, start.replace(tzinfo=None)),
+    ):
         with pytest.raises(QuotaRuleError):
             validate_window(*args)

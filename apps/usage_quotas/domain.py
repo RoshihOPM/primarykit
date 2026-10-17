@@ -44,9 +44,7 @@ def validate_event_key(key: str) -> str:
 def validate_window(start: datetime, end: datetime, expires_at: datetime | None) -> None:
     for value in (start, end, expires_at):
         if value is not None and (
-            not isinstance(value, datetime)
-            or value.tzinfo is None
-            or value.utcoffset() is None
+            not isinstance(value, datetime) or value.tzinfo is None or value.utcoffset() is None
         ):
             raise QuotaRuleError("Policy timestamps must be timezone-aware.")
     if start >= end:
@@ -69,6 +67,7 @@ def normalize_metadata(metadata: dict | None) -> dict:
     return json.loads(encoded)
 
 
-def is_in_window(*, now: datetime, start: datetime, end: datetime,
-                 expires_at: datetime | None) -> bool:
+def is_in_window(
+    *, now: datetime, start: datetime, end: datetime, expires_at: datetime | None
+) -> bool:
     return start <= now < end and (expires_at is None or now < expires_at)

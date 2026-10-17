@@ -90,8 +90,15 @@ def _snapshot(policy: UsagePolicy) -> dict:
 
 
 def provision_quota(
-    *, scope: str, scope_id, code: str, period_start, period_end,
-    limit_units: int, expires_at=None, metadata=None,
+    *,
+    scope: str,
+    scope_id,
+    code: str,
+    period_start,
+    period_end,
+    limit_units: int,
+    expires_at=None,
+    metadata=None,
 ) -> UsagePolicy:
     """TRUSTED SERVER ONLY. Clients decide their own entitlements and time windows.
 
@@ -107,9 +114,9 @@ def provision_quota(
     validate_window(period_start, period_end, expires_at)
     metadata = normalize_metadata(metadata)
     _require_postgres()
-    lookup = {"owner_id": identifier} if scope == UsagePolicy.Scope.OWNER else {
-        "tenant_id": identifier
-    }
+    lookup = (
+        {"owner_id": identifier} if scope == UsagePolicy.Scope.OWNER else {"tenant_id": identifier}
+    )
     if scope == UsagePolicy.Scope.OWNER:
         if not get_user_model().objects.filter(pk=identifier, is_active=True).exists():
             raise QuotaRuleError("Scope owner does not exist or is inactive.")
@@ -122,20 +129,30 @@ def provision_quota(
             raise QuotaRuleError("Tenant does not exist or is inactive.")
     lock_key = int.from_bytes(
         hashlib.sha256(f"{scope}:{identifier}:{code}".encode()).digest()[:8],
-        "big", signed=True,
+        "big",
+        signed=True,
     )
     with transaction.atomic():
         with connection.cursor() as cursor:
             cursor.execute("SELECT pg_advisory_xact_lock(%s)", [lock_key])
         overlapping = UsagePolicy.objects.filter(
-            scope=scope, code=code, period_start__lt=period_end,
-            period_end__gt=period_start, **lookup,
+            scope=scope,
+            code=code,
+            period_start__lt=period_end,
+            period_end__gt=period_start,
+            **lookup,
         ).exists()
         if overlapping:
             raise QuotaConflict("Overlapping policy windows are not permitted.")
         policy = UsagePolicy.objects.create(
-            scope=scope, code=code, period_start=period_start, period_end=period_end,
-            expires_at=expires_at, limit_units=limit_units, metadata=metadata, **lookup,
+            scope=scope,
+            code=code,
+            period_start=period_start,
+            period_end=period_end,
+            expires_at=expires_at,
+            limit_units=limit_units,
+            metadata=metadata,
+            **lookup,
         )
         UsageCounter.objects.create(policy=policy)
         return policy
@@ -149,8 +166,12 @@ def get_quota_status(*, actor, policy_id) -> UsageResult:
     _authorized(actor=actor, policy=policy)
     used = UsageCounter.objects.get(policy=policy).used_units
     return UsageResult(
-        policy.id, policy.code, used, policy.limit_units,
-        policy.limit_units - used, False,
+        policy.id,
+        policy.code,
+        used,
+        policy.limit_units,
+        policy.limit_units - used,
+        False,
     )
 
 
@@ -174,9 +195,14 @@ def find_current_quota(*, actor, code: str, tenant_id=None) -> UsagePolicy:
             raise NotFound()
         get_active_membership(user=actor, organization=org)
         lookup = {"scope": UsagePolicy.Scope.TENANT, "tenant_id": identifier}
-    policies = list(UsagePolicy.objects.filter(
-        code=code, period_start__lte=now, period_end__gt=now, **lookup,
-    ).filter(Q(expires_at__isnull=True) | Q(expires_at__gt=now))[:2])
+    policies = list(
+        UsagePolicy.objects.filter(
+            code=code,
+            period_start__lte=now,
+            period_end__gt=now,
+            **lookup,
+        ).filter(Q(expires_at__isnull=True) | Q(expires_at__gt=now))[:2]
+    )
     if not policies:
         raise NotFound()
     if len(policies) > 1:
@@ -195,9 +221,9 @@ def consume_usage(*, actor, policy_id, event_key: str, units: int = 1) -> UsageR
     event_key = validate_event_key(event_key)
     _require_postgres()
     with transaction.atomic():
-        policy = UsagePolicy.objects.select_for_update().filter(
-            pk=_parse_policy_id(policy_id)
-        ).first()
+        policy = (
+            UsagePolicy.objects.select_for_update().filter(pk=_parse_policy_id(policy_id)).first()
+        )
         if policy is None:
             raise NotFound()
         _authorized(actor=actor, policy=policy)
@@ -206,28 +232,42 @@ def consume_usage(*, actor, policy_id, event_key: str, units: int = 1) -> UsageR
             if event.units != units:
                 raise QuotaConflict("Event key reused with different units.")
             return UsageResult(
-                policy.id, policy.code, event.used_after, event.policy_snapshot["limit_units"],
-                event.policy_snapshot["limit_units"] - event.used_after, True,
+                policy.id,
+                policy.code,
+                event.used_after,
+                event.policy_snapshot["limit_units"],
+                event.policy_snapshot["limit_units"] - event.used_after,
+                True,
             )
         now = timezone.now()
         if not is_in_window(
-            now=now, start=policy.period_start, end=policy.period_end,
+            now=now,
+            start=policy.period_start,
+            end=policy.period_end,
             expires_at=policy.expires_at,
         ):
             raise QuotaRuleError("Quota window is closed or expired.")
         if units > policy.limit_units:
             raise QuotaExceeded("Quota exceeded.")
         updated = UsageCounter.objects.filter(
-            policy=policy, used_units__lte=policy.limit_units - units,
+            policy=policy,
+            used_units__lte=policy.limit_units - units,
         ).update(used_units=F("used_units") + units)
         if updated != 1:
             raise QuotaExceeded("Quota exceeded.")
         used_after = UsageCounter.objects.values_list("used_units", flat=True).get(policy=policy)
         UsageEvent.objects.create(
-            policy=policy, event_key=event_key, units=units,
-            used_after=used_after, policy_snapshot=_snapshot(policy),
+            policy=policy,
+            event_key=event_key,
+            units=units,
+            used_after=used_after,
+            policy_snapshot=_snapshot(policy),
         )
         return UsageResult(
-            policy.id, policy.code, used_after, policy.limit_units,
-            policy.limit_units - used_after, False,
+            policy.id,
+            policy.code,
+            used_after,
+            policy.limit_units,
+            policy.limit_units - used_after,
+            False,
         )

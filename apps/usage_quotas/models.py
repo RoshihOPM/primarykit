@@ -17,7 +17,10 @@ class UsagePolicy(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     scope = models.CharField(max_length=6, choices=Scope.choices)
     owner = models.ForeignKey(
-        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT,
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
         related_name="usage_policies",
     )
     # No FK to optional Organizations: an owner-only project must be independent.
@@ -58,7 +61,9 @@ class UsagePolicy(models.Model):
         ]
         indexes = [
             models.Index(fields=("owner", "code", "period_end"), name="usage_owner_lookup_idx"),
-            models.Index(fields=("tenant_id", "code", "period_end"), name="usage_tenant_lookup_idx"),
+            models.Index(
+                fields=("tenant_id", "code", "period_end"), name="usage_tenant_lookup_idx"
+            ),
         ]
 
 
@@ -92,8 +97,6 @@ class UsageEvent(models.Model):
             models.UniqueConstraint(
                 fields=("policy", "event_key"), name="usage_policy_event_key_uq"
             ),
-            models.CheckConstraint(
-                condition=Q(units__gt=0), name="usage_positive_event_units_ck"
-            ),
+            models.CheckConstraint(condition=Q(units__gt=0), name="usage_positive_event_units_ck"),
         ]
         indexes = [models.Index(fields=("created_at",), name="usage_event_created_idx")]

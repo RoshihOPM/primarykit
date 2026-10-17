@@ -35,8 +35,13 @@ def window():
 def grant(actor, *, limit=3, **kwargs):
     start, end = window()
     return provision_quota(
-        scope="owner", scope_id=actor.pk, code="requests", period_start=start,
-        period_end=end, limit_units=limit, **kwargs,
+        scope="owner",
+        scope_id=actor.pk,
+        code="requests",
+        period_start=start,
+        period_end=end,
+        limit_units=limit,
+        **kwargs,
     )
 
 
@@ -52,8 +57,12 @@ def test_sqlite_rejects_accounting_without_claiming_atomicity():
     start, end = window()
     with pytest.raises(NotSupportedError):
         provision_quota(
-            scope="owner", scope_id=actor.pk, code="requests",
-            period_start=start, period_end=end, limit_units=2,
+            scope="owner",
+            scope_id=actor.pk,
+            code="requests",
+            period_start=start,
+            period_end=end,
+            limit_units=2,
         )
     with pytest.raises(NotSupportedError):
         consume_usage(actor=actor, policy_id=uuid4(), event_key="event-1")
@@ -83,16 +92,15 @@ def test_consume_replay_conflict_limit_and_immutable_snapshots():
     assert find_current_quota(actor=actor, code="requests").id == policy.id
     first = consume_usage(actor=actor, policy_id=policy.pk, event_key="first", units=2)
     assert (first.used_units, first.remaining_units, first.replayed) == (2, 1, False)
-    assert consume_usage(
-        actor=actor, policy_id=policy.pk, event_key="first", units=2
-    ).replayed
+    assert consume_usage(actor=actor, policy_id=policy.pk, event_key="first", units=2).replayed
     with pytest.raises(QuotaConflict):
         consume_usage(actor=actor, policy_id=policy.pk, event_key="first", units=1)
     with pytest.raises(QuotaExceeded):
         consume_usage(actor=actor, policy_id=policy.pk, event_key="too-big", units=2)
-    assert consume_usage(
-        actor=actor, policy_id=policy.pk, event_key="last", units=1
-    ).remaining_units == 0
+    assert (
+        consume_usage(actor=actor, policy_id=policy.pk, event_key="last", units=1).remaining_units
+        == 0
+    )
     with pytest.raises(QuotaExceeded):
         consume_usage(actor=actor, policy_id=policy.pk, event_key="over", units=1)
     counter = UsageCounter.objects.get(policy=policy)
@@ -110,26 +118,31 @@ def test_expiration_period_boundaries_zero_limit_and_replay_after_close(monkeypa
     start, end = window()
     expire = start + timedelta(minutes=90)
     policy = provision_quota(
-        scope="owner", scope_id=actor.pk, code="limited",
-        period_start=start, period_end=end, limit_units=1, expires_at=expire,
+        scope="owner",
+        scope_id=actor.pk,
+        code="limited",
+        period_start=start,
+        period_end=end,
+        limit_units=1,
+        expires_at=expire,
     )
     before_expiry = start + timedelta(minutes=89)
     monkeypatch.setattr("apps.usage_quotas.services.timezone.now", lambda: before_expiry)
-    assert consume_usage(
-        actor=actor, policy_id=policy.id, event_key="one"
-    ).used_units == 1
+    assert consume_usage(actor=actor, policy_id=policy.id, event_key="one").used_units == 1
     monkeypatch.setattr("apps.usage_quotas.services.timezone.now", lambda: expire)
     with pytest.raises(QuotaRuleError):
         consume_usage(actor=actor, policy_id=policy.id, event_key="new")
-    assert consume_usage(
-        actor=actor, policy_id=policy.id, event_key="one"
-    ).replayed
+    assert consume_usage(actor=actor, policy_id=policy.id, event_key="one").replayed
     with pytest.raises(NotFound):
         find_current_quota(actor=actor, code="limited")
     assert UsageEvent.objects.filter(policy=policy).count() == 1
     zero = provision_quota(
-        scope="owner", scope_id=actor.pk, code="disabled",
-        period_start=start, period_end=end, limit_units=0,
+        scope="owner",
+        scope_id=actor.pk,
+        code="disabled",
+        period_start=start,
+        period_end=end,
+        limit_units=0,
     )
     with pytest.raises(QuotaExceeded):
         consume_usage(actor=actor, policy_id=zero.pk, event_key="zero")
@@ -141,18 +154,29 @@ def test_non_overlapping_periods_and_no_implicit_billing_schedule():
     actor = user("quota-period@tests.test")
     start, end = window()
     first = provision_quota(
-        scope="owner", scope_id=actor.pk, code="credits",
-        period_start=start, period_end=end, limit_units=1,
+        scope="owner",
+        scope_id=actor.pk,
+        code="credits",
+        period_start=start,
+        period_end=end,
+        limit_units=1,
     )
     with pytest.raises(QuotaConflict):
         provision_quota(
-            scope="owner", scope_id=actor.pk, code="credits",
+            scope="owner",
+            scope_id=actor.pk,
+            code="credits",
             period_start=end - timedelta(seconds=1),
-            period_end=end + timedelta(days=3), limit_units=2,
+            period_end=end + timedelta(days=3),
+            limit_units=2,
         )
     second = provision_quota(
-        scope="owner", scope_id=actor.pk, code="credits",
-        period_start=end, period_end=end + timedelta(days=30), limit_units=10,
+        scope="owner",
+        scope_id=actor.pk,
+        code="credits",
+        period_start=end,
+        period_end=end + timedelta(days=30),
+        limit_units=10,
     )
     assert first.id != second.id
     assert UsagePolicy.objects.filter(owner=actor, code="credits").count() == 2
@@ -162,10 +186,18 @@ def test_bad_scopes_invalid_identifiers_and_unknown_owners():
     postgresql_only()
     actor = user("quota-validation@tests.test")
     start, end = window()
-    for scope, identifier in (("root", actor.pk), ("owner", "bogus"),
-                              ("owner", uuid4()), ("tenant", uuid4())):
+    for scope, identifier in (
+        ("root", actor.pk),
+        ("owner", "bogus"),
+        ("owner", uuid4()),
+        ("tenant", uuid4()),
+    ):
         with pytest.raises(QuotaRuleError):
             provision_quota(
-                scope=scope, scope_id=identifier, code="requests",
-                period_start=start, period_end=end, limit_units=5,
+                scope=scope,
+                scope_id=identifier,
+                code="requests",
+                period_start=start,
+                period_end=end,
+                limit_units=5,
             )
