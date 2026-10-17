@@ -1,7 +1,7 @@
 """Session ownership, revocation, rotation, privacy and lifecycle regressions (issue #48)."""
 
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timedelta, timezone as dt_timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from django.core.management import call_command
@@ -137,7 +137,7 @@ def test_refresh_rotates_and_retains_session_id(client):
     session = DeviceSession.objects.get(pk=sid)
     assert session.last_seen_at >= session.created_at
     assert session.expires_at == datetime.fromtimestamp(
-        RefreshToken(response.data["refresh"])["exp"], tz=dt_timezone.utc
+        RefreshToken(response.data["refresh"])["exp"], tz=UTC
     )
     assert api(response.data["access"]).get(reverse("users-sessions")).data["results"][0]["is_current"]
 
