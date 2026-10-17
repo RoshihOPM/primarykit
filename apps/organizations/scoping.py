@@ -17,9 +17,7 @@ def require_writer(membership):
 
 
 def branch_ids_for(membership):
-    return TenantPolicy(
-        organization=membership.organization, membership=membership
-    ).branch_ids()
+    return TenantPolicy(organization=membership.organization, membership=membership).branch_ids()
 
 
 def require_warehouse_access(*, membership, warehouse, writing=False):
