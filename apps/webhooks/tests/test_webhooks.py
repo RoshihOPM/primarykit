@@ -30,8 +30,15 @@ def test_hmac_verification_and_timestamp_rejection():
 def test_inbound_receipt_idempotency_and_rollback():
     signature = sign(secret=SECRET, body=BODY, timestamp=1000)
     seen = []
-    kwargs = dict(provider="shipping", delivery_id="evt-123", body=BODY, timestamp="1000",
-                  signature=signature, secret=SECRET, now=1000)
+    kwargs = dict(
+        provider="shipping",
+        delivery_id="evt-123",
+        body=BODY,
+        timestamp="1000",
+        signature=signature,
+        secret=SECRET,
+        now=1000,
+    )
     assert accept(**kwargs, processor=seen.append)
     assert not accept(**kwargs, processor=seen.append)
     assert seen == [BODY]
@@ -72,8 +79,9 @@ class FakeTransport:
 )
 def test_outbound_signs_and_sends_json_to_allowlisted_https_target():
     fake = FakeTransport()
-    deliver(event_type="lead.created", data={"lead_id": "42"},
-            event_id="event-uuid", transport=fake)
+    deliver(
+        event_type="lead.created", data={"lead_id": "42"}, event_id="event-uuid", transport=fake
+    )
     request, timeout = fake.calls[0]
     assert request.full_url == "https://events.example.com/hooks"
     assert timeout == 5
@@ -83,9 +91,12 @@ def test_outbound_signs_and_sends_json_to_allowlisted_https_target():
         "type": "lead.created",
         "data": {"lead_id": "42"},
     }
-    verify(secret=SECRET, body=request.data,
-           timestamp=request.get_header("X-webhook-timestamp"),
-           signature=request.get_header("X-webhook-signature"))
+    verify(
+        secret=SECRET,
+        body=request.data,
+        timestamp=request.get_header("X-webhook-timestamp"),
+        signature=request.get_header("X-webhook-signature"),
+    )
 
 
 @override_settings(
@@ -96,7 +107,6 @@ def test_outbound_signs_and_sends_json_to_allowlisted_https_target():
 def test_outbound_rejects_insecure_target():
     with pytest.raises(ValueError, match="HTTPS"):
         deliver(event_type="lead.created", data={}, event_id="id", transport=FakeTransport())
-
 
 
 @override_settings(
