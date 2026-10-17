@@ -2,7 +2,7 @@
 
 ## Goals and non-goals
 
-PrimaryKit users provides email-based identity, public-registration toggle, JWT login/refresh/logout, own profile, password change and superuser-only user administration. Email verification and password reset are in the separate [email workflow module](email-notifications.md). MFA, invitations, social login and tenant-scoped RBAC remain out of scope. Do not deploy public registration without abuse controls.
+PrimaryKit users provides email-based identity, public-registration toggle, JWT login/refresh/logout, per-device session management, own profile, password change and superuser-only user administration. See [Device sessions](device-sessions.md) for lifecycle, privacy, retention and rollout. Email verification and password reset are in the separate [email workflow module](email-notifications.md). MFA, invitations, social login and tenant-scoped RBAC remain out of scope. Do not deploy public registration without abuse controls.
 
 ## Data
 
@@ -23,6 +23,9 @@ PrimaryKit users provides email-based identity, public-registration toggle, JWT 
 | POST | /api/v1/auth/logout/ | Bearer access + same user's refresh |
 | GET/PATCH | /api/v1/users/me/ | Authenticated account |
 | POST | /api/v1/users/me/change-password/ | Authenticated, current password required |
+| GET | /api/v1/users/me/sessions/ | Authenticated, owner-only paginated active sessions |
+| DELETE | /api/v1/users/me/sessions/{uuid}/ | Authenticated, owner-only revoke |
+| POST | /api/v1/users/me/sessions/revoke-all/ | Authenticated, revoke all own sessions |
 | GET | /api/v1/admin/users/ | Active superuser only |
 | GET/PATCH | /api/v1/admin/users/{uuid}/ | Active superuser only; update profile/is_active |
 
@@ -30,13 +33,13 @@ No DELETE in admin API; deactivate instead. No arbitrary ID fetch in /users/me/.
 
 ## Security & deployment
 
-- Access JWT: 5 minutes; refresh JWT: 1 day; refresh rotation and blacklist enabled. Logout blacklists supplied refresh only. Access tokens remain valid until expiration unless the account becomes inactive or password changes.
+- Access JWT: 5 minutes; refresh JWT: 1 day; refresh rotation and blacklist enabled. Refreshes require a nonrevoked, owned DeviceSession; logout blacklists supplied refresh and revokes its session. Individual/all-device revocation blocks linked refreshes. Access tokens remain valid until expiration (up to five minutes by default) unless the account becomes inactive or password changes.
 - Password change and login validate input; generic auth failures to avoid account enumeration.
 - DRF scoped throttles limit auth requests in development. **Built-in throttles using Django LocMemCache are per-process and do not provide reliable protection against distributed brute-force or abuse.** Configure a shared cache and edge-layer rate controls before production; include them in readiness/security review.
 - `ALLOW_PUBLIC_REGISTRATION=false` by default. If enabled, add email verification, anti-bot and abuse protection according to project needs.
 - Bearer tokens should normally stay in memory, not localStorage. If using cookies, configure CSRF/SameSite and refresh-token cookie policy separately.
 - JWT implementation uses `djangorestframework-simplejwt`; verify against Django 6.1 in CI, because upstream's published supported matrix may lag the Django release.
-- Production password reset and sending email are not implemented. Configure email delivery and audited single-use expiring tokens in a later PR.
+- Email verification and password recovery require configured mail flows; both password-change and password-reset revoke device sessions. Schedule expired session and JWT blacklist cleanup in production.
 - Do not use a new login flow as authentication proof without running tests on PostgreSQL.
 
 ## Trade-offs

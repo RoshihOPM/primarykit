@@ -10,6 +10,9 @@ from .email_views import (
 from .views import (
     AdminUserViewSet,
     ChangePasswordView,
+    DeviceSessionListView,
+    DeviceSessionRevokeAllView,
+    DeviceSessionRevokeView,
     LoginView,
     LogoutView,
     MeView,
@@ -39,5 +42,16 @@ urlpatterns = [
     ),
     path("users/me/", MeView.as_view(), name="users-me"),
     path("users/me/change-password/", ChangePasswordView.as_view(), name="users-change-password"),
+    path("users/me/sessions/", DeviceSessionListView.as_view(), name="users-sessions"),
+    path(
+        "users/me/sessions/revoke-all/",
+        DeviceSessionRevokeAllView.as_view(),
+        name="users-sessions-revoke-all",
+    ),
+    path(
+        "users/me/sessions/<uuid:session_id>/",
+        DeviceSessionRevokeView.as_view(),
+        name="users-sessions-revoke",
+    ),
     path("", include(router.urls)),
 ]

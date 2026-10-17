@@ -26,6 +26,7 @@ from scripts.presets import PRESETS
         {"idempotency"},
         {"http_integrations"},
         {"outbox"},
+        {"workflows"},
         {"webhooks"},
         {"cache"},
         {"rate_limit"},
@@ -79,6 +80,7 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
         "idempotency",
         "http_integrations",
         "outbox",
+        "workflows",
         "webhooks",
         "cache",
         "rate_limit",
@@ -153,6 +155,7 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
         + (" webhooks" if "webhooks" in selected else "")
         + (" api_keys" if "api_keys" in selected else "")
         + (" idempotency" if "idempotency" in selected else "")
+        + (" workflows" if "workflows" in selected else "")
         + (" chat" if "chat" in selected else "")
     )
     assert workflows.count(f"makemigrations {migration_apps} --noinput") == 2
