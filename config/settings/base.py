@@ -193,6 +193,11 @@ if "apps.celery_tasks" in INSTALLED_APPS:
     CELERY_RESULT_EXPIRES = 3600
 
 BACKGROUND_JOB_HANDLERS = {}  # e.g. {"mail.send": "apps.myapp.jobs.send_email"}
+# Client-owned event handlers; Outbox reuses Tasks rows and requires a worker.
+OUTBOX_EVENT_HANDLERS = {}  # e.g. {"lead.created": "apps.leads.events.publish_created"}
+if "apps.outbox" in INSTALLED_APPS:
+    BACKGROUND_JOB_HANDLERS["outbox.dispatch"] = "apps.outbox.services.dispatch"
+
 RBAC_ASSIGNABLE_PERMISSIONS = []  # Populate in the generated project.
 REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {
     "account_login": "5/min",
