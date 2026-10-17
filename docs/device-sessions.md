@@ -32,6 +32,10 @@ are denied.
 DeviceSession is owned by users.User with CASCADE deletion. It stores only
 fixed-vocabulary browser/OS/device classifications, timestamps and UUID.
 No raw JWT, full User-Agent, IP, signing secret or fingerprint is stored.
+The auth endpoints use SessionRefreshToken to keep SimpleJWT OutstandingToken.token
+empty while retaining its JTI/expiry/blacklist relationships; upstream's normal
+RefreshToken.for_user may persist the encoded token if a client invokes it
+directly outside these endpoints. Review custom auth paths accordingly.
 The UA parser bounds input length and does not persist untrusted substrings.
 Each login is a separate session, even on the same physical device.
 
@@ -80,7 +84,10 @@ before deploying this code, and test against PostgreSQL. Never regenerate an
 existing customer's initial migration or auto-migrate production in AppConfig.
 
 Old refresh tokens lack sid and will no longer refresh; warn users to log in
-again. Avoid mixed API version deployments. Coordinate rollout, backups and
+again. Existing OutstandingToken rows from older deployments may already
+contain encoded JWTs. Redact those rows separately with a reviewed one-time
+migration/cleanup command; dropping the token string does not remove the JTI
+blacklist reference, but review client-specific uses of the field first. Avoid mixed API version deployments. Coordinate rollout, backups and
 client behavior. Rollback of code alone changes auth security assumptions.
 
 Run: uv sync --locked --all-groups; uv run ruff check .;
