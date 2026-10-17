@@ -35,9 +35,7 @@ class DialogueViewSet(
     http_method_names = ("get", "post", "head", "options")
 
     def get_throttles(self):
-        self.throttle_scope = (
-            "chat_write" if self.request.method == "POST" else "chat_read"
-        )
+        self.throttle_scope = "chat_write" if self.request.method == "POST" else "chat_read"
         return super().get_throttles()
 
     def get_queryset(self):
@@ -58,9 +56,7 @@ class DialogueViewSet(
             message = send_message(
                 actor=request.user, dialogue_id=dialogue.pk, **incoming.validated_data
             )
-            return Response(
-                MessageReadSerializer(message).data, status=status.HTTP_201_CREATED
-            )
+            return Response(MessageReadSerializer(message).data, status=status.HTTP_201_CREATED)
         try:
             after = int(request.query_params.get("after", "0"))
             limit = int(request.query_params.get("limit", "50"))

@@ -12,8 +12,15 @@ class DialogueReadSerializer(serializers.ModelSerializer):
     class Meta:
         model = Dialogue
         fields = (
-            "id", "user_low", "user_high", "organization_id", "last_sequence",
-            "low_read_sequence", "high_read_sequence", "created_at", "updated_at",
+            "id",
+            "user_low",
+            "user_high",
+            "organization_id",
+            "last_sequence",
+            "low_read_sequence",
+            "high_read_sequence",
+            "created_at",
+            "updated_at",
         )
         read_only_fields = fields
 

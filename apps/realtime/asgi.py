@@ -32,17 +32,11 @@ def _read_events(*, user_id, dialogue_id, after):
 
     user = User.objects.filter(pk=user_id, is_active=True).first()
     if user is None or (
-        getattr(settings, "AUTH_REQUIRE_EMAIL_VERIFICATION", True)
-        and not user.email_verified
+        getattr(settings, "AUTH_REQUIRE_EMAIL_VERIFICATION", True) and not user.email_verified
     ):
         raise PermissionError("Account is no longer active.")
-    _, rows = visible_messages(
-        actor=user, dialogue_id=dialogue_id, after=after, limit=50
-    )
-    return [
-        {"type": "message", **MessageReadSerializer(row).data}
-        for row in rows
-    ]
+    _, rows = visible_messages(actor=user, dialogue_id=dialogue_id, after=after, limit=50)
+    return [{"type": "message", **MessageReadSerializer(row).data} for row in rows]
 
 
 async def _close(send, code):
@@ -99,9 +93,7 @@ async def websocket_application(scope, receive, send):
             credentials["access_token"]
         )
         # Confirm access before emitting READY or any event metadata.
-        await sync_to_async(_read_events)(
-            user_id=user.pk, dialogue_id=dialogue_id, after=after
-        )
+        await sync_to_async(_read_events)(user_id=user.pk, dialogue_id=dialogue_id, after=after)
     except Exception:
         # Authentication/authorization errors are intentionally indistinguishable.
         return await _close(send, 4401)

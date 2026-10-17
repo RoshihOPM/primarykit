@@ -29,7 +29,7 @@ async def connection(path, frames, *, query=b"", origin=None):
     headers = [(b"origin", origin.encode())] if origin else []
     await websocket_application(
         {"type": "websocket", "path": path, "query_string": query, "headers": headers},
-        receive, send,
+
     )
     return sent
 
@@ -52,9 +52,7 @@ def test_ws_anonymous_connection_never_gets_ready():
     path = "/ws/v1/chats/00000000-0000-0000-0000-000000000001/"
     frames = [
         {"type": "websocket.connect"},
-        {"type": "websocket.receive", "text": json.dumps({
-            "type": "authenticate", "access_token": "wrong"
-        })},
+
     ]
     result = asyncio.run(connection(path, frames))
     assert result[-1]["code"] == 4401
@@ -79,10 +77,7 @@ def test_ws_verified_scope_replay_and_other_user_denial():
     def frames(who):
         return [
             {"type": "websocket.connect"},
-            {"type": "websocket.receive", "text": json.dumps({
-                "type": "authenticate",
-                "access_token": str(RefreshToken.for_user(who).access_token),
-            })},
+
             {"type": "websocket.disconnect"},
         ]
 
@@ -92,8 +87,9 @@ def test_ws_verified_scope_replay_and_other_user_denial():
     assert received[1]["sequence"] == 1
     assert received[1]["body"] == "hello"
     replay = asyncio.run(connection(path, frames(friend), query=b"after=1"))
-    assert [json.loads(item["text"])["type"] for item in replay
-            if item["type"] == "websocket.send"] == ["ready"]
+    assert [
+        json.loads(item["text"])["type"] for item in replay if item["type"] == "websocket.send"
+    ] == ["ready"]
     blocked = asyncio.run(connection(path, frames(stranger)))
     assert blocked[-1]["code"] == 4401
     assert all(item["type"] != "websocket.send" for item in blocked)

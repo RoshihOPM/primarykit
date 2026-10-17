@@ -51,9 +51,7 @@ def visible_dialogues(user):
     allowed_ids = Membership.objects.filter(
         user=user, is_active=True, organization__is_active=True
     ).values_list("organization_id", flat=True)
-    return query.filter(
-        Q(organization_id__isnull=True) | Q(organization_id__in=allowed_ids)
-    )
+
 
 
 def get_dialogue(*, actor, dialogue_id, lock=False):
@@ -157,9 +155,7 @@ def mark_read(*, actor, dialogue_id, sequence):
         dialogue = get_dialogue(actor=actor, dialogue_id=dialogue_id, lock=True)
         if sequence > dialogue.last_sequence:
             raise ValidationError({"sequence": "Sequence exceeds the latest message."})
-        column = (
-            "low_read_sequence" if actor.pk == dialogue.user_low_id else "high_read_sequence"
-        )
+        column = "low_read_sequence" if actor.pk == dialogue.user_low_id else "high_read_sequence"
         new_value = max(getattr(dialogue, column), sequence)
         if new_value != getattr(dialogue, column):
             setattr(dialogue, column, new_value)

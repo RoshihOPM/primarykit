@@ -38,9 +38,7 @@ class Dialogue(UUIDTimestampedModel):
 
 class Message(UUIDTimestampedModel):
     dialogue = models.ForeignKey(Dialogue, on_delete=models.CASCADE, related_name="messages")
-    sender = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
-    )
+    sender = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
     sequence = models.PositiveBigIntegerField()
     body = models.TextField(blank=True)
     # Opaque ID validated at write and read boundaries; Storage is optional.
