@@ -27,7 +27,7 @@ jobs:
       - name: Ruff format
         run: uv run ruff format --check .
       - name: Generate project-specific migrations for tests
-        run: uv run python manage.py makemigrations users audit storage catalog inventory organizations orders sales payments tasks webhooks api_keys idempotency --noinput --settings=config.settings.test
+        run: uv run python manage.py makemigrations users audit storage catalog inventory organizations orders sales payments tasks webhooks api_keys idempotency privacy --noinput --settings=config.settings.test
       - name: Django checks
         run: uv run python manage.py check --settings=config.settings.test
       - name: Tests
@@ -44,6 +44,15 @@ jobs:
           uv run python manage.py makemigrations users audit --noinput --settings=config.settings.test
           uv run python manage.py check --settings=config.settings.test
           uv run pytest
+          cd -
+          # Privacy requires Tasks and Audit even in generated clients.
+          uv run python scripts/new_project.py /tmp/primarykit-privacy-client --name privacy-client --apps privacy
+          cd /tmp/primarykit-privacy-client
+          uv sync --locked --all-groups
+          uv run python -m apps.core.doctor --strict
+          uv run python manage.py makemigrations users audit tasks privacy --noinput --settings=config.settings.test
+          uv run python manage.py check --settings=config.settings.test
+          uv run pytest -q apps/privacy/tests
           cd -
           # Check an independent feature-flags project with no external services.
           uv run python scripts/new_project.py /tmp/primarykit-flags-client --name flags-client --apps feature_flags
@@ -299,7 +308,7 @@ jobs:
       - name: PostgreSQL integration smoke test
         run: |
           docker compose up -d
-          docker compose exec -T api python manage.py makemigrations users audit storage catalog inventory organizations orders sales payments tasks webhooks api_keys idempotency --noinput
+          docker compose exec -T api python manage.py makemigrations users audit storage catalog inventory organizations orders sales payments tasks webhooks api_keys idempotency privacy --noinput
           docker compose exec -T api python manage.py migrate --noinput
           docker compose exec -T api python manage.py check
           docker compose exec -T api uv run pytest --ds=config.settings.postgres_test

@@ -18,6 +18,7 @@ from scripts.presets import PRESETS
         {"sales"},
         {"payments"},
         {"tasks"},
+        {"privacy"},
         {"observability"},
         {"feature_flags"},
         {"search"},
@@ -67,6 +68,7 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
         "sales",
         "payments",
         "tasks",
+        "privacy",
         "observability",
         "feature_flags",
         "search",
@@ -147,6 +149,7 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
         + (" webhooks" if "webhooks" in selected else "")
         + (" api_keys" if "api_keys" in selected else "")
         + (" idempotency" if "idempotency" in selected else "")
+        + (" privacy" if "privacy" in selected else "")
     )
     assert workflows.count(f"makemigrations {migration_apps} --noinput") == 2
     if "storage" in selected:
