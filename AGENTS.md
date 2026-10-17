@@ -48,6 +48,11 @@ PrimaryKit is a copy-based Django starter, not a separately deployed shared back
 - Run `python -m apps.core.doctor --strict` inside generated backends, as well as the usual tests. The doctor does not need Django startup, network access or a kit checkout, and is only a static preflight; it does not replace ORM migrations or runtime security tests.
 - See `docs/independent-projects.md`, `docs/doctor.md`, and `docs/architecture-recipes.md`.
 
+## Webhooks safety
+
+- Inbound provider signatures must be verified over raw bytes before processing, with bounded clock-skew and PostgreSQL idempotency receipt in the same business transaction. Provider handlers and signing secrets are trusted client-owned configuration.
+- Outgoing destinations come exclusively from trusted project settings, must use HTTPS and must never follow redirects to private infrastructure. Use Outbox for durable at-least-once retries. Never store secrets in receipts or outbox payloads.
+
 ## Outbox event safety
 
 - `outbox` requires `tasks` and writes the event row within the caller's `transaction.atomic`; no RabbitMQ/Redis required and no second queue table.
