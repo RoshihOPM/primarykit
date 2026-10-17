@@ -48,6 +48,11 @@ PrimaryKit is a copy-based Django starter, not a separately deployed shared back
 - Run `python -m apps.core.doctor --strict` inside generated backends, as well as the usual tests. The doctor does not need Django startup, network access or a kit checkout, and is only a static preflight; it does not replace ORM migrations or runtime security tests.
 - See `docs/independent-projects.md`, `docs/doctor.md`, and `docs/architecture-recipes.md`.
 
+## Rate limiting
+
+- Public authentication/registration/password endpoints must enforce a shared store (Redis or trusted edge) for horizontally scaled deployments; Django's process-local cache cannot provide a global security boundary.
+- `apps/rate_limit` is opt-in, requires cache, hashes client IPs into keys, never trusts inbound proxy headers, and fails closed when Redis is unavailable.
+
 ## Optional infrastructure modules
 
 - `apps/cache` uses an independent redis-py CacheService as the default API (JSON, Hashes, counters). Django Cache and django-redis are optional bridges. Do not make Redis mandatory for generated clients. Redis is ephemeral and never authoritative for permissions or financial state.
