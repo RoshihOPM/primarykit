@@ -4,7 +4,8 @@ import tomllib
 import pytest
 
 from apps.core.module_registry import dependency_closure, discover_modules
-from scripts.new_project import SOURCE_ROOT, create_project
+from scripts.new_project import SOURCE_ROOT, create_project, project_plan
+from scripts.presets import PRESETS
 
 
 @pytest.mark.parametrize(
@@ -121,6 +122,9 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
 
     metadata = json.loads((target / "primarykit-origin.json").read_text())
     assert set(metadata["included_apps"]) == selected
+    assert set(metadata["module_fingerprints"]) == selected
+    for name in selected:
+        assert metadata["module_fingerprints"][name]["manifest.py"]
     source_project = tomllib.loads((SOURCE_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     assert metadata["source_version"] == source_project["project"]["version"]
     assert ("Feature flags: configure FEATURE_FLAGS" in readme) == ("feature_flags" in apps)
@@ -162,3 +166,30 @@ def test_generator_does_not_keep_secret_env_or_git_folders(tmp_path):
     assert not (dest / ".env").exists()
     assert not (dest / ".venv").exists()
     assert not (dest / "media").exists()
+
+
+@pytest.mark.parametrize("preset", sorted(PRESETS))
+def test_generator_preset_portability_and_modes(tmp_path, preset):
+    plan = project_plan(requested_apps=set(), preset=preset)
+    assert set(plan["included_apps"]) >= {"core", "users", "notifications"}
+    target = create_project(tmp_path / preset, name="preset-backend", preset=preset)
+    metadata = json.loads((target / "primarykit-origin.json").read_text())
+    assert metadata["preset"] == preset
+    assert metadata["included_apps"] == plan["included_apps"]
+    for name in set(discover_modules()) - set(plan["included_apps"]):
+        assert not (target / "apps" / name).exists()
+
+
+def test_dry_run_and_presets_do_not_write_files(tmp_path, capsys, monkeypatch):
+    from scripts.new_project import main
+
+    target = tmp_path / "does-not-exist"
+    monkeypatch.setattr(
+        "sys.argv",
+        ["new_project.py", str(target), "--name", "dry-api", "--preset", "crm", "--dry-run"],
+    )
+    main()
+    result = json.loads(capsys.readouterr().out)
+    assert result["preset"] == "crm"
+    assert "organizations" in result["included_apps"]
+    assert not target.exists()

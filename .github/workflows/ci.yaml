@@ -17,6 +17,11 @@ jobs:
         run: uv sync --locked --all-groups
       - name: Offline detached-project doctor
         run: uv run python -m apps.core.doctor --strict
+      - name: CLI preset dry-run
+        run: |
+          uv run python scripts/new_project.py --list-presets
+          uv run python scripts/new_project.py /tmp/preset-preview --name preview-backend --preset marketplace --dry-run
+          test ! -e /tmp/preset-preview
       - name: Ruff lint
         run: uv run ruff check .
       - name: Ruff format
