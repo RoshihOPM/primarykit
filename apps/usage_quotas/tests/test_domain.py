@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -47,7 +47,7 @@ def test_json_snapshot_metadata_bounds_and_serialization():
 
 
 def test_start_inclusive_end_and_expiration_exclusive():
-    start = datetime(2026, 10, 1, tzinfo=timezone.utc)
+    start = datetime(2026, 10, 1, tzinfo=UTC)
     end = start + timedelta(days=30)
     expires = start + timedelta(days=2)
     validate_window(start, end, expires)
@@ -59,7 +59,7 @@ def test_start_inclusive_end_and_expiration_exclusive():
 
 
 def test_invalid_timestamps_fail_closed():
-    start = datetime(2026, 10, 1, tzinfo=timezone.utc)
+    start = datetime(2026, 10, 1, tzinfo=UTC)
     end = start + timedelta(days=1)
     for args in ((end, start, None), (start, start, None), (start.replace(tzinfo=None),
                  end, None), (start, end, start), (start, end, start.replace(tzinfo=None))):
