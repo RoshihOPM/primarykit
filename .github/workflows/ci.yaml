@@ -88,6 +88,15 @@ jobs:
           uv run python manage.py check --settings=config.settings.test
           uv run pytest
           cd -
+          # HTTP integrations have no required broker or database migrations.
+          uv run python scripts/new_project.py /tmp/primarykit-http-client --name http-client --apps http_integrations
+          cd /tmp/primarykit-http-client
+          uv sync --locked --all-groups
+          uv run python -m apps.core.doctor --strict
+          uv run python manage.py makemigrations users --noinput --settings=config.settings.test
+          uv run python manage.py check --settings=config.settings.test
+          uv run pytest
+          cd -
           # Raw copy test: no generator edits or INSTALLED_APPS/URL changes after copying.
           uv run python scripts/new_project.py /tmp/primarykit-copy-client --name copy-client
           cp -a apps/storage /tmp/primarykit-copy-client/apps/

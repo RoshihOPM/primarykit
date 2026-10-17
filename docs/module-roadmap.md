@@ -19,6 +19,7 @@ Updated: 2026-10-17. This is a future-improvement backlog, **not** a list of uni
 | CSV Exchange | Strict, bounded CSV import validation and formula-safe export primitives | [CSV Exchange](csv-exchange.md) |
 | API Keys | Scoped personal credentials, expiration and revocation | [API Keys](api-keys.md) |
 | Idempotency | Durable per-principal, per-operation PostgreSQL deduplication | [Idempotency](idempotency.md) |
+| HTTP Integrations | Trusted outbound HTTPS with bounded responses and retries | [HTTP Integrations](http-integrations.md) |
 | Cache | Django cache facade and optional Redis backend | [Cache](redis-cache.md) |
 | Celery Tasks | RabbitMQ broker, optional Redis result backend, copyable worker adapter | [Celery](celery-rabbitmq.md) |
 | Statistics | Auto-discovered providers, scoped counts and date windows | [Statistics](statistics-architecture.md) |
