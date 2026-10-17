@@ -31,7 +31,7 @@ class InventoryScopeMixin:
             user=self.request.user, organization_id=self.kwargs["org_id"], lock=True
         )
         policy.require_write()
-        return policy.organization
+        return policy
 
     def get_policy(self):
         if not hasattr(self, "_tenant_policy"):
@@ -67,8 +67,9 @@ class WarehouseViewSet(InventoryScopeMixin, viewsets.ModelViewSet):
 
     @transaction.atomic
     def perform_create(self, serializer):
-        org = self.lock_and_check_writer()
-        warehouse = serializer.save(organization=org)
+        policy = self.lock_and_check_writer()
+        policy.require_branch(branch=serializer.validated_data["branch"])
+        warehouse = serializer.save(organization=policy.organization)
         record_audit_event(
             actor=self.request.user,
             action="inventory.warehouse.created",
@@ -78,7 +79,11 @@ class WarehouseViewSet(InventoryScopeMixin, viewsets.ModelViewSet):
 
     @transaction.atomic
     def perform_update(self, serializer):
-        self.lock_and_check_writer()
+        policy = self.lock_and_check_writer()
+        policy.require_organization(serializer.instance.organization_id)
+        policy.require_branch(branch=serializer.instance.branch, active_only=False)
+        if "branch" in serializer.validated_data:
+            policy.require_branch(branch=serializer.validated_data["branch"])
         warehouse = serializer.save()
         record_audit_event(
             actor=self.request.user,
@@ -138,7 +143,7 @@ class OperationViewSet(
         return InventoryOperation.objects.filter(organization=organization)
 
     def create(self, request, *args, **kwargs):
-        organization, membership = self.get_scope()
+        organization, _ = self.get_scope()
         self.get_policy().require_write()
         serializer = StockCommandSerializer(data=request.data, context={"view": self})
         serializer.is_valid(raise_exception=True)
