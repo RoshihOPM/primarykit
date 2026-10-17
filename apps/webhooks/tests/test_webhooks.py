@@ -96,3 +96,23 @@ def test_outbound_signs_and_sends_json_to_allowlisted_https_target():
 def test_outbound_rejects_insecure_target():
     with pytest.raises(ValueError, match="HTTPS"):
         deliver(event_type="lead.created", data={}, event_id="id", transport=FakeTransport())
+
+
+
+@override_settings(
+    WEBHOOK_OUTBOUND_TARGETS={
+        "lead.created": {"url": "https://events.example.com/hooks", "secret": SECRET},
+    }
+)
+def test_outbound_network_failure_raises_for_outbox_retry():
+    class UnavailableTransport:
+        def open(self, _request, timeout):
+            raise TimeoutError("external transport secret")
+
+    with pytest.raises(WebhookDeliveryError, match="did not accept"):
+        deliver(
+            event_type="lead.created",
+            data={},
+            event_id="stable-event-id",
+            transport=UnavailableTransport(),
+        )
