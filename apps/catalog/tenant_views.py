@@ -5,9 +5,7 @@ from rest_framework import mixins, viewsets
 from rest_framework.permissions import SAFE_METHODS
 
 from apps.core.audit import record_audit_event
-from apps.organizations.models import Organization
-from apps.organizations.permissions import get_active_membership
-from apps.organizations.scoping import organization_scope, require_writer
+from apps.organizations.policy import TenantPolicy
 
 from .models import AttributeDefinition, CatalogItem, Category
 from .permissions import CatalogAccess
@@ -23,21 +21,26 @@ class CatalogScopeMixin:
         if request.method not in SAFE_METHODS:
             self.check_write_role()
 
-    def get_scope(self):
-        if not hasattr(self, "_tenant_scope"):
-            self._tenant_scope = organization_scope(
-                user=self.request.user, org_id=self.kwargs["org_id"]
+    def get_policy(self):
+        if not hasattr(self, "_tenant_policy"):
+            self._tenant_policy = TenantPolicy.resolve(
+                user=self.request.user, organization_id=self.kwargs["org_id"]
             )
-        return self._tenant_scope
+        return self._tenant_policy
+
+    def get_scope(self):
+        policy = self.get_policy()
+        return policy.organization, policy.membership
 
     def check_write_role(self):
-        require_writer(self.get_scope()[1])
+        self.get_policy().require_write()
 
     def lock_and_check_writer(self):
-        org = Organization.objects.select_for_update().get(pk=self.get_scope()[0].pk)
-        membership = get_active_membership(user=self.request.user, organization=org)
-        require_writer(membership)
-        return org
+        policy = TenantPolicy.resolve(
+            user=self.request.user, organization_id=self.kwargs["org_id"], lock=True
+        )
+        policy.require_write()
+        return policy.organization
 
 
 class AuditedCatalogViewSet(CatalogScopeMixin, viewsets.ModelViewSet):
@@ -76,7 +79,9 @@ class CategoryViewSet(AuditedCatalogViewSet):
 
     def get_queryset(self):
         organization, membership = self.get_scope()
-        queryset = super().get_queryset().filter(organization=organization)
+        queryset = self.get_policy().scope_queryset(
+            super().get_queryset(), organization_field="organization"
+        )
         if membership.role == "member":
             queryset = queryset.filter(is_active=True)
         return queryset
@@ -89,7 +94,9 @@ class CatalogItemViewSet(AuditedCatalogViewSet):
 
     def get_queryset(self):
         organization, membership = self.get_scope()
-        queryset = super().get_queryset().filter(organization=organization)
+        queryset = self.get_policy().scope_queryset(
+            super().get_queryset(), organization_field="organization"
+        )
         if membership.role == "member":
             queryset = queryset.filter(is_active=True, category__is_active=True)
         category = self.request.query_params.get("category")
@@ -114,7 +121,9 @@ class AttributeDefinitionViewSet(
 
     def get_queryset(self):
         organization, membership = self.get_scope()
-        queryset = super().get_queryset().filter(category__organization=organization)
+        queryset = self.get_policy().scope_queryset(
+            super().get_queryset(), organization_field="category__organization"
+        )
         if membership.role == "member":
             queryset = queryset.filter(category__is_active=True)
         category = self.request.query_params.get("category")
