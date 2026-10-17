@@ -11,7 +11,7 @@ PrimaryKit распознаёт любую доверенную папку `apps
 | `search` | PostgreSQL text search с явной фильтрацией owner/tenant | core | — |
 | `csv_exchange` | Схемонезависимый безопасный CSV parse/export | core | — |
 | `api_keys` | Scoped машинные ключи с owner scope и отзывом | users | audit |
-| `idempotency` | PostgreSQL идемпотентность команд с атомарным replay | core | — |
+| `idempotency` | PostgreSQL идемпотентность команд с атомарным replay | core | — |\n| `usage_quotas` | Атомарные квоты потребления, owner/tenant, снимки политик | users | organizations, statistics |
 | `http_integrations` | Явно разрешённые HTTPS host + безопасный retry | core | — |
 | `tasks` | Внутренняя очередь, транзакционное добавление и worker | core | — |
 | `outbox` | Транзакционная запись событий и retry delivery через Tasks | core, tasks | — |
@@ -50,7 +50,7 @@ PrimaryKit распознаёт любую доверенную папку `apps
 | Payments manual reconcile | `/api/v1/admin/payments/` | Только суперпользователь |
 | Statistics | `/api/v1/statistics/` | Только доступные метрики |
 
-Tasks, Cache и Celery не создают публичных API маршрутов; Celery и Redis не устанавливаются в клиенте автоматически. Tasks не создаёт публичных API маршрутов: `enqueue` вызывается только из доверенного кода приложения; worker запускается отдельно.
+Usage Quotas предоставляет только серверные сервисы, без публичного API выдачи квот. Tasks, Cache и Celery не создают публичных API маршрутов; Celery и Redis не устанавливаются в клиенте автоматически. Tasks не создаёт публичных API маршрутов: `enqueue` вызывается только из доверенного кода приложения; worker запускается отдельно.
 
 Доступные маршруты можно увидеть после старта в Swagger `/api/docs/` (DEBUG). Если Organizations и нужные приложения включены в **tenant** режиме, Catalog и Inventory регистрируют корпоративные префиксы `/api/v1/organizations/{org_id}/catalog/` и `inventory/`. Statistics также имеет tenant и system API.
 

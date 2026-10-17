@@ -47,3 +47,5 @@
 - [Project presets and CLI](project-generator.md) · [Safe module upgrade report](module-upgrades.md) — dry-run and client-side change reviews.
 
 - [OpenAPI compatibility](api-compatibility.md) — сравнение JSON контрактов на удалённые методы и новые обязательные параметры.
+
+- [Usage Quotas](usage-quotas.md) — PostgreSQL бизнес-квоты и идемпотентный учёт потребления.
