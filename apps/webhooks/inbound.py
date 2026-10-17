@@ -11,8 +11,17 @@ from apps.webhooks.security import verify
 PROVIDER = re.compile(r"^[a-zA-Z0-9_.-]{1,80}$")
 
 
-def accept(*, provider: str, delivery_id: str, body: bytes, timestamp: str,
-           signature: str, secret: str, processor, now=None) -> bool:
+def accept(
+    *,
+    provider: str,
+    delivery_id: str,
+    body: bytes,
+    timestamp: str,
+    signature: str,
+    secret: str,
+    processor,
+    now=None,
+) -> bool:
     """Run trusted synchronous processor(body) inside receipt transaction.
 
     False means this provider/delivery ID was already processed. If processor
