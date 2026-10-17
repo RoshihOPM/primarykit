@@ -43,6 +43,10 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
+# Request correlation middleware is copied only with the optional module.
+if "apps.observability" in INSTALLED_APPS:
+    MIDDLEWARE.insert(0, "apps.observability.middleware.request_id_middleware")
+
 ROOT_URLCONF = "config.urls"
 TEMPLATES = [
     {
@@ -234,3 +238,7 @@ LOGGING = {
     "handlers": {"console": {"class": "logging.StreamHandler", "formatter": "default"}},
     "root": {"handlers": ["console"], "level": env("LOG_LEVEL", default="INFO")},
 }
+
+if "apps.observability" in INSTALLED_APPS:
+    LOGGING["formatters"]["json"] = {"()": "apps.observability.logging.JsonLogFormatter"}
+    LOGGING["handlers"]["console"]["formatter"] = "json"

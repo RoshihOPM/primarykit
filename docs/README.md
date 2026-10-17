@@ -16,6 +16,7 @@
 7. **[Tasks](tasks-architecture.md)** — встроенная переносимая очередь, отдельный worker, ограничения at-least-once.
 7a. **[Outbox](outbox-architecture.md)** — durable events в одной транзакции с бизнес-данными.
 8. **[Redis Cache](redis-cache.md)** — опциональный кэш и правила namespace, инвалидации и Redis.
+8b. **[Observability](observability.md)** — server-side request IDs и JSON-логи.
 9. **[Celery + RabbitMQ](celery-rabbitmq.md)** — самостоятельные worker и брокер, Redis results по требованию.
 8. **[Statistics](statistics-architecture.md)** — единый API и подключение своих метрик.
 8. **[Развёртывание и поддержка](deployment.md)** — Docker, Linux/Nginx, SSL, PostgreSQL, бэкапы.
