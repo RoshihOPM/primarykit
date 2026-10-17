@@ -7,10 +7,44 @@ from django.db import transaction
 from django.http import Http404
 from django.utils import timezone
 from rest_framework_simplejwt.exceptions import InvalidToken
+from rest_framework_simplejwt.settings import api_settings
+from rest_framework_simplejwt.tokens import RefreshToken, Token
 
 from .models import DeviceSession, User
 
 SESSION_CLAIM = "sid"
+
+
+class SessionRefreshToken(RefreshToken):
+    """Blacklist-compatible refresh token that never persists its encoded value."""
+
+    @classmethod
+    def for_user(cls, user):
+        # Bypass BlacklistMixin.for_user, which stores an entire bearer JWT.
+        token = Token.for_user.__func__(cls, user)
+        token.outstand()
+        return token
+
+    def outstand(self):
+        from rest_framework_simplejwt.token_blacklist.models import OutstandingToken
+
+        user_id = self.get(api_settings.USER_ID_CLAIM)
+        user = User.objects.filter(pk=user_id).first() if user_id else None
+        return OutstandingToken.objects.get_or_create(
+            jti=self[api_settings.JTI_CLAIM],
+            defaults={
+                "user": user,
+                "created_at": self.current_time,
+                "token": "",
+                "expires_at": expires_at(self),
+            },
+        )
+
+    def blacklist(self):
+        # Ensure SimpleJWT's default blacklist implementation finds this
+        # sanitized outstanding row rather than inserting str(self).
+        self.outstand()
+        return super().blacklist()
 
 
 def device_metadata(user_agent: str) -> dict[str, str]:
