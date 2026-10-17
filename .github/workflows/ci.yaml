@@ -108,6 +108,14 @@ jobs:
           uv run python manage.py check --settings=config.settings.test
           uv run pytest
           cd -
+          uv run python scripts/new_project.py /tmp/primarykit-outbox-client --name outbox-client --apps outbox
+          cd /tmp/primarykit-outbox-client
+          uv sync --locked --all-groups
+          uv run python -m apps.core.doctor --strict
+          uv run python manage.py makemigrations users tasks --noinput --settings=config.settings.test
+          uv run python manage.py check --settings=config.settings.test
+          uv run pytest
+          cd -
           uv run python scripts/new_project.py /tmp/primarykit-tasks-client --name tasks-client --apps tasks
           cd /tmp/primarykit-tasks-client
           uv sync --locked --all-groups
