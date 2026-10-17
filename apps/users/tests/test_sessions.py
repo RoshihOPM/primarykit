@@ -19,9 +19,7 @@ PASSWORD = "A-strong-test-password-329"
 
 
 def new_user(email="one@example.com", **kwargs):
-    return User.objects.create_user(
-        email=email, password=PASSWORD, email_verified=True, **kwargs
-    )
+    return User.objects.create_user(email=email, password=PASSWORD, email_verified=True, **kwargs)
 
 
 def login(client, user, *, agent="Mozilla/5.0 (Windows NT 10.0) Chrome/125.0 Safari/537.36"):
@@ -54,8 +52,14 @@ def test_device_session_list_current_flag_and_safe_metadata(client):
     assert items.data["count"] == 2
     entries = items.data["results"]
     assert set(entries[0]) == {
-        "id", "browser", "os", "device_type", "created_at",
-        "last_seen_at", "expires_at", "is_current",
+        "id",
+        "browser",
+        "os",
+        "device_type",
+        "created_at",
+        "last_seen_at",
+        "expires_at",
+        "is_current",
     }
     assert [e["is_current"] for e in entries] == [True, False]
     assert entries[0]["browser"] == "Safari"
@@ -96,7 +100,10 @@ def test_other_user_and_staff_cannot_read_or_revoke_sessions(client):
         ).status_code
         == 404
     )
-    assert client.post(reverse("auth-refresh"), {"refresh": victim_tokens["refresh"]}).status_code == 200
+    assert (
+        client.post(reverse("auth-refresh"), {"refresh": victim_tokens["refresh"]}).status_code
+        == 200
+    )
 
 
 def test_anonymous_denied_on_all_session_endpoints(client):
@@ -120,7 +127,9 @@ def test_revoke_all_is_owner_scoped_and_new_login_is_allowed(client):
     assert DeviceSession.objects.filter(user=first_user, revoked_at__isnull=True).count() == 0
     assert DeviceSession.objects.filter(user=second_user, revoked_at__isnull=True).count() == 1
     for token in (tokens1, tokens2):
-        assert client.post(reverse("auth-refresh"), {"refresh": token["refresh"]}).status_code == 401
+        assert (
+            client.post(reverse("auth-refresh"), {"refresh": token["refresh"]}).status_code == 401
+        )
     assert client.post(reverse("auth-refresh"), {"refresh": other["refresh"]}).status_code == 200
     new = login(client, first_user)
     assert client.post(reverse("auth-refresh"), {"refresh": new["refresh"]}).status_code == 200
@@ -139,7 +148,9 @@ def test_refresh_rotates_and_retains_session_id(client):
     assert session.expires_at == datetime.fromtimestamp(
         RefreshToken(response.data["refresh"])["exp"], tz=UTC
     )
-    assert api(response.data["access"]).get(reverse("users-sessions")).data["results"][0]["is_current"]
+    assert (
+        api(response.data["access"]).get(reverse("users-sessions")).data["results"][0]["is_current"]
+    )
 
 
 def test_legacy_refresh_without_session_is_rejected(client):
@@ -151,7 +162,9 @@ def test_legacy_refresh_without_session_is_rejected(client):
 def test_expired_or_revoked_session_cannot_refresh(client):
     member = new_user()
     tokens = login(client, member)
-    DeviceSession.objects.filter(user=member).update(expires_at=timezone.now() - timedelta(seconds=1))
+    DeviceSession.objects.filter(user=member).update(
+        expires_at=timezone.now() - timedelta(seconds=1)
+    )
     assert client.post(reverse("auth-refresh"), {"refresh": tokens["refresh"]}).status_code == 401
     assert api(tokens["access"]).get(reverse("users-sessions")).data["count"] == 0
 
@@ -159,9 +172,7 @@ def test_expired_or_revoked_session_cannot_refresh(client):
 def test_logout_blacklists_refresh_and_retires_session(client):
     member = new_user()
     tokens = login(client, member)
-    response = api(tokens["access"]).post(
-        reverse("auth-logout"), {"refresh": tokens["refresh"]}
-    )
+    response = api(tokens["access"]).post(reverse("auth-logout"), {"refresh": tokens["refresh"]})
     assert response.status_code == 204
     assert DeviceSession.objects.get(user=member).revoked_at is not None
     assert client.post(reverse("auth-refresh"), {"refresh": tokens["refresh"]}).status_code == 401
@@ -174,12 +185,14 @@ def test_logout_after_concurrent_rotation_still_revokes_device(client):
     assert rotated.status_code == 200
     # The original refresh has been blacklisted by rotation, but still
     # legitimately identifies the device session for explicit logout.
-    assert api(token["access"]).post(
-        reverse("auth-logout"), {"refresh": token["refresh"]}
-    ).status_code == 204
-    assert client.post(
-        reverse("auth-refresh"), {"refresh": rotated.data["refresh"]}
-    ).status_code == 401
+    assert (
+        api(token["access"]).post(reverse("auth-logout"), {"refresh": token["refresh"]}).status_code
+        == 204
+    )
+    assert (
+        client.post(reverse("auth-refresh"), {"refresh": rotated.data["refresh"]}).status_code
+        == 401
+    )
 
 
 def test_change_password_revokes_all_sessions(client):
@@ -224,9 +237,7 @@ def test_parallel_refresh_has_one_winner(client):
     tokens = login(client, member)
 
     def refresh():
-        return APIClient().post(
-            reverse("auth-refresh"), {"refresh": tokens["refresh"]}
-        ).status_code
+        return APIClient().post(reverse("auth-refresh"), {"refresh": tokens["refresh"]}).status_code
 
     with ThreadPoolExecutor(max_workers=2) as pool:
         results = list(pool.map(lambda _: refresh(), range(2)))
@@ -241,9 +252,7 @@ def test_revoke_all_wins_against_inflight_refresh(client):
     tokens = login(client, member)
 
     def refresh():
-        response = APIClient().post(
-            reverse("auth-refresh"), {"refresh": tokens["refresh"]}
-        )
+        response = APIClient().post(reverse("auth-refresh"), {"refresh": tokens["refresh"]})
         return response.data.get("refresh") if response.status_code == 200 else None
 
     def revoke():
