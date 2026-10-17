@@ -1,7 +1,7 @@
 """Session ownership, revocation, rotation, privacy and lifecycle regressions (issue #48)."""
 
 from concurrent.futures import ThreadPoolExecutor
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone as dt_timezone
 
 import pytest
 from django.core.management import call_command
@@ -69,7 +69,7 @@ def test_device_session_list_current_flag_and_safe_metadata(client):
 def test_revoke_one_blocks_only_its_refresh_but_access_lags(client):
     member = new_user()
     first, second = login(client, member), login(client, member)
-    first_id = DeviceSession.objects.get(user=member, created_at__lte=timezone.now(), id=RefreshToken(first["refresh"])["sid"]).pk
+    first_id = RefreshToken(first["refresh"])["sid"]
     owner_api = api(second["access"])
     url = reverse("users-sessions-revoke", kwargs={"session_id": first_id})
     assert owner_api.delete(url).status_code == 204
@@ -136,8 +136,8 @@ def test_refresh_rotates_and_retains_session_id(client):
     assert client.post(reverse("auth-refresh"), {"refresh": tokens["refresh"]}).status_code == 401
     session = DeviceSession.objects.get(pk=sid)
     assert session.last_seen_at >= session.created_at
-    assert session.expires_at == timezone.datetime.fromtimestamp(
-        RefreshToken(response.data["refresh"])["exp"], tz=timezone.utc
+    assert session.expires_at == datetime.fromtimestamp(
+        RefreshToken(response.data["refresh"])["exp"], tz=dt_timezone.utc
     )
     assert api(response.data["access"]).get(reverse("users-sessions")).data["results"][0]["is_current"]
 
@@ -196,7 +196,9 @@ def test_purge_removes_only_old_ended_sessions(client):
     DeviceSession.objects.filter(pk=ids[0]).update(revoked_at=past)
     DeviceSession.objects.filter(pk=ids[1]).update(expires_at=past)
     call_command("purge_device_sessions", days=30)
-    assert set(DeviceSession.objects.values_list("pk", flat=True)) == {DeviceSession.objects.get(pk=ids[2]).pk}
+    assert list(DeviceSession.objects.values_list("pk", flat=True)) == [
+        DeviceSession.objects.get(pk=ids[2]).pk
+    ]
 
 
 @pytest.mark.django_db(transaction=True)
