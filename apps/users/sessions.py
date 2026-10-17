@@ -1,7 +1,7 @@
 """Account-owned device sessions; never persist raw JWTs, IPs or user agents."""
 
 import uuid
-from datetime import datetime, timezone as dt_timezone
+from datetime import UTC, datetime
 
 from django.db import transaction
 from django.http import Http404
@@ -52,7 +52,7 @@ def device_metadata(user_agent: str) -> dict[str, str]:
 
 
 def expires_at(refresh) -> datetime:
-    return datetime.fromtimestamp(refresh["exp"], tz=dt_timezone.utc)
+    return datetime.fromtimestamp(refresh["exp"], tz=UTC)
 
 
 def create_session(*, user: User, refresh, user_agent: str) -> DeviceSession:
