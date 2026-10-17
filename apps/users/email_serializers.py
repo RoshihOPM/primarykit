@@ -11,6 +11,7 @@ from rest_framework import serializers
 
 from apps.core.audit import record_audit_event
 
+from .sessions import revoke_on_password_change
 from .tokens import email_verification_token
 
 User = get_user_model()
@@ -93,6 +94,7 @@ class PasswordResetConfirmSerializer(TokenConfirmSerializer):
             raise serializers.ValidationError(_("Invalid or expired confirmation link."))
         user.set_password(self.validated_data["new_password"])
         user.save(update_fields=["password"])
+        revoke_on_password_change(user=user)
         record_audit_event(
             actor=None,
             action="users.password.reset",
