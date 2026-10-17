@@ -33,7 +33,11 @@ def search_queryset(
         raise ValueError("Search text must be 1-200 characters")
     if not isinstance(limit, int) or isinstance(limit, bool) or not 1 <= limit <= 100:
         raise ValueError("Result limit must be between 1 and 100")
-    if not isinstance(fields, tuple) or not 1 <= len(fields) <= 8 or len(set(fields)) != len(fields):
+    if (
+        not isinstance(fields, tuple)
+        or not 1 <= len(fields) <= 8
+        or len(set(fields)) != len(fields)
+    ):
         raise ValueError("Supply 1-8 unique, model-local text fields")
 
     for name in fields:

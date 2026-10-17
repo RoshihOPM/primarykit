@@ -51,8 +51,12 @@ def test_no_sqlite_fallback():
 def test_search_respects_authorized_querysets_and_owner_scope():
     if connection.vendor != "postgresql":
         pytest.skip("PostgreSQL-only integration")
-    owner = User.objects.create_user(email="owner@example.test", password="test-password", first_name="needle")
-    other = User.objects.create_user(email="other@example.test", password="test-password", first_name="needle")
+    owner = User.objects.create_user(
+        email="owner@example.test", password="test-password", first_name="needle"
+    )
+    other = User.objects.create_user(
+        email="other@example.test", password="test-password", first_name="needle"
+    )
     authorized = User.objects.filter(pk__in=[owner.pk, other.pk])
     found = list(_search(authorized))
     assert [user.pk for user in found] == [owner.pk]
