@@ -84,7 +84,7 @@ def test_message_sequence_cursor_read_receipts_and_mass_assignment():
     second = b.post(url, {"body": "two"})
     assert first.status_code == second.status_code == 201
     assert first.data["body"] == "one"
-    assert first.data["sender"] == str(alice.pk)
+    assert str(first.data["sender"]) == str(alice.pk)
     assert first.data["sequence"] == 1
     assert second.data["sequence"] == 2
     assert len(a.get(url + "?after=1").data["results"]) == 1
