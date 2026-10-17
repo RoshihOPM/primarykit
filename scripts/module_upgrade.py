@@ -6,7 +6,8 @@ import hashlib
 import json
 from pathlib import Path
 
-CONTRACT_FILES = frozenset({
+CONTRACT_FILES = frozenset(
+    {
     "manifest.py",
     "models.py",
     "urls.py",
@@ -14,8 +15,9 @@ CONTRACT_FILES = frozenset({
     "services.py",
     "serializers.py",
     "permissions.py",
-    "authentication.py",
-})
+        "authentication.py",
+    }
+)
 CONTRACT_PREFIXES = ("migrations/",)
 
 

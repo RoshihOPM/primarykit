@@ -25,7 +25,15 @@ PRESETS = {
     },
     "saas": {
         "description": "Tenant baseline with audit, storage, quotas left to each business",
-        "apps": ("organizations", "rbac", "audit", "storage", "statistics", "api_keys", "rate_limit"),
+        "apps": (
+            "organizations",
+            "rbac",
+            "audit",
+            "storage",
+            "statistics",
+            "api_keys",
+            "rate_limit",
+        ),
     },
     "commerce": {
         "description": "Personal demo commerce only: no verified payments or automatic stock deduction",

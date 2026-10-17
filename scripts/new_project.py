@@ -305,7 +305,9 @@ def main():
     parser.add_argument("--name", help="New pyproject name, e.g. auto-market")
     parser.add_argument("--preset", choices=sorted(PRESETS), help="Optional starter profile")
     parser.add_argument("--list-presets", action="store_true", help="Show available profiles")
-    parser.add_argument("--dry-run", action="store_true", help="Print plan without any filesystem writes")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Print plan without any filesystem writes"
+    )
     parser.add_argument("--apps", nargs="*", choices=sorted(OPTIONAL_APPS), default=[])
     parser.add_argument("--git-init", action="store_true", help="Initialize new Git main branch")
     args = parser.parse_args()

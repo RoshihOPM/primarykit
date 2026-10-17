@@ -15,9 +15,7 @@ def test_read_only_upgrade_report_detects_conflicts(tmp_path):
     file.write_text(file.read_text(encoding="utf-8") + "\n# Client-only extension\n")
     local = compare_modules(source=SOURCE_ROOT, project=target)
     entry = next(
-        item
-        for item in local["modules"]["audit"]["changes"]
-        if item["path"] == "services.py"
+        item for item in local["modules"]["audit"]["changes"] if item["path"] == "services.py"
     )
     assert entry["change"] == "client_modified"
     assert entry["contract_review"] is True
@@ -29,9 +27,7 @@ def test_read_only_upgrade_report_detects_conflicts(tmp_path):
     (alternate / "apps" / "audit" / "services.py").write_text("new source contract")
     clash = compare_modules(source=alternate, project=target)
     found = next(
-        item
-        for item in clash["modules"]["audit"]["changes"]
-        if item["path"] == "services.py"
+        item for item in clash["modules"]["audit"]["changes"] if item["path"] == "services.py"
     )
     assert found["change"] == "conflict_review"
     assert clash["review_required"]
