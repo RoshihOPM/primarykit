@@ -26,12 +26,8 @@ def test_owner_demotion_commits_before_locked_writer_authorization():
     org = Organization.objects.create(slug="policy-role-race", name="Role race")
     actor = make_user("role-actor@policy.test")
     other_owner = make_user("role-other@policy.test")
-    member = Membership.objects.create(
-        organization=org, user=actor, role=Membership.Role.OWNER
-    )
-    Membership.objects.create(
-        organization=org, user=other_owner, role=Membership.Role.OWNER
-    )
+    member = Membership.objects.create(organization=org, user=actor, role=Membership.Role.OWNER)
+    Membership.objects.create(organization=org, user=other_owner, role=Membership.Role.OWNER)
     changed, attempting, release = Event(), Event(), Event()
 
     def downgrade():
@@ -55,9 +51,7 @@ def test_owner_demotion_commits_before_locked_writer_authorization():
             attempting.set()
             try:
                 with transaction.atomic():
-                    policy = TenantPolicy.resolve(
-                        user=actor, organization_id=org.pk, lock=True
-                    )
+                    policy = TenantPolicy.resolve(user=actor, organization_id=org.pk, lock=True)
                     policy.require_write()
             except PermissionDenied:
                 return "denied"
@@ -86,9 +80,7 @@ def test_branch_revocation_commits_before_locked_branch_authorization():
     org = Organization.objects.create(slug="policy-branch-race", name="Branch race")
     owner = make_user("branch-owner@policy.test")
     manager = make_user("branch-manager@policy.test")
-    Membership.objects.create(
-        organization=org, user=owner, role=Membership.Role.OWNER
-    )
+    Membership.objects.create(organization=org, user=owner, role=Membership.Role.OWNER)
     membership = Membership.objects.create(
         organization=org, user=manager, role=Membership.Role.MANAGER
     )
@@ -117,9 +109,7 @@ def test_branch_revocation_commits_before_locked_branch_authorization():
             attempting.set()
             try:
                 with transaction.atomic():
-                    policy = TenantPolicy.resolve(
-                        user=manager, organization_id=org.pk, lock=True
-                    )
+                    policy = TenantPolicy.resolve(user=manager, organization_id=org.pk, lock=True)
                     policy.require_write()
                     policy.require_branch(branch=branch)
             except NotFound:
