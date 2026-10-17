@@ -32,8 +32,13 @@ def _config(event_type: str):
     if not isinstance(url, str):
         raise ValueError("Invalid webhook endpoint")
     parsed = urlsplit(url)
-    if (parsed.scheme != "https" or not parsed.hostname or parsed.username
-            or parsed.password or parsed.fragment):
+    if (
+        parsed.scheme != "https"
+        or not parsed.hostname
+        or parsed.username
+        or parsed.password
+        or parsed.fragment
+    ):
         raise ValueError("Outbound webhook requires explicit HTTPS endpoint")
     hostname = parsed.hostname.lower()
     if hostname == "localhost" or hostname.endswith(".local"):
