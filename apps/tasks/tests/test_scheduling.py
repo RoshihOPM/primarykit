@@ -1,6 +1,6 @@
 """Recurring scheduling: wall clocks, misfires, idempotency and leader races."""
 
-from datetime import datetime, timedelta, timezone as utc
+from datetime import UTC, datetime, timedelta
 from threading import Barrier, Thread
 
 import pytest
@@ -13,7 +13,6 @@ from apps.tasks.schedule_domain import next_fire_after, validate_calendar
 from apps.tasks.scheduler import _SCHEDULER_LOCK, fire_due, register_schedule
 from apps.tasks.services import claim_next, complete, fail, run_next
 
-UTC = utc.utc
 HANDLERS = {
     "test.ok": "apps.tasks.tests.test_jobs.job_success",
     "test.fail": "apps.tasks.tests.test_jobs.job_failure",
