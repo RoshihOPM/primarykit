@@ -28,3 +28,9 @@ PrimaryKit распространяет исходный код, а не уст�
 5. Провести rollback/release review и отдельно согласовать production migration/deploy.
 
 Нельзя обещать upgrade-safe перенос между `standalone` и `tenant` режимами Catalog/Inventory без отдельного плана миграции данных. Нельзя распространять типовые Commerce-модели как обязательную предметную схему клиентских проектов.
+
+## Проверка изменения OpenAPI
+
+После создания двух версий schema.json используйте source-only
+`python scripts/contract_check.py before.json after.json --fail-on-breaking`.
+Скрипт выявляет удалённые endpoints, новые обязательные параметры и исчезнувшие успешные ответы; он **не заменяет** тесты object-level прав или ручное ревью схемы.

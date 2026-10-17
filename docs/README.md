@@ -45,3 +45,5 @@
 Прочитайте [AGENTS.md](../AGENTS.md), [tests and review gates](module-development.md) и [agent workflow](agent-workflow.md). Изменения должны проходить Ruff, pytest, генератор и CI; PR объединяется с main только при успешных проверках.
 
 - [Project presets and CLI](project-generator.md) · [Safe module upgrade report](module-upgrades.md) — dry-run and client-side change reviews.
+
+- [OpenAPI compatibility](api-compatibility.md) — сравнение JSON контрактов на удалённые методы и новые обязательные параметры.
