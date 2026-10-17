@@ -60,3 +60,27 @@ def test_network_error_fail_closed(monkeypatch):
                         lambda: FakeService(Broken()))
     with pytest.raises(RateLimiterUnavailable, match="temporarily unavailable"):
         check_limit(scope="login", identity="ip:1.1.1.1", max_requests=1, window_seconds=60)
+
+
+@override_settings(SHARED_ACCOUNT_THROTTLE_ENABLED=True)
+def test_account_endpoint_delegates_to_shared_redis(monkeypatch):
+    from types import SimpleNamespace
+
+    from django.contrib.auth.models import AnonymousUser
+
+    from apps.users.throttles import AccountRateThrottle
+
+    calls = []
+
+    def record(**kwargs):
+        calls.append(kwargs)
+        return False, 11
+
+    monkeypatch.setattr("apps.rate_limit.services.check_limit", record)
+    request = SimpleNamespace(META={"REMOTE_ADDR": "192.0.2.42"}, user=AnonymousUser())
+    view = SimpleNamespace(throttle_scope="account_login")
+    throttle = AccountRateThrottle()
+    assert throttle.allow_request(request, view) is False
+    assert throttle.wait() == 11
+    assert calls[0]["identity"] == "ip:192.0.2.42"
+    assert calls[0]["window_seconds"] == 60
