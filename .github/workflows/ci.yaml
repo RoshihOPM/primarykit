@@ -84,6 +84,14 @@ jobs:
           cd -
           # Commerce modules must all boot and work when copied independently.
           # Optional infrastructure modules must generate without importing Celery or Redis.
+          uv run python scripts/new_project.py /tmp/primarykit-rate-client --name rate-client --apps rate_limit
+          cd /tmp/primarykit-rate-client
+          uv sync --locked --all-groups
+          uv run python -m apps.core.doctor --strict
+          uv run python manage.py makemigrations users --noinput --settings=config.settings.test
+          uv run python manage.py check --settings=config.settings.test
+          uv run pytest
+          cd -
           uv run python scripts/new_project.py /tmp/primarykit-cache-client --name cache-client --apps cache
           cd /tmp/primarykit-cache-client
           uv sync --locked --all-groups
