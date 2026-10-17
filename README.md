@@ -44,6 +44,7 @@ uv run python manage.py runserver
 | [Фоновые задачи](docs/tasks-architecture.md) | Очередь, обработчики клиента, worker, ограничения доставки |
 | [Transactional Outbox](docs/outbox-architecture.md) | Durable business events в PostgreSQL Tasks, idempotent dispatch |
 | [Redis Cache](docs/redis-cache.md) | Собственный CacheService на redis-py: JSON, Hashes, счётчики и TTL; Django Cache опционален |
+| [Distributed Rate Limiting](docs/rate-limiting.md) | Атомарные Redis-лимиты между Django workers |
 | [Observability](docs/observability.md) | Request IDs, структурированные JSON-логи, длительность запросов |
 | [Celery + RabbitMQ](docs/celery-rabbitmq.md) | Независимый worker, брокер, необязательные результаты Redis |
 | [Статистика](docs/statistics-architecture.md) | Как бизнес-модули отдают метрики |
@@ -61,6 +62,7 @@ uv run python manage.py runserver
 | tasks | Внутренняя PostgreSQL-очередь фоновых задач, отдельный worker, повторы и идемпотентность |
 | outbox | События бизнеса внутри транзакций PostgreSQL, доставка через Tasks |
 | cache | Native redis-py CacheService (JSON, Hashes и счётчики), необязательный Django Cache bridge |
+| rate_limit | Общие Redis-лимиты login/register/password endpoints |
 | observability | Генерация request IDs и HTTP метрики в JSON-логах |
 | celery_tasks | Отдельный Celery-адаптер с RabbitMQ и необязательным Redis result backend |
 | **users** | JWT, email auth, профиль, восстановление |

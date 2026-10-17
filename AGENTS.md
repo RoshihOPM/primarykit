@@ -58,6 +58,11 @@ PrimaryKit is a copy-based Django starter, not a separately deployed shared back
 
 - Observability is opt-in and must not be required for app startup without external monitoring services. Use server-generated correlation IDs; do not log query parameters, credentials, raw paths containing private identifiers or request/response bodies.
 
+## Distributed rate limiting
+
+- For horizontally scaled auth endpoints, use Redis-backed atomic shared thresholds or trusted edge limits; per-worker DRF LocMemCache is insufficient.
+- Rate limiter is opt-in and requires cache. Never accept user-provided forwarded IP headers or fall back to allowing requests when Redis fails.
+
 ## Optional infrastructure modules
 
 - `apps/cache` uses an independent redis-py CacheService as the default API (JSON, Hashes, counters). Django Cache and django-redis are optional bridges. Do not make Redis mandatory for generated clients. Redis is ephemeral and never authoritative for permissions or financial state.
