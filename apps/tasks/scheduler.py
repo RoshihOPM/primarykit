@@ -73,9 +73,7 @@ def register_schedule(
                     namespace=namespace, name=name, next_run_at=first, **configuration
                 )
         except IntegrityError:
-            existing = JobSchedule.objects.select_for_update().get(
-                namespace=namespace, name=name
-            )
+            existing = JobSchedule.objects.select_for_update().get(namespace=namespace, name=name)
             if any(getattr(existing, field) != value for field, value in configuration.items()):
                 raise ValueError("Conflicting schedule configuration") from None
             return existing
@@ -108,9 +106,9 @@ def fire_due(*, now=None, limit: int = 100) -> int:
     with transaction.atomic():
         if not _leader_acquired():
             return 0
-        due = JobSchedule.objects.filter(
-            is_enabled=True, next_run_at__lte=now
-        ).order_by("next_run_at", "pk")
+        due = JobSchedule.objects.filter(is_enabled=True, next_run_at__lte=now).order_by(
+            "next_run_at", "pk"
+        )
         if connection.features.has_select_for_update_skip_locked:
             due = due.select_for_update(skip_locked=True)
         else:
