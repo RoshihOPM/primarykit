@@ -36,6 +36,7 @@ PrimaryKit распознаёт любую доверенную папку `apps
 | `realtime` | Опциональный WebSocket ASGI adapter, PostgreSQL event cursor | users | chat |
 | `catalog` | Категории, товары, атрибуты | users | organizations, audit |
 | `listings` | Публичные объявления, продавец, модерация, статусы | users | audit, search, storage, organizations |
+| `favorites` | Приватное избранное и сохранённые поисковые фильтры | listings | — |
 | `inventory` | Склады, SKU, остатки и резервы | users | catalog, organizations, audit |
 | `statistics` | Read-only метрики установленных модулей | users | catalog, inventory, storage, organizations |
 | `orders` | Снимок состава заказа, статус | users | catalog, sales, payments, audit |
@@ -55,6 +56,8 @@ PrimaryKit распознаёт любую доверенную папку `apps
 | Organizations | `/api/v1/organizations/` | Организации |
 | Catalog | `/api/v1/catalog/` | Standalone |
 | Listings | `/api/v1/listings/` | Публичные опубликованные, приватные черновики |
+| Favorites | `/api/v1/favorites/` | Приватные закладки опубликованных объявлений |
+| Saved searches | `/api/v1/saved-searches/` | Приватные сохранённые поиски |
 | Inventory | `/api/v1/inventory/` | Standalone |
 | Orders | `/api/v1/orders/` | Пользователь |
 | Sales | `/api/v1/sales/` | Пользователь |
