@@ -1,25 +1,32 @@
-# CRM Starter
-
-Профиль `--preset crm` собирает независимый backend с модулями Kanban и Leads.
+# CRM Starter — независимые модули
 
 ```bash
 uv run python scripts/new_project.py ../my-crm --name my-crm --preset crm
 cd ../my-crm
-uv run python manage.py makemigrations users audit storage organizations tasks kanban leads
+uv run python manage.py makemigrations users audit storage organizations tasks kanban leads contacts deals
 uv run python manage.py migrate
 ```
 
-JWT обязателен, данные ограничены владельцем. Модуль `leads` управляет
-статусом лида независимо от доски. Перемещение карточки **не меняет** статус
-лида автоматически: синхронизация — бизнес-правило клиентского проекта.
+Шаблон собирает **четыре независимых модуля**: Kanban, Leads, Contacts,
+Deals. Прямых зависимостей и связей моделей между ними нет. Каждый можно
+установить отдельно через `--apps` вместе с обязательным базовым Users.
 
-`POST /api/v1/kanban/cards/{id}/move/` принимает `target_column_id`
-и `expected_version` (необязательный `position` задаёт позицию с нуля). `POST /api/v1/leads/{id}/transition/` принимает
-`status` и `expected_version`; устаревшая версия приводит к HTTP 409.
+Все API требуют JWT и ограничивают данные владельцем. Organizations/RBAC не
+включают командные права для этих модулей автоматически.
 
-Ограничения: это не полноценная CRM и не Bitrix24. Нет фронтенда,
-общекомандного доступа, универсального справочника контактов, сделок,
-фронтенда перетаскивания, автоматизации и отчётов по воронке.
-Установка Organizations не делает модули автоматически tenant-aware.
-Персональные данные лидов требуют отдельной политики хранения и удаления.
-Миграции создаются и коммитятся **в сгенерированном проекте**.
+- `/api/v1/kanban/boards/`, `columns/`, `cards/` — доски, колонки, карточки
+- `POST /api/v1/kanban/cards/{id}/move/` — `target_column_id`,
+  `expected_version`, необязательный `position` (от нуля)
+- `/api/v1/leads/` — лиды и `/{id}/transition/` для смены статуса
+- `/api/v1/contacts/` — независимые контакты
+- `/api/v1/deals/` — сделки и `/{id}/transition/` для смены стадии
+
+Для редактирования применяется `PATCH` с `expected_version`;
+конфликт возвращает HTTP 409. У сделок суммы хранятся в целых минимальных
+денежных единицах: это не платёжный процессинг.
+
+Это backend starter, а не законченный Bitrix24. Нет фронтенда,
+совместных досок, автоматической связи сделок и лидов, командных прав,
+удаления персональных данных, аналитики воронки и платёжных операций.
+Такие правила и интеграции реализуются внутри сгенерированного проекта.
+Миграции генерируются и коммитятся клиентом.
