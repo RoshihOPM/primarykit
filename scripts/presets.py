@@ -17,6 +17,8 @@ PRESETS = {
             "outbox",
             "kanban",
             "leads",
+            "contacts",
+            "deals",
         ),
     },
     "marketplace": {
