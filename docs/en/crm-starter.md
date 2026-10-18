@@ -1,44 +1,53 @@
-# CRM starter (API building blocks)
+# CRM starter — independent modules
 
 Generate a standalone Django backend:
 
 ```bash
 uv run python scripts/new_project.py ../my-crm --name my-crm --preset crm
 cd ../my-crm
-uv run python manage.py makemigrations users audit storage organizations tasks kanban leads
+uv run python manage.py makemigrations users audit storage organizations tasks kanban leads contacts deals
 uv run python manage.py migrate
 ```
 
-The CRM preset includes Kanban and Leads plus existing infrastructure. It is not a
-Bitrix clone or a complete CRM. The starter does not automatically synchronize
-Kanban cards and Leads, create UI screens, provide multi-user team access, or
-manage contacts/deals. Those business rules remain client-owned.
+The CRM preset **composes** the standalone `kanban`, `leads`, `contacts` and
+`deals` modules; it does not introduce database foreign keys or business imports
+between them. Any one module can also be selected alone via `--apps` and
+generated with only its required `users` dependency. Each module uses an
+owner-only API (JWT required). Adding `organizations` or `rbac` does not
+automatically provide tenant or team ACLs.
 
 ## Endpoints
 
-- `/api/v1/kanban/boards/` — user-owned boards
-- `/api/v1/kanban/columns/` — columns inside accessible boards
-- `/api/v1/kanban/cards/` — cards inside accessible boards
-- `POST /api/v1/kanban/cards/{id}/move/` — body:
-  `{"target_column_id":"<uuid>","expected_version":0}`
-- `/api/v1/leads/` — owner-scoped lead CRUD (no DELETE)
-- `POST /api/v1/leads/{id}/transition/` — body:
+- `/api/v1/kanban/boards/` — private boards
+- `/api/v1/kanban/columns/` — columns within private boards
+- `/api/v1/kanban/cards/` — standalone cards
+- `POST /api/v1/kanban/cards/{id}/move/` —
+  `{"target_column_id":"<uuid>","expected_version":0,"position":0}`
+- `PATCH /api/v1/kanban/cards/{id}/` —
+  `{"expected_version":0,"title":"Revised"}`
+- `/api/v1/leads/` — independent lead CRUD without DELETE
+- `POST /api/v1/leads/{id}/transition/` —
   `{"status":"qualified","expected_version":0}`
+- `/api/v1/contacts/` — standalone private contact directory without DELETE
+- `/api/v1/deals/` — private deals with amount in integer minor units and
+  three-letter ISO-style currency codes
+- `POST /api/v1/deals/{id}/transition/` —
+  `{"stage":"negotiation","expected_version":0}`
 
-JWT authentication is required. Non-owners cannot access data. Lead status changes
-are serialized under a row lock and detect stale versions (409). Basic card moves
-also use a row lock and version; card editing requires `expected_version` and the move command optionally takes `position` for ordered placement. Concurrent
-PostgreSQL verification and code review are required before production adoption.
+Leads, Deals and Contacts PATCH requests require `expected_version`; stale
+updates return 409. Read/write permission is always owner-only and scoped on
+every endpoint. Versions prevent lost updates between supported service calls.
 
-## Known limitations
+## Deliberate limitations
 
-- Owner-only, not organization-wide permissions. Installing `organizations`
-  does **not** automatically make Kanban/Leads tenant-aware.
-- Contacts are embedded as lead fields in this initial starter. PII retention,
-  purpose limitation, export and deletion must be designed per client.
-- Kanban placement is not a source of truth for lead status, and cannot be
-  automatically mapped to domain stages.
-- No frontend drag-and-drop, per-column WIP limits, leads assignment,
-  deals, custom fields, automations, or UI.
-- Copy-based modules ship without migrations; generate and commit the client
-  schema before deployment.
+- No association between Lead, Deal, Contact or Kanban Card. A generated client
+  must explicitly design its own domain associations; core source modules remain
+  independent.
+- No organization-wide permissions, assignees, custom fields, drag-and-drop
+  frontend, background automation, revenue accounting or pipeline reports.
+- No hard delete endpoints: personal-data deletion/export and retention policies
+  must be implemented per deployed client's legal obligations.
+- Kanban's same-board integrity is enforced by the supplied API/service, not
+  by a cross-table SQL CHECK constraint; bypassing services is unsupported.
+- Values in Deals are not payment settlement, invoices, nor bank transactions.
+- Copy-based modules ship no reusable migrations. Generate and commit your own.
