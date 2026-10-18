@@ -2,4 +2,10 @@
 
 from apps.core.module_registry import Module, Route
 
-MODULE = Module(name="kanban", requires=("users",), optional=("audit",), routes=(Route("api/v1/kanban/"),), priority=54)
+MODULE = Module(
+    name="kanban",
+    requires=("users",),
+    optional=("audit",),
+    routes=(Route("api/v1/kanban/"),),
+    priority=54,
+)
