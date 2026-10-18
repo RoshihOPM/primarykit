@@ -58,9 +58,7 @@ class ColumnViewSet(viewsets.ModelViewSet):
         column = self.get_object()
         payload = ColumnReorderSerializer(data=request.data)
         payload.is_valid(raise_exception=True)
-        updated = reorder_column(
-            actor=request.user, column_id=column.pk, **payload.validated_data
-        )
+        updated = reorder_column(actor=request.user, column_id=column.pk, **payload.validated_data)
         return Response(self.get_serializer(updated).data)
 
     def perform_update(self, serializer):
