@@ -1,5 +1,8 @@
 # Module scaffold and dependency graph (source catalog only)
 
+**Language:** English · [Guide](en/module-scaffold.md) · [Русский индекс](README.md)
+
+
 `python scripts/module_scaffold.py` is a **source-only** developer CLI. It lives under
 `scripts/` and is intentionally absent from independent client backends created by
 `scripts/new_project.py`. It does not install packages, generate migrations, run

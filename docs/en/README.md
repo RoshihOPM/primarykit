@@ -13,6 +13,10 @@ This is the English-language guide to the **implemented source catalog**, verifi
 5. [Operations and security checklist](operations.md)
 6. [Project status and release readiness](project-status.md)
 
+## Newly implemented module guides (#45–#52)
+
+[Shared tenant permissions](tenant-permissions.md) · [Workflows](workflows.md) · [Tasks scheduler](tasks-scheduler.md) · [Device sessions](device-sessions.md) · [Usage quotas](usage-quotas.md) · [Chat / Realtime](chat-realtime.md) · [Privacy retention](privacy-retention.md) · [Module scaffold](module-scaffold.md)
+
 ## Reference documentation by topic
 
 The following detailed documents are in the source-level `docs/` directory; some are in Russian, some in English. The English guides above describe the same current features.

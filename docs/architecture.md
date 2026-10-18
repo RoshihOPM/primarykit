@@ -1,5 +1,8 @@
 # Архитектура PrimaryKit
 
+**Язык:** Русский · [English](en/architecture.md) · [Оглавление](README.md)
+
+
 ## Границы
 
 - `config/`: Django project settings, ASGI/WSGI, URL routing. Это **Django Core**.
@@ -31,7 +34,7 @@ PrimaryKit предназначен для **копирования исходн
 ## Окружения
 
 - `local`: local development only.
-- `test`: SQLite in-memory для быстрых unit/smoke tests; интеграционные тесты с PostgreSQL необходимо добавить.
+- `test`: SQLite in-memory для быстрых unit/smoke tests; PostgreSQL integration tests уже используются в CI для конкурентных операций, но нужны и в тестах каждого клиентского проекта.
 - `production`: требует секрет, разрешённые хосты, БД, TLS через reverse proxy, сессии/CSRF только по HTTPS.
 
 `DATABASE_URL` в Compose должен соответствовать параметрам PostgreSQL; для пароля со спецсимволами потребуется URL-кодирование или другой способ задания настроек.
@@ -39,7 +42,7 @@ PrimaryKit предназначен для **копирования исходн
 ## Дальнейшие шаги
 
 - `uv.lock` хранится в репозитории. При изменении `pyproject.toml` выполняйте `uv lock` и коммитьте lockfile. Docker/CI используют `uv sync --locked`.
-- Добавить отдельную проверку Compose + PostgreSQL и production `check --deploy`.
+- CI уже содержит проверки Compose + PostgreSQL; клиенту дополнительно нужно выполнять production `check --deploy` со своими настройками.
 - Users, RBAC, Notifications, Audit, Storage, Organizations, Catalog and Inventory уже реализованы. Catalog и Inventory имеют два режима: standalone (владелец) и tenant (компания/филиалы). Storage поддерживает раздельные персональные и корпоративные файлы через политику доступа.
 - Генератор модулей поддерживает полностью независимые Catalog и Inventory. Для корпоративного комплекта нужно явно выбрать `catalog inventory organizations` и до первой миграции закрепить tenant-режим.
 

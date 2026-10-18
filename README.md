@@ -101,7 +101,7 @@ The source catalog additionally supports project presets, a project dry-run, a r
 - [Architecture and ownership](docs/en/architecture.md)
 - [Module list, dependencies and routes](docs/en/modules.md)
 - [Getting started](docs/en/getting-started.md)
-- [Implemented features and limitations](docs/en/features.md)
+- [Implemented features and limitations](docs/en/features.md) · [New module deep dives (#45–#52)](docs/en/README.md#newly-implemented-module-guides-45-52)
 - [Production and security checklist](docs/en/operations.md)
 - [Current project status](docs/en/project-status.md)
 

@@ -1,5 +1,8 @@
 # New Project Generator — v0.1
 
+**Язык:** Русский · [English quick start](en/getting-started.md) · [Оглавление](README.md)
+
+
 ## Goal
 
 Create a **completely independent Django repository** from PrimaryKit without pip-installed shared packages or source-catalog migration history. Module source is physically copied; later upgrades require a human review.
@@ -22,7 +25,7 @@ For minimal API:
 uv run python scripts/new_project.py ../crm-api --name crm-api --git-init
 ```
 
-Always copied: `core`, `users`, `notifications`. Optional: `rbac`, `audit`, `storage`, `organizations`, `catalog`, `inventory`.
+Always copied: `core`, `users`, `notifications`. Optional: см. [полный каталог модулей](modules.md), включая chat/realtime, privacy, workflows, quotas, storage и другие. Генератор разрешает зависимости по manifest; перечисление выше не является полным.
 
 `users` currently depends on `notifications` because account verification uses its email transport. Audit is optional (core facade is a no-op when not installed). Storage depends only on Users and works without Organizations; RBAC depends on Users. Catalog and Inventory work in standalone mode without other business modules. To start in tenant mode, select Organizations alongside Catalog (and Catalog plus Organizations alongside Inventory). The generator pins the schema mode before migrations.
 

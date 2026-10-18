@@ -1,5 +1,8 @@
 # Organizations & Memberships v0.1
 
+**Language:** English · [Tenant policy guide](en/tenant-permissions.md) · [Русский индекс](README.md)
+
+
 ## Design and trust boundary
 
 Organizations is an optional app implementing **organization-scoped** membership and

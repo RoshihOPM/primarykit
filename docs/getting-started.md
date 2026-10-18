@@ -1,5 +1,8 @@
 # Быстрый старт: от репозитория до собственного API
 
+**Язык:** Русский · [English](en/getting-started.md) · [Оглавление](README.md)
+
+
 ## Что понадобится
 
 Python 3.13, Git, [uv](https://docs.astral.sh/uv/), Docker + Docker Compose (рекомендуется) или установленный PostgreSQL 17. Проект написан на Django 6.1 и DRF. Для локального интерфейса API достаточно браузера, Swagger включён в debug-настройках.
