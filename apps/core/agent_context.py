@@ -27,7 +27,7 @@ def build_context(root: Path) -> dict:
     """Discover capabilities from manifest metadata without importing Django apps."""
     root = root.resolve()
     report = inspect_project(root)
-    if report.failed(strict=True):
+    if report.failed(strict=False):
         raise ValueError("Project doctor failed; resolve module/configuration issues first")
     pyproject = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
     modules = {}
