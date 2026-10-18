@@ -15,8 +15,8 @@ def test_manifest():
 @pytest.mark.django_db
 def test_move_card_enforces_owner_board_and_version():
     user_model = get_user_model()
-    owner = user_model.objects.create_user(username="kanban_owner", password="test-password")
-    other = user_model.objects.create_user(username="kanban_other", password="test-password")
+    owner = user_model.objects.create_user(email="kanban_owner@example.com", password="test-password")
+    other = user_model.objects.create_user(email="kanban_other@example.com", password="test-password")
     board = Board.objects.create(owner=owner, name="Work")
     a = Column.objects.create(board=board, name="Todo")
     b = Column.objects.create(board=board, name="Done")
