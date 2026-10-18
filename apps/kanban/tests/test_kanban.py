@@ -1,6 +1,6 @@
 import pytest
 from django.contrib.auth import get_user_model
-from django.core.exceptions import PermissionDenied, ValidationError
+from rest_framework.exceptions import NotFound, ValidationError
 
 from apps.kanban.manifest import MODULE
 from apps.kanban.models import Board, Card, CardMove, Column
@@ -29,7 +29,7 @@ def test_move_card_enforces_owner_board_and_version():
     )
     card = Card.objects.create(board=board, column=a, title="Task")
 
-    with pytest.raises(PermissionDenied):
+    with pytest.raises(NotFound):
         move_card(actor=other, card_id=card.pk, target_column_id=b.pk, expected_version=0)
     with pytest.raises(ValidationError):
         move_card(actor=owner, card_id=card.pk, target_column_id=foreign.pk, expected_version=0)
