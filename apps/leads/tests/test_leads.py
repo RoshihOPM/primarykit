@@ -42,4 +42,9 @@ def test_lead_privacy_and_transitions():
         api.post(url + pk + "/transition/", {"status": "won", "expected_version": 1}).status_code
         == 200
     )
-    assert api.patch(url + pk + "/", {"status": "new", "version": 0}).data["status"] == "won"
+    assert api.patch(url + pk + "/", {"status": "new", "version": 0}).status_code == 400
+    edited = api.patch(url + pk + "/", {"expected_version": 2, "notes": "Call back"})
+    assert edited.status_code == 200
+    assert edited.data["version"] == 3
+    assert api.patch(url + pk + "/", {"expected_version": 2, "notes": "Lost update"}).status_code == 409
+    assert other.patch(url + pk + "/", {"expected_version": 3, "notes": "Intrusion"}).status_code == 404
