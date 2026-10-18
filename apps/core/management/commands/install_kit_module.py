@@ -7,7 +7,9 @@ Restart Django and generate/commit migrations afterwards.
 """
 
 import ast
+import hashlib
 import json
+import os
 import re
 import shutil
 from pathlib import Path
@@ -74,6 +76,43 @@ def install_order(*, source: Path, existing: set[str], requested: str) -> list[s
     return ordered
 
 
+
+def _module_fingerprint(folder: Path) -> dict[str, str]:
+    """Snapshot copied runtime Python files, matching the project generator."""
+    return {
+        path.relative_to(folder).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
+        for path in sorted(folder.rglob("*.py"))
+        if not {"migrations", "tests", "__pycache__"} & set(path.parts)
+    }
+
+
+def _updated_origin(origin: Path, order: list[str], stage: Path) -> str | None:
+    """Prepare provenance before moving any module into the running project."""
+    if not origin.is_file():
+        return None  # Provenance is optional for existing client projects.
+    try:
+        data = json.loads(origin.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        raise CommandError("Cannot read client provenance; no modules installed.") from exc
+    if not isinstance(data, dict):
+        raise CommandError("Invalid client provenance object; no modules installed.")
+    included = data.get("included_apps")
+    fingerprints = data.get("module_fingerprints")
+    if (
+        not isinstance(included, list)
+        or not all(isinstance(name, str) for name in included)
+        or not isinstance(fingerprints, dict)
+    ):
+        raise CommandError("Invalid client provenance metadata; no modules installed.")
+    if set(order) & (set(included) | set(fingerprints)):
+        raise CommandError("Client provenance already names a module missing on disk.")
+
+    for name in order:
+        fingerprints[name] = _module_fingerprint(stage / name)
+    data["included_apps"] = sorted(set(included) | set(order))
+    return json.dumps(data, indent=2, ensure_ascii=False) + "\n"
+
+
 class Command(BaseCommand):
     help = "Copy a selected PrimaryKit module and all required module folders."
 
@@ -117,18 +156,22 @@ class Command(BaseCommand):
                     # Tenant test modules require optional Organizations models.
                     for name in ("test_storage.py", "test_seaweedfs_integration.py"):
                         (stage / "storage" / "tests" / name).unlink(missing_ok=True)
+                origin = destination / "primarykit-origin.json"
+                updated = _updated_origin(origin, order, stage)
+                if updated is not None:
+                    staged_origin = stage / "primarykit-origin.json"
+                    staged_origin.write_text(updated, encoding="utf-8")
                 for name in order:
                     target = destination / "apps" / name
                     if target.exists():
                         raise CommandError(f"Module already exists: {target}")
                     (stage / name).rename(target)
                     created.append(target)
-                origin = destination / "primarykit-origin.json"
-                if origin.is_file():
-                    data = json.loads(origin.read_text(encoding="utf-8"))
-                    data["included_apps"] = sorted(set(data.get("included_apps", ())) | set(order))
-                    origin.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
-        except (OSError, ValueError, json.JSONDecodeError) as exc:
+                # Single atomic metadata replacement, after all folders are installed.
+                # If this fails, the original JSON remains intact and folders roll back.
+                if updated is not None:
+                    os.replace(staged_origin, origin)
+        except (OSError, ValueError, CommandError) as exc:
             for path in reversed(created):
                 shutil.rmtree(path, ignore_errors=True)
             raise CommandError(f"Module installation failed: {exc}") from exc

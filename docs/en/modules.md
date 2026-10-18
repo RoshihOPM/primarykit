@@ -2,7 +2,7 @@
 
 **Language:** English · [Русский](../modules.md) · [English index](README.md)
 
-The repository has **31** source apps in `apps/` at the reviewed commit (2026-10-18). The baseline copied into every generated project is **core + users + notifications**. All others are optional; however, individual modules have **hard dependencies** that the generator resolves.
+The repository has **32** source apps in `apps/` at the reviewed commit (2026-10-18). The baseline copied into every generated project is **core + users + notifications**. All others are optional; however, individual modules have **hard dependencies** that the generator resolves.
 
 | Module | Included behavior | Hard dependencies | Optional integrations |
 | --- | --- | --- | --- |

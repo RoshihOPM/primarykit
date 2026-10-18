@@ -2,11 +2,11 @@
 
 **Language:** English · [Русский](../project-status.md) · [English index](README.md)
 
-**Snapshot:** 2026-10-18. Source version: `0.1.0`. The verified base branch was `main`, commit `9aa8b93158d443cc9cd9d1100c8441460156cd91` (the privacy retention merge). The matching Core CI run completed successfully: [GitHub Actions](https://github.com/RoshihOPM/primarykit/actions/runs/39067376652).
+**Snapshot:** 2026-10-18. Source version: `0.1.0`. The verified base branch was `main`, commit `a17e9e7c917954fea5b6d11b39fd73881b1670a0` (the listings merge). The matching Core CI run completed successfully: [GitHub Actions](https://github.com/RoshihOPM/primarykit/actions/runs/39122039143).
 
 ## Implemented and merged
 
-The catalog contains **31 apps** with three baseline modules and 28 selectable ones. Issues **#45–#52** were implemented and merged in PRs #58, #54, #56, #57, #55, #59, #60 and #53 respectively:
+The catalog contains **32 apps** with three baseline modules and 29 selectable ones. Issues **#45–#52** were implemented and merged in PRs #58, #54, #56, #57, #55, #59, #60 and #53 respectively:
 
 | Issue | Implemented capability |
 | --- | --- |
@@ -19,7 +19,8 @@ The catalog contains **31 apps** with three baseline modules and 28 selectable o
 | #51 | Privacy retention requests, dry-run, grace windows, legal holds and audit |
 | #52 | Source-only module scaffold and dependency graph CLI |
 
-Also merged earlier: preset-aware generator with dry-run, module upgrade reports, OpenAPI compatibility checks, scoped API keys, PostgreSQL idempotency receipts, CSV exchange, PostgreSQL search, HTTPS integration adapter and foundational commerce/infrastructure modules.
+Also merged: optional seller-owned moderated `listings` (#63), independent from Catalog and Inventory.
+\nAlso merged earlier: preset-aware generator with dry-run, module upgrade reports, OpenAPI compatibility checks, scoped API keys, PostgreSQL idempotency receipts, CSV exchange, PostgreSQL search, HTTPS integration adapter and foundational commerce/infrastructure modules.
 
 ## Readiness and gaps
 

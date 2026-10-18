@@ -23,8 +23,7 @@ are marked `contract_review` when changed.
 network, or rewrites files.** A `conflict_review` entry requires a manual
 three-way merge; `source_update` is only a proposed update, never automatically
 safe. Review permissions, ORM indexes, migrations, standalone/tenant modes and
-OpenAPI before applying the change. Older clients without fingerprints must use
-manual Git history and diff; do not fabricate a baseline.
+OpenAPI before applying the change. Installing a new trusted module with `install_kit_module` now adds its copied-file\nSHA-256 snapshot and updates `included_apps` atomically. The installer must be\nupdated manually in clients generated from older kit versions. Existing clients\nwith a missing per-module snapshot receive a `baseline_unknown` report entry\nrequiring human review. Do not create a guessed baseline from modified client\nfiles; use Git history and a trusted source checkout to establish ancestry.
 
 Run client-owned migration review, schema checks and security regression tests.
 See [module compatibility](module-compatibility.md) and [deployment](deployment.md).

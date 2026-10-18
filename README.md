@@ -40,7 +40,7 @@ This example uses standalone Catalog and Inventory. For tenant mode, include `or
 
 ## Available modules
 
-The source catalog currently contains **31** apps (three baseline and 28 selectable source modules):
+The source catalog currently contains **32** apps (three baseline and 29 selectable source modules):
 
 | Area | Modules |
 | --- | --- |
@@ -51,6 +51,7 @@ The source catalog currently contains **31** apps (three baseline and 28 selecta
 | State and privacy | `workflows`, `privacy` |
 | Messaging | `chat`, `realtime` (opt-in WebSocket transport) |
 | Business examples | `storage`, `catalog`, `inventory`, `statistics`, `orders`, `sales`, `payments` |
+| Classified ads | `listings` (public search, private drafts, moderation) |
 
 `users` includes per-user device/session management. `organizations` supplies a shared tenant permission policy adapter. There is also a **source-only module scaffold CLI** (not a runtime module) and dependency graph exporter.
 
