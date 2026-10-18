@@ -41,6 +41,6 @@ def test_kanban_api_enforces_owner_and_move():
         api.post(
             root + "cards/" + card + "/move/", {"target_column_id": col1, "expected_version": 0}
         ).status_code
-        == 400
+        == 409
     )
     assert APIClient().get(root + "boards/").status_code in (401, 403)
