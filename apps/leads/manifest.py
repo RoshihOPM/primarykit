@@ -3,6 +3,9 @@
 from apps.core.module_registry import Module, Route
 
 MODULE = Module(
-    name="leads", requires=("users",), optional=("kanban", "audit", "organizations"),
-    routes=(Route("api/v1/leads/"),), priority=55,
+    name="leads",
+    requires=("users",),
+    optional=("kanban", "audit", "organizations"),
+    routes=(Route("api/v1/leads/"),),
+    priority=55,
 )
