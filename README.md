@@ -42,7 +42,7 @@ This example uses standalone Catalog and Inventory. For tenant mode, include `or
 
 ## Available modules
 
-The source catalog currently contains **31** apps (three baseline and 28 selectable source modules):
+The source catalog currently contains **33** apps (three baseline and 30 selectable source modules):
 
 | Area | Modules |
 | --- | --- |
@@ -53,6 +53,7 @@ The source catalog currently contains **31** apps (three baseline and 28 selecta
 | State and privacy | `workflows`, `privacy` |
 | Messaging | `chat`, `realtime` (opt-in WebSocket transport) |
 | Business examples | `storage`, `catalog`, `inventory`, `statistics`, `orders`, `sales`, `payments` |
+| Classified ads | `listings` (moderation and opt-in photos), `favorites` (bookmarks and saved searches) |
 
 `users` includes per-user device/session management. `organizations` supplies a shared tenant permission policy adapter. There is also a **source-only module scaffold CLI** (not a runtime module) and dependency graph exporter.
 
@@ -128,4 +129,4 @@ Generate a project, then inside the **generated client** run `python -m apps.cor
 
 ## Classified listings (optional)
 
-Select `--apps listings` or `--preset marketplace` for seller-owned moderated ads with public listing search, independent of Catalog and Inventory. Add `--apps favorites` for private bookmarks and saved searches (which also copies Listings). Vehicle VIN/make/model, public media and promotion credits are client-owned integrations. See [Listings](docs/listings.md) and [Favorites](docs/en/favorites.md).
+Select `--apps listings` or `--preset marketplace` for seller-owned moderated ads with public listing search, independent of Catalog and Inventory. Add `--apps favorites` for private bookmarks and saved searches (which also copies Listings). VIN/make/model integrations and promotion credits remain client-owned; optional listing photos are provided through a disabled-by-default private media adapter with explicit moderation. See [Listings](docs/listings.md) and [Favorites](docs/en/favorites.md).

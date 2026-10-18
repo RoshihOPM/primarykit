@@ -2,7 +2,7 @@
 
 **Language:** English · [Русский](../modules.md) · [English index](README.md)
 
-The repository has **31** source apps in `apps/` at the reviewed commit (2026-10-18). The baseline copied into every generated project is **core + users + notifications**. All others are optional; however, individual modules have **hard dependencies** that the generator resolves.
+The repository has **33** source apps in `apps/` at the reviewed commit (2026-10-18). The baseline copied into every generated project is **core + users + notifications**. All others are optional; however, individual modules have **hard dependencies** that the generator resolves.
 
 | Module | Included behavior | Hard dependencies | Optional integrations |
 | --- | --- | --- | --- |
@@ -76,4 +76,4 @@ See [implemented feature guide](features.md) and [full source references](README
 
 ## Classified ads
 
-Optional `listings` supports public moderated advertisements, privately owned drafts and a staff-managed taxonomy. No Catalog SKU/Inventory relation. See [Listings](../listings.md).
+Optional `listings` supports public moderated advertisements, privately owned drafts, staff-managed taxonomy and a disabled-by-default, private, moderated photo adapter. `favorites` adds private bookmarks and saved searches. No Catalog SKU/Inventory relation. See [Listings](../listings.md).
