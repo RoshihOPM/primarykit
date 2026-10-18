@@ -224,9 +224,7 @@ def test_generated_client_keeps_license_not_upstream_governance(tmp_path):
     source_license = (SOURCE_ROOT / "LICENSE").read_text(encoding="utf-8")
     assert source_license.startswith("MIT License")
     assert (target / "LICENSE").read_text(encoding="utf-8") == source_license
-    assert "preserve the included LICENSE" in (target / "README.md").read_text(
-        encoding="utf-8"
-    )
+    assert "preserve the included LICENSE" in (target / "README.md").read_text(encoding="utf-8")
     for source_only in (
         "CONTRIBUTING.md",
         "SECURITY.md",
