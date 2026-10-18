@@ -15,9 +15,10 @@ from .serializers import (
     CardEditSerializer,
     CardSerializer,
     ColumnSerializer,
+    ColumnReorderSerializer,
     MoveSerializer,
 )
-from .services import create_card, edit_card, move_card
+from .services import create_card, create_column, edit_card, move_card, reorder_column
 
 
 class BoardViewSet(viewsets.ModelViewSet):
@@ -46,7 +47,21 @@ class ColumnViewSet(viewsets.ModelViewSet):
         board = get_object_or_404(
             Board, pk=serializer.validated_data["board"].pk, owner=self.request.user
         )
-        serializer.save(board=board)
+        serializer.instance = create_column(
+            actor=self.request.user,
+            board_id=board.pk,
+            name=serializer.validated_data["name"],
+        )
+
+    @action(detail=True, methods=["post"])
+    def reorder(self, request, pk=None):
+        column = self.get_object()
+        payload = ColumnReorderSerializer(data=request.data)
+        payload.is_valid(raise_exception=True)
+        updated = reorder_column(
+            actor=request.user, column_id=column.pk, **payload.validated_data
+        )
+        return Response(self.get_serializer(updated).data)
 
     def perform_update(self, serializer):
         if "board" in serializer.validated_data:
