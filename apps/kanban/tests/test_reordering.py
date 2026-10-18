@@ -20,22 +20,30 @@ def test_dense_reorder_and_cross_column_move():
     assert [card.position for card in cards] == [0, 1, 2]
 
     moved = move_card(
-        actor=owner, card_id=cards[2].pk, target_column_id=todo.pk,
-        expected_version=0, position=0,
+        actor=owner,
+        card_id=cards[2].pk,
+        target_column_id=todo.pk,
+        expected_version=0,
+        position=0,
     )
     assert moved.position == 0
     assert list(Card.objects.filter(column=todo).values_list("position", flat=True)) == [0, 1, 2]
 
     moved = move_card(
-        actor=owner, card_id=cards[2].pk, target_column_id=done.pk,
-        expected_version=moved.version, position=0,
+        actor=owner,
+        card_id=cards[2].pk,
+        target_column_id=done.pk,
+        expected_version=moved.version,
+        position=0,
     )
     assert moved.column_id == done.pk
     assert list(Card.objects.filter(column=todo).values_list("position", flat=True)) == [0, 1]
     assert CardMove.objects.filter(card=moved).count() == 1
 
     edited = edit_card(
-        actor=owner, card_id=moved.pk, expected_version=moved.version,
+        actor=owner,
+        card_id=moved.pk,
+        expected_version=moved.version,
         changes={"title": "Reviewed"},
     )
     assert edited.title == "Reviewed"
@@ -49,6 +57,4 @@ def test_board_isolation_does_not_leak_existence():
     col = Column.objects.create(board=board, name="Inbox")
     card = create_card(actor=owner, board_id=board.pk, column_id=col.pk, title="Secret")
     with pytest.raises(NotFound):
-        edit_card(
-            actor=stranger, card_id=card.pk, expected_version=0, changes={"title": "Stolen"}
-        )
+        edit_card(actor=stranger, card_id=card.pk, expected_version=0, changes={"title": "Stolen"})
