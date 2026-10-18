@@ -218,3 +218,23 @@ def test_dry_run_and_presets_do_not_write_files(tmp_path, capsys, monkeypatch):
     assert result["preset"] == "crm"
     assert "organizations" in result["included_apps"]
     assert not target.exists()
+
+
+def test_generated_client_keeps_license_not_upstream_governance(tmp_path):
+    target = create_project(tmp_path / "client-api", name="client-api")
+    source_license = (SOURCE_ROOT / "LICENSE").read_text(encoding="utf-8")
+    assert source_license.startswith("MIT License")
+    assert (target / "LICENSE").read_text(encoding="utf-8") == source_license
+    assert "preserve the included LICENSE" in (target / "README.md").read_text(encoding="utf-8")
+    for source_only in (
+        "CONTRIBUTING.md",
+        "SECURITY.md",
+        "CODE_OF_CONDUCT.md",
+        ".github/CODEOWNERS",
+        ".github/dependabot.yml",
+        ".github/PULL_REQUEST_TEMPLATE.md",
+        ".github/ISSUE_TEMPLATE",
+        "docs/maintainer-playbook.md",
+        "CHANGELOG.md",
+    ):
+        assert not (target / source_only).exists(), source_only

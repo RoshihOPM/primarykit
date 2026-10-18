@@ -26,6 +26,6 @@ PrimaryKit ships examples and secure defaults; a detached client is **not produc
 
 ## Public repository readiness
 
-Making the **source repository** public is separate from deploying a backend. Before changing visibility, review *entire Git history* for credentials, private client data and redistribution rights; add an explicit project license; configure security reporting and branch protections. **No license is automatically granted by a publicly visible source tree.**
+Making the **source repository** public is separate from deploying a backend. Before changing visibility, review *entire Git history* for credentials, private client data and redistribution rights; preserve the selected [MIT license](../../LICENSE); configure security reporting and enforce branch protection. **Policy files and a passing workflow do not enable protection by themselves.** See the [maintainer playbook](../maintainer-playbook.md).
 
 See the full [source production runbook](../production-operations.md) and [project status](project-status.md).

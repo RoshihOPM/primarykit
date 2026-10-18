@@ -136,6 +136,19 @@ def create_project(
     target.parent.mkdir(parents=True, exist_ok=True)
     try:
         shutil.copytree(root, target, ignore=_ignore_excluded)
+        # Clients own their community policies; only the MIT notice follows copied code.
+        for source_only in (
+            "CONTRIBUTING.md",
+            "SECURITY.md",
+            "CODE_OF_CONDUCT.md",
+            ".github/CODEOWNERS",
+            ".github/dependabot.yml",
+            ".github/PULL_REQUEST_TEMPLATE.md",
+            "docs/maintainer-playbook.md",
+            "CHANGELOG.md",
+        ):
+            (target / source_only).unlink(missing_ok=True)
+        shutil.rmtree(target / ".github" / "ISSUE_TEMPLATE", ignore_errors=True)
         for module in OPTIONAL_APPS - selected:
             shutil.rmtree(target / "apps" / module)
         if "storage" not in selected:
@@ -281,6 +294,11 @@ def create_project(
                 if "api_keys" in selected
                 else ""
             )
+            + "\n## License notices\n\n"
+            + "Copied PrimaryKit code is distributed under MIT; preserve the included "
+            "LICENSE and applicable copyright notices. Client-authored code may have "
+            "its own separate licensing terms. Configure this client's own SECURITY, "
+            "CONTRIBUTING and repository protection policies.\n\n"
             + "See docs/architecture.md and AGENTS.md for conventions.\n",
             encoding="utf-8",
         )

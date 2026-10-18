@@ -1,0 +1,8 @@
+# Maintainer review ownership (not enforcement without GitHub branch protection).
+* @RoshihOPM
+/.github/ @RoshihOPM
+/apps/users/ @RoshihOPM
+/apps/organizations/ @RoshihOPM
+/apps/payments/ @RoshihOPM
+/apps/privacy/ @RoshihOPM
+/config/settings/ @RoshihOPM

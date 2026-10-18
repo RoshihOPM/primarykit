@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security reporting policy
+    url: https://github.com/RoshihOPM/primarykit/blob/main/SECURITY.md
+    about: Do not post exploit details or secrets to public issues. Follow the private disclosure instructions.
+  - name: Documentation / Документация
+    url: https://github.com/RoshihOPM/primarykit/blob/main/docs/en/README.md
+    about: Read the usage and architecture guides before opening an issue.

@@ -26,13 +26,13 @@ Also merged earlier: preset-aware generator with dry-run, module upgrade reports
 - **Source unit/integration CI:** the referenced base commit passed. This does not verify an arbitrary generated client's product requirements or current deployment.
 - **Repository visibility:** private in the reviewed snapshot.
 - **Public release:** no GitHub Release was published in the reviewed snapshot.
-- **Licensing:** no `LICENSE` file was found in the reviewed repository tree. Selection must be made by the repository owner.
+- **Licensing:** MIT has been selected for the project and added in a separate governance PR, subject to merge and redistribution-rights review.
 - **History security review:** not confirmed; do not treat the presence of `.env.example` or `.gitignore` as proof that old commits contain no secrets.
 - **Production:** each client must evaluate correctness, migrations, permissions, financial integration and operations for its own composition.
 - **Language coverage:** central onboarding, module overview, architecture, implementation guide and status are bilingual; deeper source docs in `docs/` retain their original RU/EN text.
 
 ## Next steps (not yet implemented by this documentation PR)
 
-Complete the history/IP/security audit, choose a license, configure protection of `main` and release a clearly labelled beta only when the owner approves. Consider stronger production tests of real provider integrations and load/performance budgets before advertising turnkey commerce.
+Complete the history/IP/security audit, enable protection of `main` and release a clearly labelled beta only when the owner approves. Consider stronger production tests of real provider integrations and load/performance budgets before advertising turnkey commerce.
 
 Canonical record of code status is **GitHub main/PR/CI**, not this timestamped snapshot.
