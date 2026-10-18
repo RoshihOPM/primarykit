@@ -78,7 +78,9 @@ class CardViewSet(
         if column.board_id != board.pk:
             raise ValidationError({"column": "Column must belong to the board."})
         card = create_card(
-            actor=self.request.user, board_id=board.pk, column_id=column.pk,
+            actor=self.request.user,
+            board_id=board.pk,
+            column_id=column.pk,
             title=serializer.validated_data["title"],
             description=serializer.validated_data.get("description", ""),
         )
@@ -91,7 +93,9 @@ class CardViewSet(
         changes = dict(payload.validated_data)
         expected_version = changes.pop("expected_version")
         updated = edit_card(
-            actor=request.user, card_id=card.pk, expected_version=expected_version,
+            actor=request.user,
+            card_id=card.pk,
+            expected_version=expected_version,
             changes=changes,
         )
         return Response(self.get_serializer(updated).data)
