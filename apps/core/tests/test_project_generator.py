@@ -171,6 +171,9 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
     if "storage" in selected:
         assert (target / "apps/storage/tests/test_personal_storage.py").exists()
         assert (target / "apps/storage/tests/test_storage.py").exists()
+    if "listings" in selected:
+        assert 'STORAGES["listings_private"]' in settings
+        assert (target / "apps/listings/tests/test_media.py").exists()
     if "chat" in selected:
         assert (target / "apps/chat/tests/test_chat.py").exists()
     if "realtime" in selected:
@@ -197,6 +200,7 @@ def test_generator_does_not_keep_secret_env_or_git_folders(tmp_path):
     assert not (dest / ".env").exists()
     assert not (dest / ".venv").exists()
     assert not (dest / "media").exists()
+    assert not (dest / "privatefiles").exists()
 
 
 @pytest.mark.parametrize("preset", sorted(PRESETS))
