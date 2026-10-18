@@ -219,6 +219,7 @@ def test_dry_run_and_presets_do_not_write_files(tmp_path, capsys, monkeypatch):
     assert "organizations" in result["included_apps"]
     assert not target.exists()
 
+
 def test_generated_client_keeps_license_not_upstream_governance(tmp_path):
     target = create_project(tmp_path / "client-api", name="client-api")
     source_license = (SOURCE_ROOT / "LICENSE").read_text(encoding="utf-8")
