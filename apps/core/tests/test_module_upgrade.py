@@ -84,9 +84,7 @@ def test_install_kit_module_rejects_corrupt_provenance_without_copy(tmp_path, mo
     origin.write_text("{bad json", encoding="utf-8")
 
     with pytest.raises(CommandError, match="provenance"):
-        install_kit_module.Command().handle(
-            module="audit", source=SOURCE_ROOT, dry_run=False
-        )
+        install_kit_module.Command().handle(module="audit", source=SOURCE_ROOT, dry_run=False)
     assert origin.read_text(encoding="utf-8") == "{bad json"
     assert not (target / "apps" / "audit").exists()
 
@@ -102,9 +100,7 @@ def test_install_kit_module_rolls_back_when_metadata_replace_fails(tmp_path, mon
 
     monkeypatch.setattr(install_kit_module.os, "replace", refuse_replace)
     with pytest.raises(CommandError, match="installation failed"):
-        install_kit_module.Command().handle(
-            module="privacy", source=SOURCE_ROOT, dry_run=False
-        )
+        install_kit_module.Command().handle(module="privacy", source=SOURCE_ROOT, dry_run=False)
     assert origin.read_bytes() == initial
     for name in ("audit", "tasks", "privacy"):
         assert not (target / "apps" / name).exists()

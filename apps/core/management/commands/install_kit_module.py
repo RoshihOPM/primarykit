@@ -76,7 +76,6 @@ def install_order(*, source: Path, existing: set[str], requested: str) -> list[s
     return ordered
 
 
-
 def _module_fingerprint(folder: Path) -> dict[str, str]:
     """Snapshot copied runtime Python files, matching the project generator."""
     return {

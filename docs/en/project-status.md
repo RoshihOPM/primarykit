@@ -20,7 +20,8 @@ The catalog contains **32 apps** with three baseline modules and 29 selectable o
 | #52 | Source-only module scaffold and dependency graph CLI |
 
 Also merged: optional seller-owned moderated `listings` (#63), independent from Catalog and Inventory.
-\nAlso merged earlier: preset-aware generator with dry-run, module upgrade reports, OpenAPI compatibility checks, scoped API keys, PostgreSQL idempotency receipts, CSV exchange, PostgreSQL search, HTTPS integration adapter and foundational commerce/infrastructure modules.
+
+Also merged earlier: preset-aware generator with dry-run, module upgrade reports, OpenAPI compatibility checks, scoped API keys, PostgreSQL idempotency receipts, CSV exchange, PostgreSQL search, HTTPS integration adapter and foundational commerce/infrastructure modules.
 
 ## Readiness and gaps
 
