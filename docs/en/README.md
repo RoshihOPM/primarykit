@@ -36,3 +36,5 @@ Architecture decisions: [0001](../adr/0001-copy-based-modular-monolith.md), [000
 ## Documentation scope
 
 Core onboarding, architecture, module coverage, production boundaries and release status are documented in **both languages**. Deep per-module references have not all been independently translated into English; do not assume the English index is a complete line-by-line translation. Code, tests and manifests are authoritative when documentation and implementation diverge.
+
+- [AI-assisted development](../ai-assisted-development.md) — offline agent context, boundaries and handoff recipe.

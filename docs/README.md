@@ -30,3 +30,5 @@
 [ADR 0001](adr/0001-copy-based-modular-monolith.md) · [ADR 0002](adr/0002-storage-bounded-context-and-policies.md) · [ADR 0003](adr/0003-implemented-ddd-boundaries.md) · [ADR 0004](adr/0004-copyable-module-contract.md) · [ADR 0005](adr/0005-standalone-catalog-inventory.md).
 
 Перед PR прочитайте [AGENTS.md](../AGENTS.md). Тесты, проверки безопасности и миграции сгенерированных клиентов обязательны для соответствующих изменений.
+
+- [AI-assisted development](ai-assisted-development.md) — как передавать независимый проект AI-агенту, без копирования ненужных модулей.

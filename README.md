@@ -119,3 +119,7 @@ uv run pytest
 CI additionally exercises detached generated clients, PostgreSQL, Docker and optional services. See [agent development rules](AGENTS.md), [project roadmap](docs/module-roadmap.md) and [contributing](CONTRIBUTING.md).
 
 **Stack:** Python 3.13 · Django 6.1 · DRF · PostgreSQL 17 · uv · Docker Compose · pytest · Ruff.
+
+## AI-agent workflow
+
+Generate a project, then inside the **generated client** run `python -m apps.core.agent_context --format markdown` to get an offline, project-specific agent brief. Give it to Codex together with `AGENTS.md`, relevant app files and tests. See [AI-assisted development](docs/ai-assisted-development.md).
