@@ -102,6 +102,10 @@ def _expect_version(listing, expected_version):
 
 def add_image(*, actor, listing_id, expected_version, uploaded):
     require_media()
+    # Reject foreign listing IDs before expensive Pillow decoding/CPU work.
+    user = _actor(actor)
+    if not Listing.objects.filter(pk=listing_id, owner=user).exists():
+        raise NotFound()
     binary, width, height = _clean_image(uploaded)
     storage = private_storage()
     saved = None
