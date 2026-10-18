@@ -1,0 +1,32 @@
+name: Feature request
+description: Propose a portable source-copy capability, not client-specific product logic
+title: "feat: "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Concrete use case and why existing modules are insufficient.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed design and public contract
+      description: Ownership, manifest dependencies, API/service boundary and optional integrations.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives and trade-offs
+      description: Why not client-local code or an existing package?
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: Testing, permissions and migration implications
+      description: Generated-project smoke, PostgreSQL tests, tenant/owner isolation and migration compatibility.
+    validations:
+      required: false
