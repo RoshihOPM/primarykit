@@ -106,10 +106,12 @@ def transition_listing(*, actor, listing_id, expected_version: int, action: str)
         raise PermissionDenied()
     if action in {"submit", "approve"}:
         _category(listing.category)
-    if action == "approve" and not get_user_model().objects.filter(
-        pk=listing.owner_id, is_active=True, email_verified=True
-    ).exists():
-        raise ValidationError({"owner": "Seller is no longer eligible for publication."})
+    if action == "approve":
+        active_seller = get_user_model().objects.filter(
+            pk=listing.owner_id, is_active=True, email_verified=True
+        ).exists()
+        if not active_seller:
+            raise ValidationError({"owner": "Seller is no longer eligible for publication."})
     try:
         status = next_status(listing.status, action)
     except ListingRuleError as exc:
