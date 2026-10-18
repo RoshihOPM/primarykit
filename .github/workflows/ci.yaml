@@ -38,6 +38,16 @@ jobs:
         run: uv run pytest
       - name: Moderated listing photos (optional Pillow)
         run: uv run --with 'Pillow>=11,<13' pytest -q apps/listings/tests/test_media.py
+      - name: CRM Kanban and Leads detached smoke
+        run: |
+          uv run python scripts/new_project.py /tmp/primarykit-crm-client --name crm-client --preset crm
+          cd /tmp/primarykit-crm-client
+          uv sync --locked --all-groups
+          uv run python -m apps.core.doctor --strict
+          uv run python manage.py makemigrations users audit storage organizations tasks kanban leads --noinput --settings=config.settings.test
+          uv run python manage.py check --settings=config.settings.test
+          uv run pytest -q apps/kanban/tests apps/leads/tests
+          cd -
       # PRIMARYKIT-GENERATOR-SMOKE-START
       - name: OpenAPI compatibility comparator tests
         run: uv run pytest -q scripts/tests/test_contract_check.py
