@@ -1,5 +1,6 @@
 """Owner-scoped, versioned Kanban operations."""
 from django.db import models, transaction
+from django.utils import timezone
 from rest_framework.exceptions import NotFound, ValidationError
 
 from .models import Board, Card, CardMove, Column
@@ -64,7 +65,7 @@ def move_card(*, actor, card_id, target_column_id, expected_version, position=No
     index = len(destination) if position is None else min(position, len(destination))
     destination.insert(index, card)
     previous_column = card.column
-    now = __import__("django.utils.timezone", fromlist=["now"]).now()
+    now = timezone.now()
     touched = {}
     for column, items in (
         ((target, destination),) if same_column else
