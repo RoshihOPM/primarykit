@@ -1,5 +1,8 @@
 # Tasks — переносимая внутренняя очередь фоновых заданий
 
+**Язык:** Русский · [English](en/tasks-scheduler.md) · [Оглавление](README.md)
+
+
 `apps/tasks/` — самостоятельный модуль **без обязательных Redis/RabbitMQ/Celery**. Для отдельного брокера и масштабирования worker теперь доступен полностью опциональный [Celery + RabbitMQ](celery-rabbitmq.md), а [Redis Cache](redis-cache.md) не зависит ни от одной очереди. У него нет HTTP endpoints и привязки к Organizations/Orders/Payments. Модели и история миграций принадлежат **сгенерированному клиентскому проекту**.
 
 ## Когда выбирать

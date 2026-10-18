@@ -1,51 +1,32 @@
 # Документация PrimaryKit
 
-Это оглавление для разработчика, который впервые открыл репозиторий.
+**Язык:** Русский · [English](en/README.md) · [Главная](../README.ru.md)
 
-## Начните отсюда
+Документация актуализирована под реализованные модули в `main` на 18 октября 2026 года. PrimaryKit — исходный каталог и генератор **независимых Django backend-проектов**; миграции и бизнес-правила принадлежат созданному клиентскому проекту.
 
-1. **[Независимость созданных backend](independent-projects.md)** — проект принадлежит бизнесу, не зависит от конструктора и владеет миграциями.
-2. **[Project Doctor](doctor.md)** — статическая проверка копируемых модулей без Django и исходного checkout.
-3. **[Архитектурные рецепты](architecture-recipes.md)** — CRM, automarket, B2B и минимальная интеграция.
-4. **[Что такое PrimaryKit и как устроен репозиторий](repository-guide.md)** — границы системы, структура каталогов, что является модулем, что копируется.
-2. **[Quickstart: установка и первый запрос](getting-started.md)** — от `git clone` до работающего API и миграций.
-3. **[Все модули и их зависимости](modules.md)** — таблица самостоятельности, маршруты, вариант с организациями.
-4. **[Генератор независимых проектов](project-generator.md)** — CLI, выбор набора, копирование, `primarykit-origin.json`.
-5. **[Как написать свой модуль](module-development.md)** — файлы, manifest, модели, API, сервисы, тесты и интеграции.
-6. **[Orders, Sales и Payments](commerce-architecture.md)** — жизненный цикл, деньги, схема API, что НЕ делает платежный модуль.
-7. **[Tasks](tasks-architecture.md)** — встроенная переносимая очередь, отдельный worker, ограничения at-least-once.
-7a. **[Outbox](outbox-architecture.md)** — durable events в одной транзакции с бизнес-данными.
-7b. **[Webhooks](webhooks.md)** — HMAC-подписанные входящие/исходящие интеграции.
-8. **[Redis Cache](redis-cache.md)** — опциональный кэш и правила namespace, инвалидации и Redis.
-8a. **[Rate Limiting](rate-limiting.md)** — Redis-лимиты авторизации между воркерами.
-8b. **[Observability](observability.md)** — server-side request IDs и JSON-логи.
-9. **[Celery + RabbitMQ](celery-rabbitmq.md)** — самостоятельные worker и брокер, Redis results по требованию.
-8. **[Statistics](statistics-architecture.md)** — единый API и подключение своих метрик.
-8. **[Развёртывание и поддержка](deployment.md)** — Docker, Linux/Nginx, SSL, PostgreSQL, бэкапы.
+## Быстрый маршрут
 
-## Подробные документы
+1. [Установка и первый запуск](getting-started.md)
+2. [Каталог 31 модуля, зависимости, API](modules.md)
+3. [Архитектура](architecture.md) · [Независимость проектов](independent-projects.md)
+4. [Генератор и пресеты](project-generator.md) · [Добавление модулей](module-development.md) · [Scaffold и граф зависимостей](module-scaffold.md)
+5. [Проверка проекта (Doctor)](doctor.md) · [Совместимость модулей](module-compatibility.md) · [Проверка обновлений](module-upgrades.md) · [OpenAPI diff](api-compatibility.md)
+6. [Текущее состояние и ограничения](project-status.md) · [Roadmap](module-roadmap.md)
+7. [Деплой](deployment.md) · [Production runbook](production-operations.md)
 
-- [Core conventions](core-conventions.md) · [Users](users-architecture.md) · [Notifications](email-notifications.md)
-- [Organizations](organizations-architecture.md) · [RBAC](rbac-architecture.md) · [Audit](audit-architecture.md)
-- [Catalog](catalog-architecture.md) · [Inventory](inventory-architecture.md) · [Storage](storage-architecture.md)
-- [Architecture](architecture.md) · [Agent workflow](agent-workflow.md) · [Module roadmap](module-roadmap.md)
-- [Feature Flags](feature-flags.md) · [Search](search.md) · [CSV Exchange](csv-exchange.md) · [API Keys](api-keys.md) · [Idempotency](idempotency.md) · [HTTP Integrations](http-integrations.md) · [Совместимость модулей](module-compatibility.md) · [Production operations](production-operations.md)
+## Справочник по контекстам
+
+| Категория | Документы |
+| --- | --- |
+| Identity и права | [Users](users-architecture.md), [Device Sessions](device-sessions.md), [Organizations](organizations-architecture.md), [RBAC](rbac-architecture.md), [API Keys](api-keys.md), [Audit](audit-architecture.md) |
+| Бизнес | [Catalog](catalog-architecture.md), [Inventory](inventory-architecture.md), [Orders/Sales/Payments](commerce-architecture.md), [Statistics](statistics-architecture.md), [Storage](storage-architecture.md) |
+| Команды и данные | [Workflows](workflows.md), [Usage Quotas](usage-quotas.md), [Privacy Retention](privacy-retention.md), [Idempotency](idempotency.md), [CSV](csv-exchange.md), [Search](search.md) |
+| Асинхронная доставка | [Tasks + Scheduler](tasks-architecture.md), [Outbox](outbox-architecture.md), [Webhooks](webhooks.md), [Celery/RabbitMQ](celery-rabbitmq.md) |
+| Интеграции и эксплуатация | [Chat/Realtime](chat-realtime.md), [Redis Cache](redis-cache.md), [Rate Limiting](rate-limiting.md), [Observability](observability.md), [Notifications](email-notifications.md), [Feature Flags](feature-flags.md), [HTTPS integrations](http-integrations.md) |
+| Архитектура и разработка | [Repository guide](repository-guide.md), [Core conventions](core-conventions.md), [Architecture recipes](architecture-recipes.md), [Agent workflow](agent-workflow.md) |
 
 ## Архитектурные решения
 
-- [ADR 0001](adr/0001-copy-based-modular-monolith.md): копирование исходников вместо общей runtime-библиотеки.
-- [ADR 0002](adr/0002-storage-bounded-context-and-policies.md): личные/корпоративные файлы и доступ.
-- [ADR 0003](adr/0003-implemented-ddd-boundaries.md): чистые доменные правила.
-- [ADR 0004](adr/0004-copyable-module-contract.md): manifest и копирование модулей.
-- [ADR 0005](adr/0005-standalone-catalog-inventory.md): два режима Catalog и Inventory.
-- [Commerce Architecture](commerce-architecture.md): отдельные Orders, Sales, Payments и политика платежей.
+[ADR 0001](adr/0001-copy-based-modular-monolith.md) · [ADR 0002](adr/0002-storage-bounded-context-and-policies.md) · [ADR 0003](adr/0003-implemented-ddd-boundaries.md) · [ADR 0004](adr/0004-copyable-module-contract.md) · [ADR 0005](adr/0005-standalone-catalog-inventory.md).
 
-## Для контрибьюторов и агентов
-
-Прочитайте [AGENTS.md](../AGENTS.md), [tests and review gates](module-development.md) и [agent workflow](agent-workflow.md). Изменения должны проходить Ruff, pytest, генератор и CI; PR объединяется с main только при успешных проверках.
-
-- [Project presets and CLI](project-generator.md) · [Safe module upgrade report](module-upgrades.md) — dry-run and client-side change reviews.
-
-- [OpenAPI compatibility](api-compatibility.md) — сравнение JSON контрактов на удалённые методы и новые обязательные параметры.
-
-- [Usage Quotas](usage-quotas.md) — PostgreSQL бизнес-квоты и идемпотентный учёт потребления.
+Перед PR прочитайте [AGENTS.md](../AGENTS.md). Тесты, проверки безопасности и миграции сгенерированных клиентов обязательны для соответствующих изменений.

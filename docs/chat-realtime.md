@@ -1,5 +1,8 @@
 # Private Chat + Realtime (#50)
 
+**Язык:** Русский · [English](en/chat-realtime.md) · [Оглавление](README.md)
+
+
 `chat` (требует `users`) реализует 1:1 диалоги через HTTP.
 `realtime` (требует `users`) добавляет необязательный ASGI WebSocket transport.
 `organizations` и `storage` — необязательные зависимости. Нет автоматических

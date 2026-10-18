@@ -1,12 +1,20 @@
 # PrimaryKit roadmap — implemented modules and next milestones
 
-Updated: 2026-10-17. This is a future-improvement backlog, **not** a list of unimplemented modules.
+Updated: 2026-10-18. This is a future-improvement backlog, **not** a list of unimplemented modules. Issues #45–#52 have been merged; see [current status](project-status.md).
 
 ## Already implemented (v1)
 
 | Context | Current capabilities | Documentation |
 | --- | --- | --- |
 | Core, Users, Notifications | Project infrastructure, JWT, email flows | [Users](users-architecture.md) |
+| Organizations tenant policy | Shared explicit tenant permission adapter; no implicit superuser bypass | [Organizations](organizations-architecture.md) |
+| Device Sessions | Personal JWT sessions, revoke one/all, refresh guards | [Sessions](device-sessions.md) |
+| Workflows | Pure state rules, guarded PostgreSQL transitions, optional history | [Workflows](workflows.md) |
+| Tasks Scheduler | Recurring PostgreSQL schedules, DST and lease fencing | [Tasks](tasks-architecture.md) |
+| Usage Quotas | Owner/tenant PostgreSQL atomic limits and durable usage events | [Usage Quotas](usage-quotas.md) |
+| Chat / Realtime | Private HTTP chat, receipts and opt-in WebSocket with replay cursor | [Chat](chat-realtime.md) |
+| Privacy | Opt-in audited retention, redaction handlers, dry-run, grace and legal holds | [Privacy](privacy-retention.md) |
+| Source Module Scaffold | Source-only CLI and JSON/DOT dependency graph | [Scaffold](module-scaffold.md) |
 | Organizations, RBAC, Audit | Memberships, branches, permissions, immutable audit | [Organizations](organizations-architecture.md) |
 | Storage | Owner / optional organization scope, S3/SeaweedFS | [Storage](storage-architecture.md) |
 | Catalog | Categories, SKUs, typed attributes; standalone/tenant modes | [Catalog](catalog-architecture.md) |
@@ -20,7 +28,7 @@ Updated: 2026-10-17. This is a future-improvement backlog, **not** a list of uni
 | API Keys | Scoped personal credentials, expiration and revocation | [API Keys](api-keys.md) |
 | Idempotency | Durable per-principal, per-operation PostgreSQL deduplication | [Idempotency](idempotency.md) |
 | HTTP Integrations | Trusted outbound HTTPS with bounded responses and retries | [HTTP Integrations](http-integrations.md) |
-| Cache | Django cache facade and optional Redis backend | [Cache](redis-cache.md) |
+| Cache | Native redis-py CacheService; optional Django Cache bridge | [Cache](redis-cache.md) |
 | Celery Tasks | RabbitMQ broker, optional Redis result backend, copyable worker adapter | [Celery](celery-rabbitmq.md) |
 | Statistics | Auto-discovered providers, scoped counts and date windows | [Statistics](statistics-architecture.md) |
 | Orders | Owner-private priced order snapshots and cancellation | [Commerce](commerce-architecture.md) |
