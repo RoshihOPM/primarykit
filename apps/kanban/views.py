@@ -11,7 +11,11 @@ from rest_framework.response import Response
 
 from .models import Board, Card, Column
 from .serializers import (
-    BoardSerializer, CardEditSerializer, CardSerializer, ColumnSerializer, MoveSerializer,
+    BoardSerializer,
+    CardEditSerializer,
+    CardSerializer,
+    ColumnSerializer,
+    MoveSerializer,
 )
 from .services import create_card, edit_card, move_card
 
