@@ -22,6 +22,10 @@ def test_kanban_api_enforces_owner_and_move():
     board = api.post(root + "boards/", {"name": "Sales"}).data["id"]
     col1 = api.post(root + "columns/", {"board": board, "name": "New"}).data["id"]
     col2 = api.post(root + "columns/", {"board": board, "name": "Done"}).data["id"]
+    reordered = api.post(root + "columns/" + col2 + "/reorder/", {"expected_position": 1, "position": 0})
+    assert reordered.status_code == 200
+    assert reordered.data["position"] == 0
+    assert api.post(root + "columns/" + col2 + "/reorder/", {"expected_position": 1, "position": 0}).status_code == 409
     created = api.post(root + "cards/", {"board": board, "column": col1, "title": "Lead"})
     assert created.status_code == 201, created.data
     card = created.data["id"]
