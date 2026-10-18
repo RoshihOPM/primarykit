@@ -8,8 +8,12 @@ pytestmark = pytest.mark.django_db
 
 
 def test_kanban_api_enforces_owner_and_move():
-    owner = User.objects.create_user(email="owner-kanban@example.test", password="strongpass", email_verified=True)
-    other = User.objects.create_user(email="other-kanban@example.test", password="strongpass", email_verified=True)
+    owner = User.objects.create_user(
+        email="owner-kanban@example.test", password="strongpass", email_verified=True
+    )
+    other = User.objects.create_user(
+        email="other-kanban@example.test", password="strongpass", email_verified=True
+    )
     api = APIClient()
     api.credentials(HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(owner).access_token}")
     other_api = APIClient()
