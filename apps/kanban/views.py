@@ -10,8 +10,10 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from .models import Board, Card, Column
-from .serializers import BoardSerializer, CardSerializer, ColumnSerializer, MoveSerializer
-from .services import move_card
+from .serializers import (
+    BoardSerializer, CardEditSerializer, CardSerializer, ColumnSerializer, MoveSerializer,
+)
+from .services import create_card, edit_card, move_card
 
 
 class BoardViewSet(viewsets.ModelViewSet):
@@ -71,10 +73,24 @@ class CardViewSet(
         column = serializer.validated_data["column"]
         if column.board_id != board.pk:
             raise ValidationError({"column": "Column must belong to the board."})
-        serializer.save(board=board)
+        card = create_card(
+            actor=self.request.user, board_id=board.pk, column_id=column.pk,
+            title=serializer.validated_data["title"],
+            description=serializer.validated_data.get("description", ""),
+        )
+        serializer.instance = card
 
-    def perform_update(self, serializer):
-        raise ValidationError("Card edits require a versioned command.")
+    def partial_update(self, request, *args, **kwargs):
+        card = self.get_object()
+        payload = CardEditSerializer(data=request.data)
+        payload.is_valid(raise_exception=True)
+        changes = dict(payload.validated_data)
+        expected_version = changes.pop("expected_version")
+        updated = edit_card(
+            actor=request.user, card_id=card.pk, expected_version=expected_version,
+            changes=changes,
+        )
+        return Response(self.get_serializer(updated).data)
 
     @action(detail=True, methods=["post"])
     def move(self, request, pk=None):
