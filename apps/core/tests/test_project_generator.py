@@ -20,6 +20,7 @@ from scripts.presets import PRESETS
         {"tasks"},
         {"privacy"},
         {"listings"},
+        {"favorites"},
         {"observability"},
         {"feature_flags"},
         {"search"},
@@ -76,6 +77,7 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
         "tasks",
         "privacy",
         "listings",
+        "favorites",
         "observability",
         "feature_flags",
         "search",
@@ -163,15 +165,22 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
         + (" chat" if "chat" in selected else "")
         + (" privacy" if "privacy" in selected else "")
         + (" listings" if "listings" in selected else "")
+        + (" favorites" if "favorites" in selected else "")
     )
     assert workflows.count(f"makemigrations {migration_apps} --noinput") == 2
     if "storage" in selected:
         assert (target / "apps/storage/tests/test_personal_storage.py").exists()
         assert (target / "apps/storage/tests/test_storage.py").exists()
+    if "listings" in selected:
+        assert 'STORAGES["listings_private"]' in settings
+        assert (target / "apps/listings/tests/test_media.py").exists()
     if "chat" in selected:
         assert (target / "apps/chat/tests/test_chat.py").exists()
     if "realtime" in selected:
         assert (target / "apps/realtime/asgi.py").exists()
+    if "favorites" in selected:
+        assert (target / "apps/listings").is_dir()
+        assert (target / "apps/favorites/tests/test_favorites.py").exists()
 
 
 def test_generator_rejects_existing_directory_and_invalid_input(tmp_path):
@@ -191,6 +200,7 @@ def test_generator_does_not_keep_secret_env_or_git_folders(tmp_path):
     assert not (dest / ".env").exists()
     assert not (dest / ".venv").exists()
     assert not (dest / "media").exists()
+    assert not (dest / "privatefiles").exists()
 
 
 @pytest.mark.parametrize("preset", sorted(PRESETS))

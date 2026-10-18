@@ -52,10 +52,25 @@ def compare_modules(*, source: Path, project: Path) -> dict:
         if (
             not isinstance(name, str)
             or not name.isidentifier()
-            or name not in baseline
-            or not isinstance(baseline[name], dict)
+            or (name in baseline and not isinstance(baseline[name], dict))
         ):
             raise ValueError("Invalid provenance module metadata")
+        if name not in baseline:
+            # Older installers recorded the module name without an original
+            # snapshot. Never invent an ancestor for a three-way comparison.
+            modules[name] = {
+                "changes": [
+                    {
+                        "path": "<baseline>",
+                        "change": "baseline_unknown",
+                        "contract_review": True,
+                        "source_deleted": not (source / "apps" / name).is_dir(),
+                        "client_deleted": not (project / "apps" / name).is_dir(),
+                    }
+                ],
+                "needs_review": True,
+            }
+            continue
         before = baseline[name]
         current = _hashes(project / "apps" / name)
         incoming = _hashes(source / "apps" / name)

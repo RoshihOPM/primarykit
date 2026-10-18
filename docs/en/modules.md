@@ -2,7 +2,7 @@
 
 **Language:** English · [Русский](../modules.md) · [English index](README.md)
 
-The repository has **31** source apps in `apps/` at the reviewed commit (2026-10-18). The baseline copied into every generated project is **core + users + notifications**. All others are optional; however, individual modules have **hard dependencies** that the generator resolves.
+The repository has **33** source apps in `apps/` at the reviewed commit (2026-10-18). The baseline copied into every generated project is **core + users + notifications**. All others are optional; however, individual modules have **hard dependencies** that the generator resolves.
 
 | Module | Included behavior | Hard dependencies | Optional integrations |
 | --- | --- | --- | --- |
@@ -37,6 +37,7 @@ The repository has **31** source apps in `apps/` at the reviewed commit (2026-10
 | `observability` | Request IDs and safe structured HTTP logs | core | — |
 | `chat` | Scope-safe 1:1 conversations, messages, read receipts, attachments | users | organizations, storage, realtime |
 | `realtime` | Opt-in ASGI WebSocket authenticated event transport | users | chat |
+| `favorites` | Authenticated bookmarks and bounded private saved searches | listings | — |
 
 The hard/optional columns describe **manifest dependencies**; each optional integration can require additional configuration and schema choices. For the authoritative manifest contract, inspect `apps/<name>/manifest.py`.
 
@@ -52,6 +53,7 @@ The hard/optional columns describe **manifest dependencies**; each optional inte
 | Orders, Sales, Payments | `/api/v1/orders/`, `/api/v1/sales/`, `/api/v1/payments/` |
 | Manual payment reconciliation | `/api/v1/admin/payments/` (superuser) |
 | Statistics | `/api/v1/statistics/` |
+| Listing favorites / saved searches | `/api/v1/favorites/`, `/api/v1/saved-searches/` |
 | Private chat | `/api/v1/chats/` |
 | WebSocket for one dialogue | `/ws/v1/chats/{dialogue_id}/` (opt-in) |
 
@@ -74,4 +76,4 @@ See [implemented feature guide](features.md) and [full source references](README
 
 ## Classified ads
 
-Optional `listings` supports public moderated advertisements, privately owned drafts and a staff-managed taxonomy. No Catalog SKU/Inventory relation. See [Listings](../listings.md).
+Optional `listings` supports public moderated advertisements, privately owned drafts, staff-managed taxonomy and a disabled-by-default, private, moderated photo adapter. `favorites` adds private bookmarks and saved searches. No Catalog SKU/Inventory relation. See [Listings](../listings.md).
