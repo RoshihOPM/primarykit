@@ -23,10 +23,20 @@ def test_kanban_api_enforces_owner_and_move():
     card = created.data["id"]
     assert other_api.get(root + "boards/").data["count"] == 0
     assert other_api.get(root + "cards/" + card + "/").status_code == 404
-    assert other_api.post(root + "cards/", {"board": board, "column": col1, "title": "No"}).status_code == 404
+    assert (
+        other_api.post(root + "cards/", {"board": board, "column": col1, "title": "No"}).status_code
+        == 404
+    )
     assert api.patch(root + "cards/" + card + "/", {"column": col2}).status_code == 400
-    moved = api.post(root + "cards/" + card + "/move/", {"target_column_id": col2, "expected_version": 0})
+    moved = api.post(
+        root + "cards/" + card + "/move/", {"target_column_id": col2, "expected_version": 0}
+    )
     assert moved.status_code == 200, moved.data
     assert moved.data["column"] == col2
-    assert api.post(root + "cards/" + card + "/move/", {"target_column_id": col1, "expected_version": 0}).status_code == 400
+    assert (
+        api.post(
+            root + "cards/" + card + "/move/", {"target_column_id": col1, "expected_version": 0}
+        ).status_code
+        == 400
+    )
     assert APIClient().get(root + "boards/").status_code in (401, 403)
