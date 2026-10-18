@@ -8,9 +8,7 @@ pytestmark = pytest.mark.django_db
 
 
 def client(email):
-    user = User.objects.create_user(
-        email=email, password="test-password", email_verified=True
-    )
+    user = User.objects.create_user(email=email, password="test-password", email_verified=True)
     api = APIClient()
     api.credentials(HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(user).access_token}")
     return api
