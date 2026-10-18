@@ -32,10 +32,14 @@ class ColumnViewSet(viewsets.ModelViewSet):
     http_method_names = ("get", "post", "patch", "head", "options")
 
     def get_queryset(self):
-        return Column.objects.filter(board__owner=self.request.user).order_by("board", "position", "pk")
+        return Column.objects.filter(board__owner=self.request.user).order_by(
+            "board", "position", "pk"
+        )
 
     def perform_create(self, serializer):
-        board = get_object_or_404(Board, pk=serializer.validated_data["board"].pk, owner=self.request.user)
+        board = get_object_or_404(
+            Board, pk=serializer.validated_data["board"].pk, owner=self.request.user
+        )
         serializer.save(board=board)
 
     def perform_update(self, serializer):
@@ -44,17 +48,26 @@ class ColumnViewSet(viewsets.ModelViewSet):
         serializer.save()
 
 
-class CardViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.CreateModelMixin,
-                  mixins.UpdateModelMixin, viewsets.GenericViewSet):
+class CardViewSet(
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.CreateModelMixin,
+    mixins.UpdateModelMixin,
+    viewsets.GenericViewSet,
+):
     permission_classes = (IsAuthenticated,)
     serializer_class = CardSerializer
     http_method_names = ("get", "post", "patch", "head", "options")
 
     def get_queryset(self):
-        return Card.objects.filter(board__owner=self.request.user).order_by("column", "position", "pk")
+        return Card.objects.filter(board__owner=self.request.user).order_by(
+            "column", "position", "pk"
+        )
 
     def perform_create(self, serializer):
-        board = get_object_or_404(Board, pk=serializer.validated_data["board"].pk, owner=self.request.user)
+        board = get_object_or_404(
+            Board, pk=serializer.validated_data["board"].pk, owner=self.request.user
+        )
         column = serializer.validated_data["column"]
         if column.board_id != board.pk:
             raise ValidationError({"column": "Column must belong to the board."})
