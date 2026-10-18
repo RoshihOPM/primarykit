@@ -157,9 +157,9 @@ def test_saved_search_is_private_bounded_and_patch_is_allowlisted():
         assert other.get(url).status_code == 404
         assert other.patch(url, {"name": "Hacked"}).status_code == 404
         assert other.delete(url).status_code == 404
-    assert api.post(uri, {"name": "bad", "filters": {"owner": str(alice.pk)}}).status_code == 400
+    assert api.post(uri, {"name": "bad", "filters": {"owner": str(alice.pk)}}, format="json").status_code == 400
     assert (
-        api.post(uri, {"name": "bad", "filters": {"q": "ok"}, "owner": str(alice.pk)}).status_code
+        api.post(uri, {"name": "bad", "filters": {"q": "ok"}, "owner": str(alice.pk)}, format="json").status_code
         == 400
     )
     assert api.patch(url, {"filters": {"q": " "}}, format="json").status_code == 400
@@ -182,10 +182,10 @@ def test_saved_search_count_limit_and_reuse_deleted_slots():
             == 201
         )
     assert api.get(uri).data["count"] == MAX_SAVED_SEARCHES
-    assert api.post(uri, {"name": "Too many", "filters": {"q": "laptop"}}).status_code == 400
+    assert api.post(uri, {"name": "Too many", "filters": {"q": "laptop"}}, format="json").status_code == 400
     first = SavedSearch.objects.filter(owner=owner).first()
     assert api.delete(f"{uri}{first.pk}/").status_code == 204
-    assert api.post(uri, {"name": "Reused", "filters": {"q": "laptop"}}).status_code == 201
+    assert api.post(uri, {"name": "Reused", "filters": {"q": "laptop"}}, format="json").status_code == 201
 
 
 @pytest.mark.django_db(transaction=True)
