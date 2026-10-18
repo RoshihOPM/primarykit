@@ -8,7 +8,7 @@ from rest_framework.exceptions import APIException, NotFound, PermissionDenied, 
 from apps.core.audit import record_audit_event
 
 from .domain import ListingRuleError, next_status, normalize_fields
-from .models import Listing, ListingCategory
+from .models import Listing, ListingCategory, ListingImage
 
 EDITABLE_FIELDS = frozenset(
     {"category", "title", "description", "location_label", "price_minor", "currency", "attributes"}
@@ -107,6 +107,10 @@ def transition_listing(*, actor, listing_id, expected_version: int, action: str)
     if action in {"submit", "approve"}:
         _category(listing.category)
     if action == "approve":
+        if ListingImage.objects.filter(
+            listing=listing, status=ListingImage.Status.PENDING
+        ).exists():
+            raise ValidationError({"media": "All photos must be reviewed before publication."})
         active_seller = (
             get_user_model()
             .objects.filter(pk=listing.owner_id, is_active=True, email_verified=True)

@@ -20,6 +20,7 @@ from scripts.presets import PRESETS
         {"tasks"},
         {"privacy"},
         {"listings"},
+        {"favorites"},
         {"observability"},
         {"feature_flags"},
         {"search"},
@@ -76,6 +77,7 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
         "tasks",
         "privacy",
         "listings",
+        "favorites",
         "observability",
         "feature_flags",
         "search",
@@ -163,15 +165,22 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
         + (" chat" if "chat" in selected else "")
         + (" privacy" if "privacy" in selected else "")
         + (" listings" if "listings" in selected else "")
+        + (" favorites" if "favorites" in selected else "")
     )
     assert workflows.count(f"makemigrations {migration_apps} --noinput") == 2
     if "storage" in selected:
         assert (target / "apps/storage/tests/test_personal_storage.py").exists()
         assert (target / "apps/storage/tests/test_storage.py").exists()
+    if "listings" in selected:
+        assert 'STORAGES["listings_private"]' in settings
+        assert (target / "apps/listings/tests/test_media.py").exists()
     if "chat" in selected:
         assert (target / "apps/chat/tests/test_chat.py").exists()
     if "realtime" in selected:
         assert (target / "apps/realtime/asgi.py").exists()
+    if "favorites" in selected:
+        assert (target / "apps/listings").is_dir()
+        assert (target / "apps/favorites/tests/test_favorites.py").exists()
 
 
 def test_generator_rejects_existing_directory_and_invalid_input(tmp_path):
@@ -191,6 +200,7 @@ def test_generator_does_not_keep_secret_env_or_git_folders(tmp_path):
     assert not (dest / ".env").exists()
     assert not (dest / ".venv").exists()
     assert not (dest / "media").exists()
+    assert not (dest / "privatefiles").exists()
 
 
 @pytest.mark.parametrize("preset", sorted(PRESETS))
@@ -218,3 +228,23 @@ def test_dry_run_and_presets_do_not_write_files(tmp_path, capsys, monkeypatch):
     assert result["preset"] == "crm"
     assert "organizations" in result["included_apps"]
     assert not target.exists()
+
+
+def test_generated_client_keeps_license_not_upstream_governance(tmp_path):
+    target = create_project(tmp_path / "client-api", name="client-api")
+    source_license = (SOURCE_ROOT / "LICENSE").read_text(encoding="utf-8")
+    assert source_license.startswith("MIT License")
+    assert (target / "LICENSE").read_text(encoding="utf-8") == source_license
+    assert "preserve the included LICENSE" in (target / "README.md").read_text(encoding="utf-8")
+    for source_only in (
+        "CONTRIBUTING.md",
+        "SECURITY.md",
+        "CODE_OF_CONDUCT.md",
+        ".github/CODEOWNERS",
+        ".github/dependabot.yml",
+        ".github/PULL_REQUEST_TEMPLATE.md",
+        ".github/ISSUE_TEMPLATE",
+        "docs/maintainer-playbook.md",
+        "CHANGELOG.md",
+    ):
+        assert not (target / source_only).exists(), source_only

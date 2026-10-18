@@ -25,6 +25,8 @@
 | Интеграции и эксплуатация | [Chat/Realtime](chat-realtime.md), [Redis Cache](redis-cache.md), [Rate Limiting](rate-limiting.md), [Observability](observability.md), [Notifications](email-notifications.md), [Feature Flags](feature-flags.md), [HTTPS integrations](http-integrations.md) |
 | Архитектура и разработка | [Repository guide](repository-guide.md), [Core conventions](core-conventions.md), [Architecture recipes](architecture-recipes.md), [Agent workflow](agent-workflow.md) |
 
+Дополнительно: [Лицензия MIT](../LICENSE), [Безопасность](../SECURITY.md), [Участие](../CONTRIBUTING.md), [Кодекс поведения](../CODE_OF_CONDUCT.md), [Поддержка и защита main](maintainer-playbook.md).
+
 ## Архитектурные решения
 
 [ADR 0001](adr/0001-copy-based-modular-monolith.md) · [ADR 0002](adr/0002-storage-bounded-context-and-policies.md) · [ADR 0003](adr/0003-implemented-ddd-boundaries.md) · [ADR 0004](adr/0004-copyable-module-contract.md) · [ADR 0005](adr/0005-standalone-catalog-inventory.md).

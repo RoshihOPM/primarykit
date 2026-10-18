@@ -132,6 +132,18 @@ if STORAGE_BACKEND == "s3":
 elif STORAGE_BACKEND != "local":
     raise ImproperlyConfigured("STORAGE_BACKEND must be local or s3.")
 
+# Listing photos are never stored in the shared Storage module or MEDIA_ROOT.
+# Client production deployments must configure durable, dedicated private storage.
+if "apps.listings" in INSTALLED_APPS:
+    LISTINGS_MEDIA_ENABLED = env.bool("LISTINGS_MEDIA_ENABLED", default=False)
+    STORAGES["listings_private"] = {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+        "OPTIONS": {
+            "location": str(BASE_DIR / "privatefiles" / "listing-media"),
+            "base_url": None,
+        },
+    }
+
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
@@ -231,6 +243,10 @@ REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {
 if "apps.chat" in INSTALLED_APPS:
     REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"].update(
         {"chat_read": "120/min", "chat_write": "30/min"}
+    )
+if "apps.favorites" in INSTALLED_APPS:
+    REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"].update(
+        {"favorites_read": "120/min", "favorites_write": "60/min"}
     )
 
 

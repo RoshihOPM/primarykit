@@ -33,6 +33,8 @@ The following detailed documents are in the source-level `docs/` directory; some
 
 Architecture decisions: [0001](../adr/0001-copy-based-modular-monolith.md), [0002](../adr/0002-storage-bounded-context-and-policies.md), [0003](../adr/0003-implemented-ddd-boundaries.md), [0004](../adr/0004-copyable-module-contract.md), [0005](../adr/0005-standalone-catalog-inventory.md).
 
+See also [Security Policy](../../SECURITY.md), [Contributing](../../CONTRIBUTING.md), [Code of Conduct](../../CODE_OF_CONDUCT.md), and [maintainer playbook](../maintainer-playbook.md).
+
 ## Documentation scope
 
 Core onboarding, architecture, module coverage, production boundaries and release status are documented in **both languages**. Deep per-module references have not all been independently translated into English; do not assume the English index is a complete line-by-line translation. Code, tests and manifests are authoritative when documentation and implementation diverge.

@@ -2,6 +2,8 @@
 
 **Language:** English · [Русский](README.ru.md)
 
+**License:** [MIT](LICENSE) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Code of Conduct](CODE_OF_CONDUCT.md) · [Maintainer / branch-protection guide](docs/maintainer-playbook.md)
+
 **PrimaryKit is a copy-based Django REST API project generator and portable module catalog.** Choose a set of modules, generate a standalone backend, then implement and deploy your own business rules. A generated application owns its code, migrations, dependencies, data, infrastructure and releases.
 
 > **Status:** source version `0.1.0`, actively developed. This repository is not a SaaS, a hosted backend, a microservices framework, or a shared runtime library. Modules are reusable starting points, not certified production-ready business solutions.
@@ -40,7 +42,7 @@ This example uses standalone Catalog and Inventory. For tenant mode, include `or
 
 ## Available modules
 
-The source catalog currently contains **32** apps (three baseline and 29 selectable source modules):
+The source catalog currently contains **33** apps (three baseline and 30 selectable source modules):
 
 | Area | Modules |
 | --- | --- |
@@ -51,7 +53,7 @@ The source catalog currently contains **32** apps (three baseline and 29 selecta
 | State and privacy | `workflows`, `privacy` |
 | Messaging | `chat`, `realtime` (opt-in WebSocket transport) |
 | Business examples | `storage`, `catalog`, `inventory`, `statistics`, `orders`, `sales`, `payments` |
-| Classified ads | `listings` (public search, private drafts, moderation) |
+| Classified ads | `listings` (moderation and opt-in photos), `favorites` (bookmarks and saved searches) |
 
 `users` includes per-user device/session management. `organizations` supplies a shared tenant permission policy adapter. There is also a **source-only module scaffold CLI** (not a runtime module) and dependency graph exporter.
 
@@ -127,4 +129,4 @@ Generate a project, then inside the **generated client** run `python -m apps.cor
 
 ## Classified listings (optional)
 
-Select `--apps listings` or `--preset marketplace` for seller-owned moderated ads with public listing search, independent of Catalog and Inventory. Vehicle VIN/make/model, public media and promotion credits are client-owned integrations. See [Listings](docs/listings.md).
+Select `--apps listings` or `--preset marketplace` for seller-owned moderated ads with public listing search, independent of Catalog and Inventory. Add `--apps favorites` for private bookmarks and saved searches (which also copies Listings). VIN/make/model integrations and promotion credits remain client-owned; optional listing photos are provided through a disabled-by-default private media adapter with explicit moderation. See [Listings](docs/listings.md) and [Favorites](docs/en/favorites.md).

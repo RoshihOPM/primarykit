@@ -1,0 +1,56 @@
+name: Bug report
+description: Reproducible defect in PrimaryKit source or generated-project tooling
+title: "bug: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not publish vulnerabilities, credentials, private data or exploit details here. Read [SECURITY.md](../../SECURITY.md) instead.
+  - type: input
+    id: component
+    attributes:
+      label: Module / area
+      description: e.g. users, catalog, generator, CI
+      placeholder: apps/users
+    validations:
+      required: true
+  - type: input
+    id: commit
+    attributes:
+      label: Version / commit
+      placeholder: 0.1.x or commit SHA
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: Expected versus actual behavior; use synthetic data.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Include commands and module selection, but no secrets.
+      placeholder: |
+        1. Generate a new project with ...
+        2. Run ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Sanitized logs / traceback
+      description: Remove all keys, passwords, customer data and private infrastructure details.
+      render: shell
+    validations:
+      required: false
+  - type: textarea
+    id: checks
+    attributes:
+      label: Checks already run
+      placeholder: ruff / pytest / doctor / PostgreSQL or Docker
+    validations:
+      required: false
