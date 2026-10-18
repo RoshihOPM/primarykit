@@ -36,7 +36,7 @@ def test_kanban_api_enforces_owner_and_move():
         root + "cards/" + card + "/move/", {"target_column_id": col2, "expected_version": 0}
     )
     assert moved.status_code == 200, moved.data
-    assert moved.data["column"] == col2
+    assert str(moved.data["column"]) == col2
     assert (
         api.post(
             root + "cards/" + card + "/move/", {"target_column_id": col1, "expected_version": 0}
