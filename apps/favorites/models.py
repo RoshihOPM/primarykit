@@ -7,12 +7,8 @@ from apps.core.models import UUIDTimestampedModel
 
 
 class Favorite(UUIDTimestampedModel):
-    owner = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="+"
-    )
-    listing = models.ForeignKey(
-        "listings.Listing", on_delete=models.CASCADE, related_name="+"
-    )
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="+")
+    listing = models.ForeignKey("listings.Listing", on_delete=models.CASCADE, related_name="+")
 
     class Meta:
         ordering = ("-created_at", "-id")
@@ -23,14 +19,10 @@ class Favorite(UUIDTimestampedModel):
 
 
 class SavedSearch(UUIDTimestampedModel):
-    owner = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="+"
-    )
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="+")
     name = models.CharField(max_length=80)
     filters = models.JSONField(default=dict)
 
     class Meta:
         ordering = ("-updated_at", "-id")
-        indexes = [
-            models.Index(fields=("owner", "-updated_at"), name="fav_search_recent_idx")
-        ]
+        indexes = [models.Index(fields=("owner", "-updated_at"), name="fav_search_recent_idx")]

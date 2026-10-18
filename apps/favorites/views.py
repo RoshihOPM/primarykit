@@ -27,7 +27,8 @@ class PersonalThrottleMixin:
 
     def get_throttles(self):
         self.throttle_scope = (
-            "favorites_write" if self.request.method in {"POST", "PATCH", "DELETE"}
+            "favorites_write"
+            if self.request.method in {"POST", "PATCH", "DELETE"}
             else "favorites_read"
         )
         return super().get_throttles()

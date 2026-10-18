@@ -102,9 +102,12 @@ def test_favorites_list_paginates_and_rejects_sender_mass_assignment():
     reader, api = user_client("reader-page-favs@example.test")
     for _ in range(4):
         listing = make_listing(owner=seller)
-        assert api.post("/api/v1/favorites/", {
-            "listing_id": str(listing.pk), "owner": str(reader.pk)
-        }).status_code == 400
+        assert (
+            api.post(
+                "/api/v1/favorites/", {"listing_id": str(listing.pk), "owner": str(reader.pk)}
+            ).status_code
+            == 400
+        )
         assert api.post("/api/v1/favorites/", {"listing_id": str(listing.pk)}).status_code == 201
     result = api.get("/api/v1/favorites/?page_size=2")
     assert result.status_code == 200
@@ -114,12 +117,20 @@ def test_favorites_list_paginates_and_rejects_sender_mass_assignment():
 
 def test_filter_domain_denies_unknown_nested_oversized_and_bad_prices():
     assert normalize_filters({"q": "  laptop ", "min_price": 100}) == {
-        "q": "laptop", "min_price": 100
+        "q": "laptop",
+        "min_price": 100,
     }
     for candidate in [
-        {}, [], {"unknown": "x"}, {"q": " "}, {"q": "z" * 81},
-        {"category": "../bad"}, {"location": {"$regex": "x"}},
-        {"min_price": True}, {"min_price": -1}, {"max_price": 10**16},
+        {},
+        [],
+        {"unknown": "x"},
+        {"q": " "},
+        {"q": "z" * 81},
+        {"category": "../bad"},
+        {"location": {"$regex": "x"}},
+        {"min_price": True},
+        {"min_price": -1},
+        {"max_price": 10**16},
         {"min_price": 200, "max_price": 100},
     ]:
         with pytest.raises(ValueError):
@@ -147,7 +158,10 @@ def test_saved_search_is_private_bounded_and_patch_is_allowlisted():
         assert other.patch(url, {"name": "Hacked"}).status_code == 404
         assert other.delete(url).status_code == 404
     assert api.post(uri, {"name": "bad", "filters": {"owner": str(alice.pk)}}).status_code == 400
-    assert api.post(uri, {"name": "bad", "filters": {"q": "ok"}, "owner": str(alice.pk)}).status_code == 400
+    assert (
+        api.post(uri, {"name": "bad", "filters": {"q": "ok"}, "owner": str(alice.pk)}).status_code
+        == 400
+    )
     assert api.patch(url, {"filters": {"q": " "}}, format="json").status_code == 400
     assert api.patch(url, {"owner": str(alice.pk)}).status_code == 400
     updated = api.patch(url, {"filters": {"category": "cars", "max_price": 999}}, format="json")
@@ -161,7 +175,12 @@ def test_saved_search_count_limit_and_reuse_deleted_slots():
     owner, api = user_client("limit-favs@example.test")
     uri = "/api/v1/saved-searches/"
     for i in range(MAX_SAVED_SEARCHES):
-        assert api.post(uri, {"name": f"Search {i}", "filters": {"q": "laptop"}}, format="json").status_code == 201
+        assert (
+            api.post(
+                uri, {"name": f"Search {i}", "filters": {"q": "laptop"}}, format="json"
+            ).status_code
+            == 201
+        )
     assert api.get(uri).data["count"] == MAX_SAVED_SEARCHES
     assert api.post(uri, {"name": "Too many", "filters": {"q": "laptop"}}).status_code == 400
     first = SavedSearch.objects.filter(owner=owner).first()
@@ -183,9 +202,10 @@ def test_postgres_two_writers_cannot_exceed_saved_search_cap():
         try:
             barrier.wait(timeout=15)
             try:
-                return create_search(
-                    actor=owner, name=f"parallel-{index}", filters={"q": "laptop"}
-                ).pk is not None
+                return (
+                    create_search(actor=owner, name=f"parallel-{index}", filters={"q": "laptop"}).pk
+                    is not None
+                )
             except Exception as exc:
                 from rest_framework.exceptions import ValidationError
 

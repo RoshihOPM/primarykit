@@ -14,9 +14,7 @@ from .models import Favorite, SavedSearch
 def _actor(actor, *, lock=False):
     if not getattr(actor, "is_authenticated", False):
         raise NotFound()
-    users = get_user_model().objects.filter(
-        pk=actor.pk, is_active=True, email_verified=True
-    )
+    users = get_user_model().objects.filter(pk=actor.pk, is_active=True, email_verified=True)
     if lock:
         users = users.select_for_update()
     user = users.first()
@@ -86,9 +84,7 @@ def create_search(*, actor, name, filters):
 @transaction.atomic
 def update_search(*, actor, search_id, changes):
     user = _actor(actor)
-    search = SavedSearch.objects.select_for_update().filter(
-        owner=user, pk=search_id
-    ).first()
+    search = SavedSearch.objects.select_for_update().filter(owner=user, pk=search_id).first()
     if search is None:
         raise NotFound()
     if not changes:
