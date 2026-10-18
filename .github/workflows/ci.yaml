@@ -31,7 +31,7 @@ jobs:
       - name: Ruff format
         run: uv run ruff format --check .
       - name: Generate project-specific migrations for tests
-        run: uv run python manage.py makemigrations users audit storage catalog inventory organizations orders sales payments tasks webhooks api_keys idempotency workflows usage_quotas chat privacy listings favorites kanban leads --noinput --settings=config.settings.test
+        run: uv run python manage.py makemigrations users audit storage catalog inventory organizations orders sales payments tasks webhooks api_keys idempotency workflows usage_quotas chat privacy listings favorites kanban leads contacts deals --noinput --settings=config.settings.test
       - name: Django checks
         run: uv run python manage.py check --settings=config.settings.test
       - name: Tests
@@ -44,9 +44,9 @@ jobs:
           cd /tmp/primarykit-crm-client
           uv sync --locked --all-groups
           uv run python -m apps.core.doctor --strict
-          uv run python manage.py makemigrations users audit storage organizations tasks kanban leads --noinput --settings=config.settings.test
+          uv run python manage.py makemigrations users audit storage organizations tasks kanban leads contacts deals --noinput --settings=config.settings.test
           uv run python manage.py check --settings=config.settings.test
-          uv run pytest -q apps/kanban/tests apps/leads/tests
+          uv run pytest -q apps/kanban/tests apps/leads/tests apps/contacts/tests apps/deals/tests
           cd -
       # PRIMARYKIT-GENERATOR-SMOKE-START
       - name: OpenAPI compatibility comparator tests
