@@ -1,4 +1,5 @@
 """Owner-scoped, versioned Kanban operations."""
+
 from django.db import models, transaction
 from django.utils import timezone
 from rest_framework.exceptions import NotFound, ValidationError
@@ -12,9 +13,11 @@ class StaleCard(ValidationError):
 
 
 def _locked_card(actor, card_id):
-    board_id = Card.objects.filter(pk=card_id, board__owner=actor).values_list(
-        "board_id", flat=True
-    ).first()
+    board_id = (
+        Card.objects.filter(pk=card_id, board__owner=actor)
+        .values_list("board_id", flat=True)
+        .first()
+    )
     if board_id is None:
         raise NotFound()
     board = Board.objects.select_for_update().get(pk=board_id, owner=actor)
@@ -55,9 +58,13 @@ def move_card(*, actor, card_id, target_column_id, expected_version, position=No
     same_column = card.column_id == target.pk
     if same_column and position is None:
         return card
-    source = list(Card.objects.filter(column_id=card.column_id).order_by("position", "created_at", "pk"))
-    destination = source if same_column else list(
-        Card.objects.filter(column=target).order_by("position", "created_at", "pk")
+    source = list(
+        Card.objects.filter(column_id=card.column_id).order_by("position", "created_at", "pk")
+    )
+    destination = (
+        source
+        if same_column
+        else list(Card.objects.filter(column=target).order_by("position", "created_at", "pk"))
     )
     source = [item for item in source if item.pk != card.pk]
     if same_column:
@@ -68,8 +75,9 @@ def move_card(*, actor, card_id, target_column_id, expected_version, position=No
     now = timezone.now()
     touched = {}
     for column, items in (
-        ((target, destination),) if same_column else
-        ((previous_column, source), (target, destination))
+        ((target, destination),)
+        if same_column
+        else ((previous_column, source), (target, destination))
     ):
         for offset, item in enumerate(items):
             new_column_id = column.pk
@@ -81,11 +89,16 @@ def move_card(*, actor, card_id, target_column_id, expected_version, position=No
                 touched[item.pk] = item
     if card.pk not in touched:
         return card
-    Card.objects.bulk_update(list(touched.values()), ["column", "position", "version", "updated_at"])
+    Card.objects.bulk_update(
+        list(touched.values()), ["column", "position", "version", "updated_at"]
+    )
     if not same_column:
         CardMove.objects.create(
-            card=card, actor=actor, from_column=previous_column,
-            to_column=target, version=card.version,
+            card=card,
+            actor=actor,
+            from_column=previous_column,
+            to_column=target,
+            version=card.version,
         )
     return card
 
@@ -98,8 +111,13 @@ def create_card(*, actor, board_id, column_id, title, description=""):
     column = Column.objects.filter(pk=column_id, board=board).first()
     if column is None:
         raise ValidationError({"column": "Column must belong to the board."})
-    max_position = Card.objects.filter(column=column).aggregate(value=models.Max("position"))["value"]
+    max_position = Card.objects.filter(column=column).aggregate(value=models.Max("position"))[
+        "value"
+    ]
     return Card.objects.create(
-        board=board, column=column, title=title, description=description,
+        board=board,
+        column=column,
+        title=title,
+        description=description,
         position=(max_position + 1 if max_position is not None else 0),
     )
