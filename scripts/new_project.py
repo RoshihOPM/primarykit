@@ -235,6 +235,8 @@ def create_project(
             "docker compose exec api python manage.py migrate\n"
             "```\n\n"
             "Commit the generated migrations to **this project's Git repository**.\n"
+            "Run `python -m apps.core.agent_context --format markdown` to brief AI agents "
+            "about the selected modules and safe implementation boundaries.\n"
             "Run `python -m apps.core.doctor --strict` to validate copied modules "
             "without Django startup, database access, or the source kit.\n"
             "Configure SMTP, object storage, secrets and reverse proxy before production.\n"

@@ -22,6 +22,10 @@ jobs:
           uv run python scripts/new_project.py --list-presets
           uv run python scripts/new_project.py /tmp/preset-preview --name preview-backend --preset marketplace --dry-run
           test ! -e /tmp/preset-preview
+      - name: AI agent context smoke
+        run: |
+          uv run python -m apps.core.agent_context --format json > /tmp/primarykit-context.json
+          uv run python -c 'import json; m=json.load(open("/tmp/primarykit-context.json")); assert "core" in m["modules"] and "users" in m["modules"]'
       - name: Ruff lint
         run: uv run ruff check .
       - name: Ruff format

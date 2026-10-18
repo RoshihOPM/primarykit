@@ -156,3 +156,7 @@ uv run pytest
 CI дополнительно проверяет генератор и разные составы модулей, Docker, PostgreSQL и SeaweedFS.
 
 Python 3.13 · Django 6.1 · DRF · PostgreSQL 17 · uv · Docker Compose · pytest · Ruff.
+
+## Разработка с AI-агентами
+
+В сгенерированном проекте запустите `python -m apps.core.agent_context --format markdown` и передайте результат агенту вместе с `AGENTS.md`. Контекст формируется офлайн на основе реально установленных модулей, без БД и сети. См. [AI workflow](docs/ai-assisted-development.md).
