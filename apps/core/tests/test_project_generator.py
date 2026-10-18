@@ -194,6 +194,7 @@ def test_generator_does_not_keep_secret_env_or_git_folders(tmp_path):
     assert not (dest / ".env").exists()
     assert not (dest / ".venv").exists()
     assert not (dest / "media").exists()
+    assert not (dest / "privatefiles").exists()
 
 
 @pytest.mark.parametrize("preset", sorted(PRESETS))

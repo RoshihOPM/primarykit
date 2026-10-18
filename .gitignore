@@ -14,3 +14,6 @@ media/
 .idea/
 .vscode/
 .DS_Store
+
+# Listing media must never be committed.
+/privatefiles/

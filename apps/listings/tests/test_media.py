@@ -15,13 +15,12 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-PIL = pytest.importorskip("PIL")
-from PIL import Image  # noqa: E402
+from apps.listings.media import MAX_IMAGES, add_image, private_storage
+from apps.listings.models import Listing, ListingCategory, ListingImage
+from apps.listings.services import StaleListing
+from apps.users.models import User
 
-from apps.listings.media import MAX_IMAGES, add_image, private_storage  # noqa: E402
-from apps.listings.models import Listing, ListingCategory, ListingImage  # noqa: E402
-from apps.listings.services import StaleListing  # noqa: E402
-from apps.users.models import User  # noqa: E402
+Image = pytest.importorskip("PIL.Image")
 
 pytestmark = pytest.mark.django_db
 

@@ -17,7 +17,7 @@ from .media import (
     serialize_image,
     visible_images,
 )
-from .models import Listing, ListingImage
+from .models import Listing
 
 
 class UploadSerializer(serializers.Serializer):
