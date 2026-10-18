@@ -14,8 +14,8 @@ from .serializers import (
     BoardSerializer,
     CardEditSerializer,
     CardSerializer,
-    ColumnSerializer,
     ColumnReorderSerializer,
+    ColumnSerializer,
     MoveSerializer,
 )
 from .services import create_card, create_column, edit_card, move_card, reorder_column
