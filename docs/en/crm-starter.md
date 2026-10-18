@@ -27,7 +27,7 @@ manage contacts/deals. Those business rules remain client-owned.
 
 JWT authentication is required. Non-owners cannot access data. Lead status changes
 are serialized under a row lock and detect stale versions (409). Basic card moves
-also use a row lock and version; non-versioned card edits are disabled. Concurrent
+also use a row lock and version; card editing requires `expected_version` and the move command optionally takes `position` for ordered placement. Concurrent
 PostgreSQL verification and code review are required before production adoption.
 
 ## Known limitations
@@ -38,7 +38,7 @@ PostgreSQL verification and code review are required before production adoption.
   purpose limitation, export and deletion must be designed per client.
 - Kanban placement is not a source of truth for lead status, and cannot be
   automatically mapped to domain stages.
-- No ordered drag-and-drop reorder, per-column WIP limits, leads assignment,
+- No frontend drag-and-drop, per-column WIP limits, leads assignment,
   deals, custom fields, automations, or UI.
 - Copy-based modules ship without migrations; generate and commit the client
   schema before deployment.
