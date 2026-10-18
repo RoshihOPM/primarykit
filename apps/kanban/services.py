@@ -40,7 +40,8 @@ def move_card(*, actor, card_id, target_column_id, expected_version):
     card.position = (
         Card.objects.filter(column=target).aggregate(max_position=models.Max("position"))[
             "max_position"
-        ] or 0
+        ]
+        or 0
     ) + 1
     card.version += 1
     card.save(update_fields=("column", "position", "version", "updated_at"))
