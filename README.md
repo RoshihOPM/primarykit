@@ -123,3 +123,7 @@ CI additionally exercises detached generated clients, PostgreSQL, Docker and opt
 ## AI-agent workflow
 
 Generate a project, then inside the **generated client** run `python -m apps.core.agent_context --format markdown` to get an offline, project-specific agent brief. Give it to Codex together with `AGENTS.md`, relevant app files and tests. See [AI-assisted development](docs/ai-assisted-development.md).
+
+## Classified listings (optional)
+
+Select `--apps listings` or `--preset marketplace` for seller-owned moderated ads with public listing search, independent of Catalog and Inventory. Vehicle VIN/make/model, public media and promotion credits are client-owned integrations. See [Listings](docs/listings.md).

@@ -14,6 +14,7 @@ PRESETS = {
         "apps": (
             "organizations",
             "storage",
+            "listings",
             "search",
             "audit",
             "statistics",

@@ -19,6 +19,7 @@ from scripts.presets import PRESETS
         {"payments"},
         {"tasks"},
         {"privacy"},
+        {"listings"},
         {"observability"},
         {"feature_flags"},
         {"search"},
@@ -74,6 +75,7 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
         "payments",
         "tasks",
         "privacy",
+        "listings",
         "observability",
         "feature_flags",
         "search",
@@ -160,6 +162,7 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
         + (" workflows" if "workflows" in selected else "")
         + (" chat" if "chat" in selected else "")
         + (" privacy" if "privacy" in selected else "")
+        + (" listings" if "listings" in selected else "")
     )
     assert workflows.count(f"makemigrations {migration_apps} --noinput") == 2
     if "storage" in selected:

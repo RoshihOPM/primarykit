@@ -71,3 +71,7 @@ Organizations + tenant modes use scoped organization URLs for Catalog and Invent
 - `feature_flags` do not confer permission; `api_keys` do not create globally privileged users.
 
 See [implemented feature guide](features.md) and [full source references](README.md). Build your client's permissions and business models explicitly.
+
+## Classified ads
+
+Optional `listings` supports public moderated advertisements, privately owned drafts and a staff-managed taxonomy. No Catalog SKU/Inventory relation. See [Listings](../listings.md).
