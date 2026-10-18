@@ -134,16 +134,16 @@ def create_column(*, actor, board_id, name):
     if board is None:
         raise NotFound()
     last = Column.objects.filter(board=board).aggregate(value=models.Max("position"))["value"]
-    return Column.objects.create(
-        board=board, name=name, position=0 if last is None else last + 1
-    )
+    return Column.objects.create(board=board, name=name, position=0 if last is None else last + 1)
 
 
 @transaction.atomic
 def reorder_column(*, actor, column_id, expected_position, position):
-    column_board_id = Column.objects.filter(
-        pk=column_id, board__owner=actor
-    ).values_list("board_id", flat=True).first()
+    column_board_id = (
+        Column.objects.filter(pk=column_id, board__owner=actor)
+        .values_list("board_id", flat=True)
+        .first()
+    )
     if column_board_id is None:
         raise NotFound()
     board = Board.objects.select_for_update().get(pk=column_board_id, owner=actor)
