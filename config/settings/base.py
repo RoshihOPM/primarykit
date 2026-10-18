@@ -232,6 +232,10 @@ if "apps.chat" in INSTALLED_APPS:
     REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"].update(
         {"chat_read": "120/min", "chat_write": "30/min"}
     )
+if "apps.favorites" in INSTALLED_APPS:
+    REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"].update(
+        {"favorites_read": "120/min", "favorites_write": "60/min"}
+    )
 
 
 SIMPLE_JWT = {

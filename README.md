@@ -128,4 +128,4 @@ Generate a project, then inside the **generated client** run `python -m apps.cor
 
 ## Classified listings (optional)
 
-Select `--apps listings` or `--preset marketplace` for seller-owned moderated ads with public listing search, independent of Catalog and Inventory. Vehicle VIN/make/model, public media and promotion credits are client-owned integrations. See [Listings](docs/listings.md).
+Select `--apps listings` or `--preset marketplace` for seller-owned moderated ads with public listing search, independent of Catalog and Inventory. Add `--apps favorites` for private bookmarks and saved searches (which also copies Listings). Vehicle VIN/make/model, public media and promotion credits are client-owned integrations. See [Listings](docs/listings.md) and [Favorites](docs/en/favorites.md).

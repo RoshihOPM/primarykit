@@ -60,7 +60,9 @@ client-owned validators must enforce per-category schemas and allowed values.
   publishing policy, ownership check, quotas, moderation and cleanup need
   a separate reviewed adapter.
 - **Location:** `location_label` is descriptive only. No geocoding/distance search.
-- **Favorites, promotion credits, reviews, dealer accounts and seller messaging:**
+- **Favorites and saved searches:** optional `favorites` adds owner-private
+  bookmarks and bounded filters, but no automatic notifications. See [Favorites](favorites.md).
+- **Promotion credits, reviews, dealer accounts and seller messaging:**
   separate optional modules and permission contracts. Private Chat is
   not automatically linked to Listing.
 - **Organizations:** no implicit dealer organization ownership: listings are

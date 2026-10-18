@@ -31,7 +31,7 @@ jobs:
       - name: Ruff format
         run: uv run ruff format --check .
       - name: Generate project-specific migrations for tests
-        run: uv run python manage.py makemigrations users audit storage catalog inventory organizations orders sales payments tasks webhooks api_keys idempotency workflows usage_quotas chat privacy listings --noinput --settings=config.settings.test
+        run: uv run python manage.py makemigrations users audit storage catalog inventory organizations orders sales payments tasks webhooks api_keys idempotency workflows usage_quotas chat privacy listings favorites --noinput --settings=config.settings.test
       - name: Django checks
         run: uv run python manage.py check --settings=config.settings.test
       - name: Tests
@@ -129,6 +129,15 @@ jobs:
           uv run python manage.py makemigrations users listings --noinput --settings=config.settings.test
           uv run python manage.py check --settings=config.settings.test
           uv run pytest -q apps/listings/tests
+          cd -
+          # Favorites is an opt-in Listings extension, without Catalog/Redis/Outbox.
+          uv run python scripts/new_project.py /tmp/primarykit-favorites-client --name favorites-client --apps favorites
+          cd /tmp/primarykit-favorites-client
+          uv sync --locked --all-groups
+          uv run python -m apps.core.doctor --strict
+          uv run python manage.py makemigrations users listings favorites --noinput --settings=config.settings.test
+          uv run python manage.py check --settings=config.settings.test
+          uv run pytest -q apps/favorites/tests
           cd -
           # Raw copy test: no generator edits or INSTALLED_APPS/URL changes after copying.
           uv run python scripts/new_project.py /tmp/primarykit-copy-client --name copy-client
@@ -339,7 +348,7 @@ jobs:
       - name: PostgreSQL integration smoke test
         run: |
           docker compose up -d
-          docker compose exec -T api python manage.py makemigrations users audit storage catalog inventory organizations orders sales payments tasks webhooks api_keys idempotency workflows usage_quotas chat privacy listings --noinput
+          docker compose exec -T api python manage.py makemigrations users audit storage catalog inventory organizations orders sales payments tasks webhooks api_keys idempotency workflows usage_quotas chat privacy listings favorites --noinput
           docker compose exec -T api python manage.py migrate --noinput
           docker compose exec -T api python manage.py check
           docker compose exec -T api uv run pytest --ds=config.settings.postgres_test
