@@ -2,6 +2,7 @@
 
 Photo binaries never pass through apps.storage or its signed/private URLs.
 """
+
 import io
 import uuid
 
@@ -114,15 +115,20 @@ def add_image(*, actor, listing_id, expected_version, uploaded):
                 raise ValidationError({"file": "This ad already has the maximum of 8 photos."})
             saved = storage.save(f"listing-photos/{uuid.uuid4().hex}.jpg", ContentFile(binary))
             image = ListingImage.objects.create(
-                listing=listing, private_key=saved, width=width, height=height,
+                listing=listing,
+                private_key=saved,
+                width=width,
+                height=height,
                 size_bytes=len(binary),
             )
             Listing.objects.filter(pk=listing.pk).update(
                 version=F("version") + 1, updated_at=timezone.now()
             )
             record_audit_event(
-                actor=owner, action="listings.media.uploaded",
-                target_type="listings.ListingImage", target_id=image.pk,
+                actor=owner,
+                action="listings.media.uploaded",
+                target_type="listings.ListingImage",
+                target_id=image.pk,
             )
             return image
     except Exception:
@@ -148,24 +154,25 @@ def moderate_image(*, actor, listing_id, image_id, expected_version, decision):
         _expect_version(listing, expected_version)
         if listing.status != Listing.Status.PENDING:
             raise ValidationError({"status": "Photos can be moderated only on pending ads."})
-        image = ListingImage.objects.select_for_update().filter(
-            pk=image_id, listing=listing
-        ).first()
+        image = (
+            ListingImage.objects.select_for_update().filter(pk=image_id, listing=listing).first()
+        )
         if image is None:
             raise NotFound()
         if image.status != ListingImage.Status.PENDING:
             raise ValidationError({"status": "Photo has already been reviewed."})
         image.status = (
-            ListingImage.Status.APPROVED if decision == "approve"
-            else ListingImage.Status.REJECTED
+            ListingImage.Status.APPROVED if decision == "approve" else ListingImage.Status.REJECTED
         )
         image.save(update_fields=("status", "updated_at"))
         Listing.objects.filter(pk=listing.pk).update(
             version=F("version") + 1, updated_at=timezone.now()
         )
         record_audit_event(
-            actor=user, action=f"listings.media.{decision}",
-            target_type="listings.ListingImage", target_id=image.pk,
+            actor=user,
+            action=f"listings.media.{decision}",
+            target_type="listings.ListingImage",
+            target_id=image.pk,
         )
         return image
 
@@ -177,9 +184,9 @@ def remove_image(*, actor, listing_id, image_id, expected_version):
         _expect_version(listing, expected_version)
         if listing.status == Listing.Status.PENDING:
             raise ValidationError({"status": "Cannot remove photos during moderation."})
-        image = ListingImage.objects.select_for_update().filter(
-            pk=image_id, listing=listing
-        ).first()
+        image = (
+            ListingImage.objects.select_for_update().filter(pk=image_id, listing=listing).first()
+        )
         if image is None:
             raise NotFound()
         key = image.private_key
@@ -188,8 +195,10 @@ def remove_image(*, actor, listing_id, image_id, expected_version):
             version=F("version") + 1, updated_at=timezone.now()
         )
         record_audit_event(
-            actor=owner, action="listings.media.removed",
-            target_type="listings.ListingImage", target_id=image_id,
+            actor=owner,
+            action="listings.media.removed",
+            target_type="listings.ListingImage",
+            target_id=image_id,
         )
         # A deleted DB row is immediately inaccessible; object cleanup is best-effort.
         transaction.on_commit(lambda: private_storage().delete(key))

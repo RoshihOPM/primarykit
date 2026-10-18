@@ -1,4 +1,5 @@
 """Clean old closed-listing media and orphaned private objects, bounded per run."""
+
 from datetime import timedelta
 
 from django.core.management.base import BaseCommand, CommandError
@@ -31,13 +32,15 @@ class Command(BaseCommand):
                     Listing.Status.REJECTED,
                 ],
                 listing__updated_at__lt=cutoff,
-            ).order_by("pk").values_list("pk", flat=True)[:limit]
+            )
+            .order_by("pk")
+            .values_list("pk", flat=True)[:limit]
         )
         for pk in candidates:
             with transaction.atomic():
-                subject = ListingImage.objects.filter(pk=pk).values_list(
-                    "listing_id", flat=True
-                ).first()
+                subject = (
+                    ListingImage.objects.filter(pk=pk).values_list("listing_id", flat=True).first()
+                )
                 if subject is None:
                     continue
                 listing = Listing.objects.select_for_update().get(pk=subject)
@@ -45,7 +48,8 @@ class Command(BaseCommand):
                 if image is None:
                     continue
                 if (
-                    listing.status not in {
+                    listing.status
+                    not in {
                         Listing.Status.ARCHIVED,
                         Listing.Status.SOLD,
                         Listing.Status.REJECTED,

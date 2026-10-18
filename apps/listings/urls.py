@@ -10,10 +10,12 @@ urlpatterns = [
     path("<uuid:listing_id>/media/", MediaCollection.as_view(), name="listings-media-list"),
     path(
         "<uuid:listing_id>/media/<uuid:image_id>/",
-        MediaDetail.as_view(), name="listings-media-detail",
+        MediaDetail.as_view(),
+        name="listings-media-detail",
     ),
     path(
         "<uuid:listing_id>/media/<uuid:image_id>/moderate/",
-        MediaModeration.as_view(), name="listings-media-moderate",
+        MediaModeration.as_view(),
+        name="listings-media-moderate",
     ),
 ] + router.urls

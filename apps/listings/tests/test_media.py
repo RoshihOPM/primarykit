@@ -1,4 +1,5 @@
 """Media security, moderation, retention and genuine PostgreSQL lock races."""
+
 import io
 import os
 from concurrent.futures import ThreadPoolExecutor
@@ -72,8 +73,12 @@ def create_listing(api):
     category = ListingCategory.objects.create(slug="cars", title="Cars")
     response = api.post(
         "/api/v1/listings/",
-        {"category": str(category.pk), "title": "A decent car",
-         "price_minor": 500000, "currency": "KZT"},
+        {
+            "category": str(category.pk),
+            "title": "A decent car",
+            "price_minor": 500000,
+            "currency": "KZT",
+        },
         format="json",
     )
     assert response.status_code == 201, response.data
@@ -96,7 +101,8 @@ def upload(api, listing_id, version, blob=None):
 def submit(api, listing_id, version):
     return api.post(
         f"/api/v1/listings/{listing_id}/submit/",
-        {"expected_version": version}, format="json",
+        {"expected_version": version},
+        format="json",
     )
 
 
@@ -111,7 +117,8 @@ def moderate_photo(api, listing_id, image_id, version, decision="approve"):
 def approve_listing(api, listing_id, version):
     return api.post(
         f"/api/v1/listings/{listing_id}/moderate/",
-        {"expected_version": version, "decision": "approve"}, format="json",
+        {"expected_version": version, "decision": "approve"},
+        format="json",
     )
 
 
@@ -152,7 +159,8 @@ def test_moderated_photo_public_visibility_and_immediate_revocation():
 
     archived = seller_api.post(
         f"/api/v1/listings/{listing}/archive/",
-        {"expected_version": 4}, format="json",
+        {"expected_version": 4},
+        format="json",
     )
     assert archived.status_code == 200
     assert public.get(photo_url(listing, image_id)).status_code == 404
@@ -173,14 +181,22 @@ def test_owner_idor_and_superuser_cannot_change_sellers_photos():
     image_id = created.data["id"]
     assert outsider_api.get(photo_url(listing, image_id)).status_code == 404
     assert admin.get(photo_url(listing, image_id)).status_code == 404
-    assert outsider_api.delete(
-        photo_url(listing, image_id),
-        {"expected_version": 1}, format="json",
-    ).status_code == 404
-    assert admin.delete(
-        photo_url(listing, image_id),
-        {"expected_version": 1}, format="json",
-    ).status_code == 404
+    assert (
+        outsider_api.delete(
+            photo_url(listing, image_id),
+            {"expected_version": 1},
+            format="json",
+        ).status_code
+        == 404
+    )
+    assert (
+        admin.delete(
+            photo_url(listing, image_id),
+            {"expected_version": 1},
+            format="json",
+        ).status_code
+        == 404
+    )
     assert APIClient().post(photo_url(listing), {}).status_code in (401, 403, 404)
     assert outsider.pk != seller.pk
     assert ListingImage.objects.count() == 1
@@ -255,14 +271,22 @@ def test_delete_photo_versioning_and_disable_flag(settings):
     _, api = api_user("delete-photo@example.test")
     listing = create_listing(api)
     image = upload(api, listing, 0).data["id"]
-    assert api.delete(
-        photo_url(listing, image),
-        {"expected_version": 0}, format="json",
-    ).status_code == 409
-    assert api.delete(
-        photo_url(listing, image),
-        {"expected_version": 1}, format="json",
-    ).status_code == 204
+    assert (
+        api.delete(
+            photo_url(listing, image),
+            {"expected_version": 0},
+            format="json",
+        ).status_code
+        == 409
+    )
+    assert (
+        api.delete(
+            photo_url(listing, image),
+            {"expected_version": 1},
+            format="json",
+        ).status_code
+        == 204
+    )
     assert ListingImage.objects.count() == 0
     assert api.get(photo_url(listing, image)).status_code == 404
     settings.LISTINGS_MEDIA_ENABLED = False
@@ -275,10 +299,14 @@ def test_orphan_reclamation_and_closed_listing_retention():
     listing = create_listing(api)
     photo = upload(api, listing, 0).data["id"]
     key = ListingImage.objects.get(pk=photo).private_key
-    assert api.post(
-        f"/api/v1/listings/{listing}/archive/",
-        {"expected_version": 1}, format="json",
-    ).status_code == 200
+    assert (
+        api.post(
+            f"/api/v1/listings/{listing}/archive/",
+            {"expected_version": 1},
+            format="json",
+        ).status_code
+        == 200
+    )
     Listing.objects.filter(pk=listing).update(updated_at=timezone.now() - timedelta(days=10))
     orphan_name = "listing-photos/" + "e" * 32 + ".jpg"
     storage = private_storage()
@@ -307,7 +335,9 @@ def test_postgres_two_writers_one_gallery_slot():
             barrier.wait(timeout=15)
             try:
                 add_image(
-                    actor=seller, listing_id=listing, expected_version=0,
+                    actor=seller,
+                    listing_id=listing,
+                    expected_version=0,
                     uploaded=uploaded(),
                 )
             except StaleListing:

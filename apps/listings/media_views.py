@@ -1,4 +1,5 @@
 """Explicit media HTTP boundary: private objects are never exposed by URL."""
+
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers, status
@@ -34,9 +35,7 @@ class ImageModerationSerializer(RemoveSerializer):
 
 
 def listing_or_404(listing_id):
-    return get_object_or_404(
-        Listing.objects.select_related("owner"), pk=listing_id
-    )
+    return get_object_or_404(Listing.objects.select_related("owner"), pk=listing_id)
 
 
 class MediaCollection(APIView):
@@ -46,10 +45,12 @@ class MediaCollection(APIView):
     def get(self, request, listing_id):
         require_media()
         listing = listing_or_404(listing_id)
-        return Response([
-            serialize_image(image)
-            for image in visible_images(listing=listing, actor=request.user)
-        ])
+        return Response(
+            [
+                serialize_image(image)
+                for image in visible_images(listing=listing, actor=request.user)
+            ]
+        )
 
     def post(self, request, listing_id):
         # Ownership checked again inside the locking service, not only at the API edge.
@@ -58,7 +59,8 @@ class MediaCollection(APIView):
         data = UploadSerializer(data=request.data)
         data.is_valid(raise_exception=True)
         image = add_image(
-            actor=request.user, listing_id=listing_id,
+            actor=request.user,
+            listing_id=listing_id,
             expected_version=data.validated_data["expected_version"],
             uploaded=data.validated_data["file"],
         )
@@ -90,7 +92,9 @@ class MediaDetail(APIView):
         data = RemoveSerializer(data=request.data)
         data.is_valid(raise_exception=True)
         remove_image(
-            actor=request.user, listing_id=listing_id, image_id=image_id,
+            actor=request.user,
+            listing_id=listing_id,
+            image_id=image_id,
             expected_version=data.validated_data["expected_version"],
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -103,7 +107,9 @@ class MediaModeration(APIView):
         data = ImageModerationSerializer(data=request.data)
         data.is_valid(raise_exception=True)
         image = moderate_image(
-            actor=request.user, listing_id=listing_id, image_id=image_id,
+            actor=request.user,
+            listing_id=listing_id,
+            image_id=image_id,
             expected_version=data.validated_data["expected_version"],
             decision=data.validated_data["decision"],
         )
