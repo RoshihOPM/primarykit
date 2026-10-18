@@ -77,3 +77,7 @@ For the full source-code/module contract, use [Repository Guide](repository-guid
 ## Definition of done for new modules
 
 Each feature must define a bounded context, explicit optional dependencies, secure scope, domain invariants, transactional application commands, tested migrations, API/schema contract, negative IDOR and concurrency tests (when relevant), generated-project smoke, documented production limitations, and green CI. Passing a mocked provider test does **not** replace a real provider sandbox test.
+
+### Classified listings v1
+
+Optional [Listings](listings.md) supports seller-owned drafts and moderator approval. Future separate modules: public photos with moderated media policy, favorites, geosearch, seller/dealer identities and credits, vehicle-specific validation. No implicit Catalog/Inventory coupling.

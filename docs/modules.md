@@ -35,6 +35,7 @@ PrimaryKit распознаёт любую доверенную папку `apps
 | `chat` | Приватные 1:1-диалоги, receipts и TTL | users | organizations, storage, realtime |
 | `realtime` | Опциональный WebSocket ASGI adapter, PostgreSQL event cursor | users | chat |
 | `catalog` | Категории, товары, атрибуты | users | organizations, audit |
+| `listings` | Публичные объявления, продавец, модерация, статусы | users | audit, search, storage, organizations |
 | `inventory` | Склады, SKU, остатки и резервы | users | catalog, organizations, audit |
 | `statistics` | Read-only метрики установленных модулей | users | catalog, inventory, storage, organizations |
 | `orders` | Снимок состава заказа, статус | users | catalog, sales, payments, audit |
@@ -53,6 +54,7 @@ PrimaryKit распознаёт любую доверенную папку `apps
 | Realtime | `/ws/v1/chats/{dialogue_id}/` | Только участники при явном включении |
 | Organizations | `/api/v1/organizations/` | Организации |
 | Catalog | `/api/v1/catalog/` | Standalone |
+| Listings | `/api/v1/listings/` | Публичные опубликованные, приватные черновики |
 | Inventory | `/api/v1/inventory/` | Standalone |
 | Orders | `/api/v1/orders/` | Пользователь |
 | Sales | `/api/v1/sales/` | Пользователь |
@@ -97,3 +99,5 @@ uv run python scripts/new_project.py ../b2b-api --name b2b-api \
 Подробнее о чате и его ограничениях: [Private Chat & Realtime](chat-realtime.md).
 
 Подробнее: [Commerce](commerce-architecture.md), [Statistics](statistics-architecture.md), [Architecture](repository-guide.md).
+
+**Listings не является Catalog:** объявления продавцов с жизненным циклом и модерацией, отдельно от SKU и остатков. [Подробнее](listings.md).
