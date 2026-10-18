@@ -10,3 +10,6 @@ __pycache__
 staticfiles
 media
 *.sqlite3
+
+# Private listing image blobs must stay out of Docker build contexts.
+privatefiles/

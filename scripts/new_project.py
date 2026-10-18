@@ -61,6 +61,7 @@ def _ignore_excluded(directory, names):
             ".pytest_cache",
             ".ruff_cache",
             "media",
+            "privatefiles",
             "staticfiles",
             ".idea",
             ".vscode",
