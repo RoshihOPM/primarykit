@@ -121,3 +121,43 @@ def create_card(*, actor, board_id, column_id, title, description=""):
         description=description,
         position=(max_position + 1 if max_position is not None else 0),
     )
+
+
+class StaleColumn(ValidationError):
+    status_code = 409
+    default_detail = "Column order has changed; refresh and retry."
+
+
+@transaction.atomic
+def create_column(*, actor, board_id, name):
+    board = Board.objects.select_for_update().filter(pk=board_id, owner=actor).first()
+    if board is None:
+        raise NotFound()
+    last = Column.objects.filter(board=board).aggregate(value=models.Max("position"))["value"]
+    return Column.objects.create(
+        board=board, name=name, position=0 if last is None else last + 1
+    )
+
+
+@transaction.atomic
+def reorder_column(*, actor, column_id, expected_position, position):
+    column_board_id = Column.objects.filter(
+        pk=column_id, board__owner=actor
+    ).values_list("board_id", flat=True).first()
+    if column_board_id is None:
+        raise NotFound()
+    board = Board.objects.select_for_update().get(pk=column_board_id, owner=actor)
+    columns = list(Column.objects.filter(board=board).order_by("position", "created_at", "pk"))
+    moving = next(column for column in columns if column.pk == column_id)
+    if moving.position != expected_position:
+        raise StaleColumn()
+    columns.remove(moving)
+    columns.insert(min(position, len(columns)), moving)
+    changed = []
+    for index, item in enumerate(columns):
+        if item.position != index:
+            item.position = index
+            changed.append(item)
+    if changed:
+        Column.objects.bulk_update(changed, ["position"])
+    return moving
