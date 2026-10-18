@@ -46,3 +46,25 @@ class Listing(UUIDTimestampedModel):
             models.Index(fields=("status", "-published_at"), name="listings_public_idx"),
             models.Index(fields=("owner", "-created_at"), name="listings_owner_idx"),
         ]
+
+
+class ListingImage(UUIDTimestampedModel):
+    """Private sanitized JPEG, independently moderated. No Storage module FK."""
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending image moderation"
+        APPROVED = "approved", "Approved"
+        REJECTED = "rejected", "Rejected"
+
+    listing = models.ForeignKey(Listing, on_delete=models.CASCADE, related_name="images")
+    private_key = models.CharField(max_length=160, unique=True)
+    status = models.CharField(max_length=12, choices=Status.choices, default=Status.PENDING)
+    width = models.PositiveIntegerField()
+    height = models.PositiveIntegerField()
+    size_bytes = models.PositiveIntegerField()
+
+    class Meta:
+        ordering = ("created_at", "pk")
+        indexes = [
+            models.Index(fields=("listing", "status"), name="listing_media_state_idx"),
+        ]

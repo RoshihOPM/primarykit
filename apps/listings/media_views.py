@@ -10,7 +10,6 @@ from rest_framework.views import APIView
 
 from .media import (
     add_image,
-    media_url,
     moderate_image,
     private_storage,
     remove_image,

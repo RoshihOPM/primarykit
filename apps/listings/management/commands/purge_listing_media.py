@@ -35,15 +35,15 @@ class Command(BaseCommand):
         )
         for pk in candidates:
             with transaction.atomic():
-                image = (
-                    ListingImage.objects.select_for_update()
-                    .select_related("listing")
-                    .filter(pk=pk)
-                    .first()
-                )
+                subject = ListingImage.objects.filter(pk=pk).values_list(
+                    "listing_id", flat=True
+                ).first()
+                if subject is None:
+                    continue
+                listing = Listing.objects.select_for_update().get(pk=subject)
+                image = ListingImage.objects.select_for_update().filter(pk=pk).first()
                 if image is None:
                     continue
-                listing = Listing.objects.select_for_update().get(pk=image.listing_id)
                 if (
                     listing.status not in {
                         Listing.Status.ARCHIVED,
@@ -61,7 +61,10 @@ class Command(BaseCommand):
         # Orphaned objects may result from crashes before DB commit. Only purge
         # old blobs to avoid deleting a concurrent in-flight upload.
         orphaned = 0
-        _, filenames = storage.listdir("listing-photos")
+        try:
+            _, filenames = storage.listdir("listing-photos")
+        except FileNotFoundError:
+            filenames = []
         for name in filenames:
             if orphaned + removed >= limit:
                 break
