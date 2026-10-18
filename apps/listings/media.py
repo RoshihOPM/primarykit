@@ -76,7 +76,10 @@ def _clean_image(upload):
             output = io.BytesIO()
             image.save(output, format="JPEG", quality=82, optimize=True)
             width, height = image.size
-            return output.getvalue(), width, height
+            clean_bytes = output.getvalue()
+            if len(clean_bytes) > MAX_UPLOAD_BYTES:
+                raise ValidationError({"file": "Sanitized image exceeds the size limit."})
+            return clean_bytes, width, height
     except ImportError as exc:
         raise ValidationError({"file": "Install Pillow to enable listing photos."}) from exc
     except (ValueError, OSError, UnidentifiedImageError, Image.DecompressionBombError) as exc:

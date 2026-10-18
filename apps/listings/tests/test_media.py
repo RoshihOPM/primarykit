@@ -6,6 +6,7 @@ from datetime import timedelta
 from threading import Barrier
 
 import pytest
+from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.db import close_old_connections, connection, connections
@@ -197,7 +198,6 @@ def test_exif_removed_orientation_normalized_and_type_spoof_rejected():
     assert accepted.status_code == 201, accepted.data
     image = ListingImage.objects.get(pk=accepted.data["id"])
     private = private_storage()
-    assert not private.url if False else True  # never use provider URL for delivery
     with private.open(image.private_key, "rb") as handle:
         content = handle.read()
     assert b"PRIVATE GPS" not in content
@@ -283,7 +283,7 @@ def test_orphan_reclamation_and_closed_listing_retention():
     Listing.objects.filter(pk=listing).update(updated_at=timezone.now() - timedelta(days=10))
     orphan_name = "listing-photos/" + "e" * 32 + ".jpg"
     storage = private_storage()
-    storage.save(orphan_name, io.BytesIO(photo_bytes()))
+    storage.save(orphan_name, ContentFile(photo_bytes()))
     path = storage.path(orphan_name)
     then = (timezone.now() - timedelta(days=10)).timestamp()
     os.utime(path, (then, then))

@@ -168,6 +168,9 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
     if "storage" in selected:
         assert (target / "apps/storage/tests/test_personal_storage.py").exists()
         assert (target / "apps/storage/tests/test_storage.py").exists()
+    if "listings" in selected:
+        assert "STORAGES[\"listings_private\"]" in settings
+        assert (target / "apps/listings/tests/test_media.py").exists()
     if "chat" in selected:
         assert (target / "apps/chat/tests/test_chat.py").exists()
     if "realtime" in selected:
