@@ -28,8 +28,10 @@ def test_postgresql_two_simultaneous_moves_commit_once():
             barrier.wait(timeout=15)
             try:
                 move_card(
-                    actor=owner, card_id=card.pk,
-                    target_column_id=second.pk, expected_version=0,
+                    actor=owner,
+                    card_id=card.pk,
+                    target_column_id=second.pk,
+                    expected_version=0,
                 )
             except StaleCard:
                 return "stale"
