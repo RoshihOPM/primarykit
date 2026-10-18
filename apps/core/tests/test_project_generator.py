@@ -20,6 +20,7 @@ from scripts.presets import PRESETS
         {"tasks"},
         {"privacy"},
         {"listings"},
+        {"favorites"},
         {"observability"},
         {"feature_flags"},
         {"search"},
@@ -76,6 +77,7 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
         "tasks",
         "privacy",
         "listings",
+        "favorites",
         "observability",
         "feature_flags",
         "search",
@@ -163,6 +165,7 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
         + (" chat" if "chat" in selected else "")
         + (" privacy" if "privacy" in selected else "")
         + (" listings" if "listings" in selected else "")
+        + (" favorites" if "favorites" in selected else "")
     )
     assert workflows.count(f"makemigrations {migration_apps} --noinput") == 2
     if "storage" in selected:
@@ -172,6 +175,9 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
         assert (target / "apps/chat/tests/test_chat.py").exists()
     if "realtime" in selected:
         assert (target / "apps/realtime/asgi.py").exists()
+    if "favorites" in selected:
+        assert (target / "apps/listings").is_dir()
+        assert (target / "apps/favorites/tests/test_favorites.py").exists()
 
 
 def test_generator_rejects_existing_directory_and_invalid_input(tmp_path):
