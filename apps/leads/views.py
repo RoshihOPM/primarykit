@@ -26,8 +26,10 @@ class LeadViewSet(viewsets.ModelViewSet):
         changes = dict(serializer.validated_data)
         expected_version = changes.pop("expected_version")
         updated = edit_lead(
-            actor=request.user, lead_id=lead.pk,
-            expected_version=expected_version, changes=changes,
+            actor=request.user,
+            lead_id=lead.pk,
+            expected_version=expected_version,
+            changes=changes,
         )
         return Response(self.get_serializer(updated).data)
 
