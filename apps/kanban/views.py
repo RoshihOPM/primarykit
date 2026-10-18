@@ -61,9 +61,7 @@ class CardViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.Creat
         serializer.save(board=board)
 
     def perform_update(self, serializer):
-        if {"board", "column", "position"} & serializer.validated_data.keys():
-            raise ValidationError("Use the move operation to change a card's placement.")
-        serializer.save()
+        raise ValidationError("Card edits require a versioned command.")
 
     @action(detail=True, methods=["post"])
     def move(self, request, pk=None):
