@@ -4,8 +4,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from .models import Lead
-from .serializers import LeadSerializer, LeadTransitionSerializer
-from .services import transition_lead
+from .serializers import LeadEditSerializer, LeadSerializer, LeadTransitionSerializer
+from .services import edit_lead, transition_lead
 
 
 class LeadViewSet(viewsets.ModelViewSet):
@@ -18,6 +18,18 @@ class LeadViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
+
+    def partial_update(self, request, *args, **kwargs):
+        lead = self.get_object()
+        serializer = LeadEditSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        changes = dict(serializer.validated_data)
+        expected_version = changes.pop("expected_version")
+        updated = edit_lead(
+            actor=request.user, lead_id=lead.pk,
+            expected_version=expected_version, changes=changes,
+        )
+        return Response(self.get_serializer(updated).data)
 
     @action(detail=True, methods=["post"])
     def transition(self, request, pk=None):
