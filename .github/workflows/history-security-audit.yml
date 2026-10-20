@@ -31,7 +31,26 @@ jobs:
           curl --fail --location --retry 3 --silent --show-error "$url" -o /tmp/gitleaks.tar.gz
           echo '551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  /tmp/gitleaks.tar.gz' | sha256sum --check
           tar -xzf /tmp/gitleaks.tar.gz -C /tmp gitleaks
-      - name: Scan all fetched history without printing secrets
+      - name: Scan all fetched history with metadata-only diagnostics
         run: |
           set -euo pipefail
-          /tmp/gitleaks git --redact --no-banner --log-opts="--all" .
+          set +e
+          /tmp/gitleaks git --redact --no-banner --log-opts="--all" \
+            --report-format=json --report-path=/tmp/gitleaks-findings.json .
+          status=$?
+          set -e
+          if test -s /tmp/gitleaks-findings.json; then
+            python - <<'PY'
+          import json
+          from pathlib import Path
+
+          findings = json.loads(Path("/tmp/gitleaks-findings.json").read_text())
+          print(f"Potential findings: {len(findings)}")
+          for finding in findings:
+              # Never print lines, matches, secret material, fingerprints or URLs.
+              print(f"rule={finding.get('RuleID', 'unknown')}, "
+                    f"file={finding.get('File', 'unknown')}, "
+                    f"commit={finding.get('Commit', '')[:12]}")
+          PY
+          fi
+          exit "$status"
