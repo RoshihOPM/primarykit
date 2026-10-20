@@ -1,6 +1,6 @@
 """JWT-only personal contact directory; no destructive DELETE."""
 
-from rest_framework import viewsets
+from rest_framework import serializers, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -15,7 +15,13 @@ class ContactViewSet(viewsets.ModelViewSet):
     http_method_names = ("get", "post", "patch", "head", "options")
 
     def get_queryset(self):
-        return Contact.objects.filter(owner=self.request.user).order_by("-created_at")
+        qs = Contact.objects.filter(owner=self.request.user)
+        company = self.request.query_params.get("company")
+        if company is not None:
+            if len(company) > 160:
+                raise serializers.ValidationError({"company": "Too long."})
+            qs = qs.filter(company=company)
+        return qs.order_by("-created_at", "-pk")
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)

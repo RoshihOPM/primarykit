@@ -14,6 +14,13 @@ class Lead(UUIDTimestampedModel):
         LOST = "lost", "Lost"
 
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
+    assigned_to = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="+",
+        null=True,
+        blank=True,
+    )
     title = models.CharField(max_length=200)
     contact_name = models.CharField(max_length=160)
     contact_email = models.EmailField(blank=True)
@@ -27,4 +34,5 @@ class Lead(UUIDTimestampedModel):
         ordering = ("-created_at",)
         indexes = [
             models.Index(fields=("owner", "status", "-created_at"), name="leads_owner_status_idx"),
+            models.Index(fields=("owner", "source", "-created_at"), name="leads_owner_source_idx"),
         ]
