@@ -55,6 +55,7 @@ def test_lead_privacy_and_transitions():
         == 404
     )
 
+
 def test_lead_filters_and_assignee_policy():
     from apps.leads.models import Lead
     from apps.users.models import User
@@ -98,7 +99,9 @@ def test_lead_assignee_requires_active_shared_membership_when_organizations_inst
     from apps.organizations.models import Membership, Organization
 
     owner = User.objects.create_user(email="shared-owner@example.test", password="strongpass")
-    colleague = User.objects.create_user(email="shared-colleague@example.test", password="strongpass")
+    colleague = User.objects.create_user(
+        email="shared-colleague@example.test", password="strongpass"
+    )
     outsider = User.objects.create_user(email="shared-outsider@example.test", password="strongpass")
     organization = Organization.objects.create(slug="shared-leads", name="Shared Leads")
     Membership.objects.create(organization=organization, user=owner, is_active=True)
@@ -108,18 +111,26 @@ def test_lead_assignee_requires_active_shared_membership_when_organizations_inst
     api = APIClient()
     api.credentials(HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(owner).access_token}")
     root = "/api/v1/leads/"
-    created = api.post(root, {
-        "title": "Qualified", "contact_name": "Client", "assigned_to": str(colleague.pk)
-    })
+    created = api.post(
+        root, {"title": "Qualified", "contact_name": "Client", "assigned_to": str(colleague.pk)}
+    )
     assert created.status_code == 201, created.data
-    assert api.post(root, {
-        "title": "Unauthorized", "contact_name": "Client", "assigned_to": str(outsider.pk)
-    }).status_code == 400
+    assert (
+        api.post(
+            root,
+            {"title": "Unauthorized", "contact_name": "Client", "assigned_to": str(outsider.pk)},
+        ).status_code
+        == 400
+    )
     other_membership.is_active = False
     other_membership.save(update_fields=["is_active"])
-    assert api.patch(root + created.data["id"] + "/", {
-        "expected_version": 0, "assigned_to": str(colleague.pk)
-    }).status_code == 400
+    assert (
+        api.patch(
+            root + created.data["id"] + "/",
+            {"expected_version": 0, "assigned_to": str(colleague.pk)},
+        ).status_code
+        == 400
+    )
     # Assignment is metadata, not authorization: the colleague cannot read the lead.
     other_api = APIClient()
     other_api.credentials(
