@@ -74,7 +74,7 @@ def test_lead_filters_and_assignee_policy():
         {"title": "First", "contact_name": "A", "source": "website", "assigned_to": str(owner.pk)},
     )
     assert created.status_code == 201, created.data
-    assert created.data["assigned_to"] == str(owner.pk)
+    assert str(created.data["assigned_to"]) == str(owner.pk)
     second = api.post(root, {"title": "Second", "contact_name": "B", "source": "referral"})
     assert second.status_code == 201
     assert api.get(root, {"source": "website"}).data["count"] == 1
@@ -98,11 +98,11 @@ def test_lead_assignee_requires_active_shared_membership_when_organizations_inst
         pytest.skip("Standalone Leads has no shared organization memberships")
     from apps.organizations.models import Membership, Organization
 
-    owner = User.objects.create_user(email="shared-owner@example.test", password="strongpass")
+    owner = User.objects.create_user(email="shared-owner@example.test", password="strongpass", email_verified=True)
     colleague = User.objects.create_user(
-        email="shared-colleague@example.test", password="strongpass"
+        email="shared-colleague@example.test", password="strongpass", email_verified=True
     )
-    outsider = User.objects.create_user(email="shared-outsider@example.test", password="strongpass")
+    outsider = User.objects.create_user(email="shared-outsider@example.test", password="strongpass", email_verified=True
     organization = Organization.objects.create(slug="shared-leads", name="Shared Leads")
     Membership.objects.create(organization=organization, user=owner, is_active=True)
     other_membership = Membership.objects.create(
