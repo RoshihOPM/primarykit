@@ -35,7 +35,7 @@ jobs:
         run: |
           set -euo pipefail
           set +e
-          /tmp/gitleaks git --redact --no-banner --log-opts="--all" \
+          /tmp/gitleaks git --config=.gitleaks.toml --redact --no-banner --log-opts="--all" \
             --report-format=json --report-path=/tmp/gitleaks-findings.json .
           status=$?
           set -e
