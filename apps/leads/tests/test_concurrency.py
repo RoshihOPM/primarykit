@@ -16,7 +16,9 @@ def test_concurrent_transitions_have_one_winner():
     if connection.vendor != "postgresql":
         pytest.skip("PostgreSQL row locks required")
     owner = User.objects.create_user(email="leads-race@example.test", password="test-password")
-    instance = Lead.objects.create(owner=owner, title="Concurrent transition", contact_name="Customer")
+    instance = Lead.objects.create(
+        owner=owner, title="Concurrent transition", contact_name="Customer"
+    )
     barrier = Barrier(2)
 
     def transition(_index):
@@ -24,7 +26,12 @@ def test_concurrent_transitions_have_one_winner():
         try:
             barrier.wait(timeout=15)
             try:
-                transition_lead(actor=owner, lead_id=instance.pk, expected_version=0, status=Lead.Status.QUALIFIED)
+                transition_lead(
+                    actor=owner,
+                    lead_id=instance.pk,
+                    expected_version=0,
+                    status=Lead.Status.QUALIFIED,
+                )
                 return "moved"
             except StaleLead:
                 return "stale"
