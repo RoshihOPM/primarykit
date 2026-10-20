@@ -10,5 +10,5 @@ description = "One historical synthetic idempotency test fixture, not an API cre
 targetRules = ["generic-api-key"]
 condition = "AND"
 regexTarget = "line"
-paths = ['''^apps/inventory/tests/test_tenant_policy_api\\.py$''']
-regexes = ['''"idempotency_key"\\s*:\\s*"policy-allowed-001"''']
+paths = ['''^apps/inventory/tests/test_tenant_policy_api\.py$''']
+regexes = ['''"idempotency_key"\s*:\s*"policy-allowed-001"''']
