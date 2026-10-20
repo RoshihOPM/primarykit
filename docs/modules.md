@@ -40,7 +40,7 @@ PrimaryKit распознаёт любую доверенную папку `apps
 | `kanban` | Доски, колонки, карточки, перемещение и сортировка | users | audit |
 | `leads` | Независимые лиды с жизненным циклом | users | audit, organizations |
 | `contacts` | Приватные контакты с контролем версий | users | audit |
-| `deals` | Независимые сделки и стадии продаж | users | audit |
+| `deals` | Независимые сделки и стадии продаж | users | audit |\n| `crm_pipeline` | Опциональная атомарная проекция Deals → Kanban | deals, kanban | — |
 | `inventory` | Склады, SKU, остатки и резервы | users | catalog, organizations, audit |
 | `statistics` | Read-only метрики установленных модулей | users | catalog, inventory, storage, organizations |
 | `orders` | Снимок состава заказа, статус | users | catalog, sales, payments, audit |
@@ -58,7 +58,7 @@ PrimaryKit распознаёт любую доверенную папку `apps
 | Kanban | `/api/v1/kanban/` | Владелец |
 | Leads | `/api/v1/leads/` | Владелец |
 | Contacts | `/api/v1/contacts/` | Владелец |
-| Deals | `/api/v1/deals/` | Владелец |
+| Deals | `/api/v1/deals/` | Владелец |\n| CRM Pipeline | `/api/v1/crm/pipeline/` | Владелец |
 | Chat | `/api/v1/chats/` | Участники приватного диалога |
 | Realtime | `/ws/v1/chats/{dialogue_id}/` | Только участники при явном включении |
 | Organizations | `/api/v1/organizations/` | Организации |
