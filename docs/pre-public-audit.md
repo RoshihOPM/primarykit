@@ -9,7 +9,7 @@ not authorize publication or mean that the repository has no leaked credentials.
    (including old closed PR refs where GitHub still exposes them). Verify no
    shallow history. Review unreachable objects separately if available.
 2. Run `bash scripts/audit_git_history.sh` with reviewed Gitleaks v8.30.1 or newer.
-   The CI job `Full History Secrets Audit` also scans fetched refs using a
+   The repo uses a narrowly targeted Gitleaks allowlist for one verified synthetic\nidempotency key in a historical inventory test. Never broaden this exception\nto whole directories; review every future finding separately.\n\nThe CI job `Full History Secrets Audit` also scans fetched refs using a
    checksum-verified Gitleaks binary. Review any results **privately**.
 3. Manually inspect historical environment files, binary archives, uploads,
    screenshots, URLs, fixtures and commit metadata for customer data and secrets.
