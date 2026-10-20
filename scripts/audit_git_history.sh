@@ -12,6 +12,6 @@ if [[ "$(git rev-parse --is-shallow-repository)" != false ]]; then
 fi
 # Do not print raw secret values. The report stays in the local private workspace.
 report="${GITLEAKS_REPORT_PATH:-/tmp/primarykit-history-audit.json}"
-gitleaks git --redact --no-banner --log-opts="--all" \
+gitleaks git --config=.gitleaks.toml --redact --no-banner --log-opts="--all" \
   --report-format json --report-path "$report" .
 echo "Automated scan completed. Review report privately, third-party rights and orphaned refs manually."
