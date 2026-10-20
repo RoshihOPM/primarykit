@@ -29,3 +29,15 @@ def test_contacts_are_private_and_versioned():
     assert changed.data["version"] == 1
     assert owner.patch(path + key + "/", {"expected_version": 0, "name": "Old"}).status_code == 409
     assert owner.delete(path + key + "/").status_code == 405
+
+def test_contacts_filter_is_owner_scoped_and_bounded():
+    owner = client("contact-filter-owner@example.test")
+    other = client("contact-filter-other@example.test")
+    root = "/api/v1/contacts/"
+    assert owner.post(root, {"name": "A", "company": "Acme"}).status_code == 201
+    assert owner.post(root, {"name": "B", "company": "Beta"}).status_code == 201
+    assert other.post(root, {"name": "C", "company": "Acme"}).status_code == 201
+    result = owner.get(root, {"company": "Acme"})
+    assert result.status_code == 200
+    assert result.data["count"] == 1
+    assert owner.get(root, {"company": "X" * 161}).status_code == 400
