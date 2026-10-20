@@ -50,7 +50,8 @@ jobs:
               # Never print lines, matches, secret material, fingerprints or URLs.
               print(f"rule={finding.get('RuleID', 'unknown')}, "
                     f"file={finding.get('File', 'unknown')}, "
-                    f"commit={finding.get('Commit', '')[:12]}")
+                    f"commit={finding.get('Commit', '')[:12]}, "
+                    f"line={finding.get('StartLine', 'unknown')}")
           PY
           fi
           exit "$status"
