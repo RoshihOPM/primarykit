@@ -15,8 +15,11 @@ class Lead(UUIDTimestampedModel):
 
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
     assigned_to = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+",
-        null=True, blank=True,
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="+",
+        null=True,
+        blank=True,
     )
     title = models.CharField(max_length=200)
     contact_name = models.CharField(max_length=160)
