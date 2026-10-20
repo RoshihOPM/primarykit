@@ -49,8 +49,10 @@ def create_lead(*, actor, data):
     validate_assignee(actor=actor, assignee=data.get("assigned_to"))
     lead = Lead.objects.create(owner=actor, **data)
     record_audit_event(
-        actor=actor, action="leads.created",
-        target_type="leads.Lead", target_id=lead.pk,
+        actor=actor,
+        action="leads.created",
+        target_type="leads.Lead",
+        target_id=lead.pk,
     )
     return lead
 
@@ -62,7 +64,15 @@ def edit_lead(*, actor, lead_id, expected_version, changes):
         raise NotFound()
     if lead.version != expected_version:
         raise StaleLead()
-    allowed = {"title", "contact_name", "contact_email", "contact_phone", "source", "notes", "assigned_to"}
+    allowed = {
+        "title",
+        "contact_name",
+        "contact_email",
+        "contact_phone",
+        "source",
+        "notes",
+        "assigned_to",
+    }
     if not changes or not set(changes) <= allowed:
         raise ValidationError("Invalid or empty lead changes.")
     if "assigned_to" in changes:
@@ -72,8 +82,10 @@ def edit_lead(*, actor, lead_id, expected_version, changes):
     lead.version += 1
     lead.save(update_fields=(*changes.keys(), "version", "updated_at"))
     record_audit_event(
-        actor=actor, action="leads.updated",
-        target_type="leads.Lead", target_id=lead.pk,
+        actor=actor,
+        action="leads.updated",
+        target_type="leads.Lead",
+        target_id=lead.pk,
         changes={"fields": sorted(changes)},
     )
     return lead
@@ -92,8 +104,10 @@ def transition_lead(*, actor, lead_id, expected_version, status):
     lead.version += 1
     lead.save(update_fields=("status", "version", "updated_at"))
     record_audit_event(
-        actor=actor, action="leads.transitioned",
-        target_type="leads.Lead", target_id=lead.pk,
+        actor=actor,
+        action="leads.transitioned",
+        target_type="leads.Lead",
+        target_id=lead.pk,
         changes={"status": status},
     )
     return lead
