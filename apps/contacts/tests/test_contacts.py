@@ -30,6 +30,7 @@ def test_contacts_are_private_and_versioned():
     assert owner.patch(path + key + "/", {"expected_version": 0, "name": "Old"}).status_code == 409
     assert owner.delete(path + key + "/").status_code == 405
 
+
 def test_contacts_filter_is_owner_scoped_and_bounded():
     owner = client("contact-filter-owner@example.test")
     other = client("contact-filter-other@example.test")
