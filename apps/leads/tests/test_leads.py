@@ -90,6 +90,7 @@ def test_lead_filters_and_assignee_policy():
 
 def test_lead_assignee_requires_active_shared_membership_when_organizations_installed():
     from django.apps import apps
+
     from apps.users.models import User
 
     if not apps.is_installed("apps.organizations"):
