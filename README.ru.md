@@ -43,6 +43,7 @@ uv run python manage.py runserver
 | [Project Doctor](docs/doctor.md) | Offline диагностика локальных модулей и режима схемы |
 | [Архитектурные рецепты](docs/architecture-recipes.md) | Примеры для CRM, classifieds, B2B и минимального API |
 | [Старт и установка](docs/getting-started.md) | Установка, .env, Docker, uv, миграции, первый API |
+| [CRM Starter](docs/crm-starter.md) | Независимые Kanban, Leads, Contacts, Deals, сборка через `--preset crm` |
 | [Каталог модулей](docs/modules.md) | Что даёт каждая папка, обязательные и необязательные зависимости |
 | [Как устроена репа](docs/repository-guide.md) | Архитектура, manifest, Django/DDD, переносимость |
 | [Создание и подключение модулей](docs/module-development.md) | Пошаговая разработка своего Django-приложения |
@@ -116,6 +117,10 @@ uv run python manage.py runserver
 | payments | Намерения оплаты, ручная привилегированная сверка |
 
 Core, Users и Notifications входят в базовый проект. Все остальные **опциональны**. Orders, Sales и Payments запускаются независимо и не требуют друг друга. Подробнее: [таблица зависимостей и маршрутов](docs/modules.md).
+
+## CRM Starter
+
+Шаблон `--preset crm` включает четыре независимых модуля: `kanban`, `leads`, `contacts`, `deals`. Их API защищены JWT, данные ограничены владельцем, прямых FK и импортов между бизнес-модулями нет. [Документация CRM Starter](docs/crm-starter.md).
 
 ## Два способа использования
 

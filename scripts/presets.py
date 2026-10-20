@@ -7,7 +7,19 @@ PRESETS = {
     },
     "crm": {
         "description": "Company and branch access, audit, files, metrics and background jobs",
-        "apps": ("organizations", "rbac", "audit", "storage", "statistics", "tasks", "outbox"),
+        "apps": (
+            "organizations",
+            "rbac",
+            "audit",
+            "storage",
+            "statistics",
+            "tasks",
+            "outbox",
+            "kanban",
+            "leads",
+            "contacts",
+            "deals",
+        ),
     },
     "marketplace": {
         "description": "Classifieds scaffolding; client owns listing, chat and commerce models",

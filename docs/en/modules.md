@@ -2,7 +2,7 @@
 
 **Language:** English · [Русский](../modules.md) · [English index](README.md)
 
-The repository has **33** source apps in `apps/` at the reviewed commit (2026-10-18). The baseline copied into every generated project is **core + users + notifications**. All others are optional; however, individual modules have **hard dependencies** that the generator resolves.
+The repository has **37** source apps in `apps/` at the reviewed commit (2026-10-18). The baseline copied into every generated project is **core + users + notifications**. All others are optional; however, individual modules have **hard dependencies** that the generator resolves.
 
 | Module | Included behavior | Hard dependencies | Optional integrations |
 | --- | --- | --- | --- |
@@ -38,6 +38,10 @@ The repository has **33** source apps in `apps/` at the reviewed commit (2026-10
 | `chat` | Scope-safe 1:1 conversations, messages, read receipts, attachments | users | organizations, storage, realtime |
 | `realtime` | Opt-in ASGI WebSocket authenticated event transport | users | chat |
 | `favorites` | Authenticated bookmarks and bounded private saved searches | listings | — |
+| `kanban` | Owner-private boards, columns, cards, ordered moves | users | audit |
+| `leads` | Owner-private leads with versioned lifecycle | users | audit, organizations |
+| `contacts` | Private contact directory with versioned edits | users | audit |
+| `deals` | Private deal stages and monetary snapshots | users | audit |
 
 The hard/optional columns describe **manifest dependencies**; each optional integration can require additional configuration and schema choices. For the authoritative manifest contract, inspect `apps/<name>/manifest.py`.
 
@@ -54,6 +58,7 @@ The hard/optional columns describe **manifest dependencies**; each optional inte
 | Manual payment reconciliation | `/api/v1/admin/payments/` (superuser) |
 | Statistics | `/api/v1/statistics/` |
 | Listing favorites / saved searches | `/api/v1/favorites/`, `/api/v1/saved-searches/` |
+| Independent CRM APIs | `/api/v1/kanban/`, `/api/v1/leads/`, `/api/v1/contacts/`, `/api/v1/deals/` |
 | Private chat | `/api/v1/chats/` |
 | WebSocket for one dialogue | `/ws/v1/chats/{dialogue_id}/` (opt-in) |
 

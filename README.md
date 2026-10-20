@@ -42,7 +42,7 @@ This example uses standalone Catalog and Inventory. For tenant mode, include `or
 
 ## Available modules
 
-The source catalog currently contains **33** apps (three baseline and 30 selectable source modules):
+The source catalog currently contains **37** apps (three baseline and 34 selectable source modules):
 
 | Area | Modules |
 | --- | --- |
@@ -54,6 +54,7 @@ The source catalog currently contains **33** apps (three baseline and 30 selecta
 | Messaging | `chat`, `realtime` (opt-in WebSocket transport) |
 | Business examples | `storage`, `catalog`, `inventory`, `statistics`, `orders`, `sales`, `payments` |
 | Classified ads | `listings` (moderation and opt-in photos), `favorites` (bookmarks and saved searches) |
+| CRM building blocks | `kanban`, `leads`, `contacts`, `deals` (independent owner-scoped modules) |
 
 `users` includes per-user device/session management. `organizations` supplies a shared tenant permission policy adapter. There is also a **source-only module scaffold CLI** (not a runtime module) and dependency graph exporter.
 
@@ -126,6 +127,10 @@ CI additionally exercises detached generated clients, PostgreSQL, Docker and opt
 ## AI-agent workflow
 
 Generate a project, then inside the **generated client** run `python -m apps.core.agent_context --format markdown` to get an offline, project-specific agent brief. Give it to Codex together with `AGENTS.md`, relevant app files and tests. See [AI-assisted development](docs/ai-assisted-development.md).
+
+## CRM starter (optional)
+
+Select `--preset crm` to compose four standalone private API modules: Kanban, Leads, Contacts and Deals. They have **no direct module dependencies or shared business model foreign keys**. Each can be installed individually with `--apps`. See [English CRM guide](docs/en/crm-starter.md) and [Russian CRM guide](docs/crm-starter.md).
 
 ## Classified listings (optional)
 

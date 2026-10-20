@@ -31,13 +31,23 @@ jobs:
       - name: Ruff format
         run: uv run ruff format --check .
       - name: Generate project-specific migrations for tests
-        run: uv run python manage.py makemigrations users audit storage catalog inventory organizations orders sales payments tasks webhooks api_keys idempotency workflows usage_quotas chat privacy listings favorites --noinput --settings=config.settings.test
+        run: uv run python manage.py makemigrations users audit storage catalog inventory organizations orders sales payments tasks webhooks api_keys idempotency workflows usage_quotas chat privacy listings favorites kanban leads contacts deals --noinput --settings=config.settings.test
       - name: Django checks
         run: uv run python manage.py check --settings=config.settings.test
       - name: Tests
         run: uv run pytest
       - name: Moderated listing photos (optional Pillow)
         run: uv run --with 'Pillow>=11,<13' pytest -q apps/listings/tests/test_media.py
+      - name: CRM Kanban and Leads detached smoke
+        run: |
+          uv run python scripts/new_project.py /tmp/primarykit-crm-client --name crm-client --preset crm
+          cd /tmp/primarykit-crm-client
+          uv sync --locked --all-groups
+          uv run python -m apps.core.doctor --strict
+          uv run python manage.py makemigrations users audit storage organizations tasks kanban leads contacts deals --noinput --settings=config.settings.test
+          uv run python manage.py check --settings=config.settings.test
+          uv run pytest -q apps/kanban/tests apps/leads/tests apps/contacts/tests apps/deals/tests
+          cd -
       # PRIMARYKIT-GENERATOR-SMOKE-START
       - name: OpenAPI compatibility comparator tests
         run: uv run pytest -q scripts/tests/test_contract_check.py
@@ -351,7 +361,7 @@ jobs:
       - name: PostgreSQL integration smoke test
         run: |
           docker compose up -d
-          docker compose exec -T api python manage.py makemigrations users audit storage catalog inventory organizations orders sales payments tasks webhooks api_keys idempotency workflows usage_quotas chat privacy listings favorites --noinput
+          docker compose exec -T api python manage.py makemigrations users audit storage catalog inventory organizations orders sales payments tasks webhooks api_keys idempotency workflows usage_quotas chat privacy listings favorites kanban leads contacts deals --noinput
           docker compose exec -T api python manage.py migrate --noinput
           docker compose exec -T api python manage.py check
           docker compose exec -T api uv run pytest --ds=config.settings.postgres_test

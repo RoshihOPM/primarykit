@@ -1,0 +1,129 @@
+"""Authenticated owner-only Kanban API; no implicit team access."""
+
+from django.core.exceptions import PermissionDenied as DjangoPermissionDenied
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.shortcuts import get_object_or_404
+from rest_framework import mixins, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+from .models import Board, Card, Column
+from .serializers import (
+    BoardSerializer,
+    CardEditSerializer,
+    CardSerializer,
+    ColumnReorderSerializer,
+    ColumnSerializer,
+    MoveSerializer,
+)
+from .services import create_card, create_column, edit_card, move_card, reorder_column
+
+
+class BoardViewSet(viewsets.ModelViewSet):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = BoardSerializer
+    http_method_names = ("get", "post", "patch", "head", "options")
+
+    def get_queryset(self):
+        return Board.objects.filter(owner=self.request.user).order_by("-created_at")
+
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
+
+
+class ColumnViewSet(viewsets.ModelViewSet):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = ColumnSerializer
+    http_method_names = ("get", "post", "patch", "head", "options")
+
+    def get_queryset(self):
+        return Column.objects.filter(board__owner=self.request.user).order_by(
+            "board", "position", "pk"
+        )
+
+    def perform_create(self, serializer):
+        board = get_object_or_404(
+            Board, pk=serializer.validated_data["board"].pk, owner=self.request.user
+        )
+        serializer.instance = create_column(
+            actor=self.request.user,
+            board_id=board.pk,
+            name=serializer.validated_data["name"],
+        )
+
+    @action(detail=True, methods=["post"])
+    def reorder(self, request, pk=None):
+        column = self.get_object()
+        payload = ColumnReorderSerializer(data=request.data)
+        payload.is_valid(raise_exception=True)
+        updated = reorder_column(actor=request.user, column_id=column.pk, **payload.validated_data)
+        return Response(self.get_serializer(updated).data)
+
+    def perform_update(self, serializer):
+        if "board" in serializer.validated_data:
+            raise ValidationError({"board": "Board cannot be changed."})
+        serializer.save()
+
+
+class CardViewSet(
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.CreateModelMixin,
+    mixins.UpdateModelMixin,
+    viewsets.GenericViewSet,
+):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = CardSerializer
+    http_method_names = ("get", "post", "patch", "head", "options")
+
+    def get_queryset(self):
+        return Card.objects.filter(board__owner=self.request.user).order_by(
+            "column", "position", "pk"
+        )
+
+    def perform_create(self, serializer):
+        board = get_object_or_404(
+            Board, pk=serializer.validated_data["board"].pk, owner=self.request.user
+        )
+        column = serializer.validated_data["column"]
+        if column.board_id != board.pk:
+            raise ValidationError({"column": "Column must belong to the board."})
+        card = create_card(
+            actor=self.request.user,
+            board_id=board.pk,
+            column_id=column.pk,
+            title=serializer.validated_data["title"],
+            description=serializer.validated_data.get("description", ""),
+        )
+        serializer.instance = card
+
+    def partial_update(self, request, *args, **kwargs):
+        card = self.get_object()
+        payload = CardEditSerializer(data=request.data)
+        payload.is_valid(raise_exception=True)
+        changes = dict(payload.validated_data)
+        expected_version = changes.pop("expected_version")
+        updated = edit_card(
+            actor=request.user,
+            card_id=card.pk,
+            expected_version=expected_version,
+            changes=changes,
+        )
+        return Response(self.get_serializer(updated).data)
+
+    @action(detail=True, methods=["post"])
+    def move(self, request, pk=None):
+        card = self.get_object()
+        data = MoveSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        try:
+            card = move_card(actor=request.user, card_id=card.pk, **data.validated_data)
+        except DjangoPermissionDenied as exc:
+            raise PermissionDenied(str(exc)) from exc
+        except DjangoValidationError as exc:
+            raise ValidationError(exc.messages) from exc
+        except Card.DoesNotExist as exc:
+            raise NotFound() from exc
+        return Response(self.get_serializer(card).data, status=status.HTTP_200_OK)
