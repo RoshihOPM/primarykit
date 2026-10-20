@@ -198,7 +198,7 @@ def test_atomic_fire_rollback_and_handler_removal():
 
 @pytest.mark.django_db
 @override_settings(BACKGROUND_JOB_HANDLERS=HANDLERS)
-def test_batch_limit_and_command():
+def test_batch_limit_and_command(monkeypatch):
     schedule(name="first")
     schedule(name="second")
     assert fire_due(now=at(2026, 10, 18, 9), limit=1) == 1
@@ -209,6 +209,9 @@ def test_batch_limit_and_command():
     with pytest.raises(ValueError, match="limit"):
         fire_due(limit=True)
     schedule(name="third", start_at=at(2020, 1, 1))
+    # Keep the command on a deterministic clock: older schedules must not
+    # become newly due simply because the wall clock has advanced.
+    monkeypatch.setattr("apps.tasks.scheduler.timezone.now", lambda: at(2020, 1, 1, 9))
     call_command("run_schedule_dispatcher", once=True)
     assert BackgroundJob.objects.count() == 3
 
