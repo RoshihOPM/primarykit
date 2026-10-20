@@ -1,10 +1,13 @@
 """Owner-scoped, versioned Kanban operations."""
 
 from django.db import models, transaction
+from django.dispatch import Signal
 from django.utils import timezone
 from rest_framework.exceptions import NotFound, ValidationError
 
 from .models import Board, Card, CardMove, Column
+
+before_card_move = Signal()  # Optional integration-specific invariants.
 
 
 class StaleCard(ValidationError):
@@ -52,6 +55,7 @@ def move_card(*, actor, card_id, target_column_id, expected_version, position=No
         raise ValidationError({"target_column_id": "Column must belong to this board."})
     if position is not None and (type(position) is not int or position < 0):
         raise ValidationError({"position": "Expected a non-negative integer."})
+    before_card_move.send(sender=Card, actor=actor, card=card, target_column=target)
 
     # All writers using this service serialize on the board. Reorder both affected
     # columns as dense integer positions, bumping affected card versions.
