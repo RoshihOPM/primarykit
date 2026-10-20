@@ -8,6 +8,4 @@ def test_pipeline_adapter_is_an_explicit_dependency_bundle():
     assert set(modules["crm_pipeline"].requires) == {"deals", "kanban"}
     assert "crm_pipeline" not in dependency_closure(modules, {"deals"})
     assert "crm_pipeline" not in dependency_closure(modules, {"kanban"})
-    assert {"deals", "kanban", "users"} <= dependency_closure(
-        modules, {"crm_pipeline"}
-    )
+    assert {"deals", "kanban", "users"} <= dependency_closure(modules, {"crm_pipeline"})
