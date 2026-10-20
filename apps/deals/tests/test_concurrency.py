@@ -24,7 +24,12 @@ def test_concurrent_transitions_have_one_winner():
         try:
             barrier.wait(timeout=15)
             try:
-                transition_deal(actor=owner, deal_id=instance.pk, expected_version=0, stage=Deal.Stage.NEGOTIATION)
+                transition_deal(
+                    actor=owner,
+                    deal_id=instance.pk,
+                    expected_version=0,
+                    stage=Deal.Stage.NEGOTIATION,
+                )
                 return "moved"
             except StaleDeal:
                 return "stale"
