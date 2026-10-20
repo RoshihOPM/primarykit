@@ -38,7 +38,8 @@ class LeadSerializer(serializers.ModelSerializer):
 class LeadEditSerializer(serializers.ModelSerializer):
     assigned_to = serializers.PrimaryKeyRelatedField(
         queryset=get_user_model().objects.filter(is_active=True),
-        allow_null=True, required=False,
+        allow_null=True,
+        required=False,
     )
     expected_version = serializers.IntegerField(min_value=0)
 
