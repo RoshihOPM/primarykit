@@ -98,11 +98,15 @@ def test_lead_assignee_requires_active_shared_membership_when_organizations_inst
         pytest.skip("Standalone Leads has no shared organization memberships")
     from apps.organizations.models import Membership, Organization
 
-    owner = User.objects.create_user(email="shared-owner@example.test", password="strongpass", email_verified=True)
+    owner = User.objects.create_user(
+        email="shared-owner@example.test", password="strongpass", email_verified=True
+    )
     colleague = User.objects.create_user(
         email="shared-colleague@example.test", password="strongpass", email_verified=True
     )
-    outsider = User.objects.create_user(email="shared-outsider@example.test", password="strongpass", email_verified=True
+    outsider = User.objects.create_user(
+        email="shared-outsider@example.test", password="strongpass", email_verified=True
+    )
     organization = Organization.objects.create(slug="shared-leads", name="Shared Leads")
     Membership.objects.create(organization=organization, user=owner, is_active=True)
     other_membership = Membership.objects.create(
