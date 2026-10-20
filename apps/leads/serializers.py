@@ -1,15 +1,15 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
-from .services import validate_assignee
-
 from .models import Lead
+from .services import validate_assignee
 
 
 class LeadSerializer(serializers.ModelSerializer):
     assigned_to = serializers.PrimaryKeyRelatedField(
         queryset=get_user_model().objects.filter(is_active=True),
-        allow_null=True, required=False,
+        allow_null=True,
+        required=False,
     )
 
     def validate_assigned_to(self, assignee):
