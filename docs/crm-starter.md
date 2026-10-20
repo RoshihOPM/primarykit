@@ -3,12 +3,11 @@
 ```bash
 uv run python scripts/new_project.py ../my-crm --name my-crm --preset crm
 cd ../my-crm
-uv run python manage.py makemigrations users audit storage organizations tasks kanban leads contacts deals
+uv run python manage.py makemigrations users audit storage organizations tasks kanban leads contacts deals crm_pipeline
 uv run python manage.py migrate
 ```
 
-Шаблон собирает **четыре независимых модуля**: Kanban, Leads, Contacts,
-Deals. Прямых зависимостей и связей моделей между ними нет. Каждый можно
+Шаблон собирает **четыре независимых модуля**: Kanban, Leads, Contacts,\nDeals, а также явный интеграционный адаптер `crm_pipeline`. Между самими\nбазовыми модулями нет прямых зависимостей и связей моделей. Только адаптер\nсоздаёт опциональную привязку Deal → Card. Каждый можно
 установить отдельно через `--apps` вместе с обязательным базовым Users.
 
 Все API требуют JWT и ограничивают данные владельцем. Organizations/RBAC не
@@ -17,15 +16,15 @@ Deals. Прямых зависимостей и связей моделей ме
 - `/api/v1/kanban/boards/`, `columns/`, `cards/` — доски, колонки, карточки
 - `POST /api/v1/kanban/cards/{id}/move/` — `target_column_id`,
   `expected_version`, необязательный `position` (от нуля)
-- `/api/v1/leads/` — лиды, фильтры `?status=new&source=website`, `/{id}/transition/`
-- `/api/v1/contacts/` — независимые контакты, фильтр `?company=Acme`
-- `/api/v1/deals/` — сделки и `/{id}/transition/` для смены стадии
+- `/api/v1/leads/` — лиды и `/{id}/transition/` для смены статуса
+- `/api/v1/contacts/` — независимые контакты
+- `/api/v1/deals/` — сделки и `/{id}/transition/` для смены стадии\n- `/api/v1/crm/pipeline/links/` — привязка Deal к Card (`deal_id`, `card_id`)
 
 У лида есть необязательное `assigned_to`. Без Organizations назначить можно\nтолько себя; с Organizations — также активного участника общей активной\nорганизации. **Назначение не выдаёт прав чтения или редактирования:**\nвладельцем данных остаётся создатель. При подключённом Audit изменения\nлида записываются в журнал.\n\nДля редактирования применяется `PATCH` с `expected_version`;
 конфликт возвращает HTTP 409. У сделок суммы хранятся в целых минимальных
 денежных единицах: это не платёжный процессинг.
 
-Это backend starter, а не законченный Bitrix24. Нет фронтенда,
+Для проекции сделки создайте Kanban-доску с единственным столбцом для каждой\nстадии `open`, `negotiation`, `won`, `lost` (без учёта регистра), а затем\nпривяжите сделку к карточке в столбце её текущей стадии. После привязки\nсмена стадии Deals атомарно двигает Card в той же транзакции PostgreSQL.\nЕсли столбец отсутствует/неоднозначен, переход откатывается; перемещение\nкарточки вручную на другую стадию запрещено. Адаптер можно исключить из\nпроекта, устанавливая независимые `deals` и `kanban` отдельно.\n\nЭто backend starter, а не законченный Bitrix24. Нет фронтенда,
 совместных досок, автоматической связи сделок и лидов, командных прав,
 удаления персональных данных, аналитики воронки и платёжных операций.
 Такие правила и интеграции реализуются внутри сгенерированного проекта.
