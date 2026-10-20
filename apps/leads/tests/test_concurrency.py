@@ -6,9 +6,9 @@ from threading import Barrier
 import pytest
 from django.db import close_old_connections, connection, connections
 
-from apps.users.models import User
 from apps.leads.models import Lead
 from apps.leads.services import StaleLead, transition_lead
+from apps.users.models import User
 
 
 @pytest.mark.django_db(transaction=True)
