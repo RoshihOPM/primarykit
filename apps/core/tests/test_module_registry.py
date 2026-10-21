@@ -20,8 +20,8 @@ from apps.core.module_registry import (
     migration_apps,
     module_env_settings,
     module_middleware,
-    module_throttle_rates,
     module_routes,
+    module_throttle_rates,
     resolve_modules,
 )
 
