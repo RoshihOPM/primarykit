@@ -111,3 +111,40 @@ def test_schema_pin_does_not_break_older_clients_without_metadata(tmp_path):
     del metadata["schema_modes"]
     origin.write_text(json.dumps(metadata))
     assert not inspect_project(target).failed()
+
+
+def test_doctor_validates_typed_manifest_configuration_offline(tmp_path):
+    target = _project(tmp_path, {"chat", "observability", "rate_limit"})
+    assert not inspect_project(target).failed(strict=True)
+
+    chat_manifest = target / "apps/chat/manifest.py"
+    original = chat_manifest.read_text()
+    chat_manifest.write_text(
+        original.replace(
+            'EnvSetting("CHAT_RETENTION_DAYS", "int", 30)',
+            'EnvSetting("DJANGO_SECRET_KEY", "str", "unexpected")',
+        )
+    )
+    assert "invalid_manifest" in {item.code for item in inspect_project(target).findings}
+
+    chat_manifest.write_text(
+        original.replace(
+            '("chat_read", "120/min")',
+            '("bad key", "120/min")',
+        )
+    )
+    assert "invalid_manifest" in {item.code for item in inspect_project(target).findings}
+
+    chat_manifest.write_text(original.replace('priority=85,', 'priority=85, dangerous=True,'))
+    assert "invalid_manifest" in {item.code for item in inspect_project(target).findings}
+
+    chat_manifest.write_text(original)
+    observability = target / "apps/observability/manifest.py"
+    content = observability.read_text()
+    observability.write_text(
+        content.replace(
+            '"apps.observability.middleware.request_id_middleware"',
+            '"apps.unrelated.middleware.payload"',
+        )
+    )
+    assert "invalid_manifest" in {item.code for item in inspect_project(target).findings}
