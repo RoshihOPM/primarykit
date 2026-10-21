@@ -119,7 +119,6 @@ def compare_modules(*, source: Path, project: Path) -> dict:
     }
 
 
-
 def apply_safe_updates(*, source: Path, project: Path) -> dict:
     """Copy only conflict-free, non-contract Python changes into a client.
 
@@ -167,7 +166,9 @@ def apply_safe_updates(*, source: Path, project: Path) -> dict:
     # changed the client after the report was prepared.
     for module, path, _, target_file in operations:
         expected = fingerprints[module].get(path)
-        actual = hashlib.sha256(target_file.read_bytes()).hexdigest() if target_file.is_file() else None
+        actual = (
+            hashlib.sha256(target_file.read_bytes()).hexdigest() if target_file.is_file() else None
+        )
         if expected != actual:
             raise ValueError(f"Client changed during update: {module}/{path}")
 
@@ -189,7 +190,9 @@ def apply_safe_updates(*, source: Path, project: Path) -> dict:
         for module, path, _, _, _, data_hash in prepared:
             fingerprints[module][path] = data_hash
         staged_origin = stage / "primarykit-origin.json"
-        staged_origin.write_text(json.dumps(metadata, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        staged_origin.write_text(
+            json.dumps(metadata, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+        )
         applied = []
         created_dirs = []
         try:
@@ -225,7 +228,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--project", required=True, type=Path)
     parser.add_argument("--json", action="store_true")
     parser.add_argument(
-        "--apply-safe", action="store_true",
+        "--apply-safe",
+        action="store_true",
         help="Copy clean non-contract Python changes; abort on any conflict or contract change",
     )
     args = parser.parse_args(argv)
