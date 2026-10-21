@@ -192,7 +192,7 @@ def test_apply_safe_update_refuses_untracked_source_migration(tmp_path):
     assert not (client / "apps" / "audit" / "helpers.py").exists()
 
 
-def test_three_way_plan_reports_missing_ref_and_never_modifies_client(tmp_path):
+def test_three_way_plan_reports_unavailable_source_ref_without_modifying_client(tmp_path):
     source = create_project(tmp_path / "source", name="source-api", optional_apps={"audit"})
     client = create_project(tmp_path / "client", name="client-api", optional_apps={"audit"})
     helper = source / "apps" / "audit" / "helpers.py"
@@ -202,5 +202,5 @@ def test_three_way_plan_reports_missing_ref_and_never_modifies_client(tmp_path):
     before = target.read_bytes()
     report = three_way_plan(source=source, project=client)
     assert report["all_mergeable"] is False
-    assert report["candidates"][0]["reason"] == "missing_immutable_baseline"
+    assert report["candidates"][0]["reason"] == "source_commit_unavailable"
     assert target.read_bytes() == before
