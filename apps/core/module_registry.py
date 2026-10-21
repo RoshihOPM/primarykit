@@ -4,10 +4,10 @@ Copying a module directory under apps/ is enough to register it if its declared
 hard dependencies are present. Never silently enable missing dependencies.
 """
 
+import re
 from dataclasses import dataclass
 from importlib import import_module
 from pathlib import Path
-import re
 
 
 class ModuleConfigurationError(ValueError):
