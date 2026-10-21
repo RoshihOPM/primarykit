@@ -203,21 +203,25 @@ def apply_safe_updates(*, source: Path, project: Path) -> dict:
         # committed Git snapshot; an uncommitted source checkout has no immutable base.
         refs = metadata.get("module_source_refs")
         if isinstance(refs, dict):
-            head = subprocess.run(
-                ["git", "-C", str(source), "rev-parse", "--verify", "HEAD"],
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-            dirty = subprocess.run(
-                ["git", "-C", str(source), "status", "--porcelain", "--", "apps"],
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-            revision = head.stdout.strip()
+            try:
+                head = subprocess.run(
+                    ["git", "-C", str(source), "rev-parse", "--verify", "HEAD"],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                dirty = subprocess.run(
+                    ["git", "-C", str(source), "status", "--porcelain", "--", "apps"],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                revision = head.stdout.strip()
+            except OSError:
+                revision = None
             if (
-                head.returncode == 0
+                revision is not None
+                and head.returncode == 0
                 and dirty.returncode == 0
                 and not dirty.stdout.strip()
                 and re.fullmatch(r"[0-9a-f]{40,64}", revision)
