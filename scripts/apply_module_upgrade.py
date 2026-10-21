@@ -105,7 +105,7 @@ def apply_three_way_updates(*, source: Path, project: Path) -> dict:
                     continue
                 with TemporaryDirectory(prefix="primarykit-three-way-") as td:
                     files = [Path(td) / x for x in ("client.py", "base.py", "source.py")]
-                    for filename, data in zip(files, (target.read_bytes(), original, upstream)):
+                    for filename, data in zip(files, (target.read_bytes(), original, upstream), strict=True):
                         filename.write_bytes(data)
                     merge = subprocess.run(
                         ["git", "merge-file", "--stdout", *(str(p) for p in files)],
