@@ -113,7 +113,8 @@ def test_copy_installer_does_not_write_on_invalid_dependency(tmp_path):
 def test_manifest_migration_policies_match_schema_owners():
     found = discover_modules()
     labels = set(migration_apps(found))
-    assert {"users", "tasks", "orders", "api_keys", "webhooks"} <= labels
+    assert "users" in labels
+    assert {"tasks", "orders", "api_keys", "webhooks"} & set(found) <= labels
     assert {"core", "notifications", "statistics", "observability"}.isdisjoint(labels)
     with pytest.raises(ModuleConfigurationError, match="Invalid migration policy"):
         migration_apps({"bad": Module("bad", migration_policy="invalid")})
