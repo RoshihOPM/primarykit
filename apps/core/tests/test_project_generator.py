@@ -243,8 +243,8 @@ def test_generated_client_keeps_license_not_upstream_governance(tmp_path):
 
 
 def test_bundled_migration_folders_preserved_only_when_declared(monkeypatch):
-    from scripts import new_project
     from apps.core.module_registry import Module
+    from scripts import new_project
 
     monkeypatch.setitem(
         new_project.AVAILABLE_MODULES,
