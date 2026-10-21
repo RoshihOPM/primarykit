@@ -42,7 +42,7 @@ This example uses standalone Catalog and Inventory. For tenant mode, include `or
 
 ## Available modules
 
-The source catalog currently contains **37** apps (three baseline and 34 selectable source modules):
+The source catalog currently contains **38** apps (three baseline and 35 selectable source modules):
 
 | Area | Modules |
 | --- | --- |
@@ -54,7 +54,7 @@ The source catalog currently contains **37** apps (three baseline and 34 selecta
 | Messaging | `chat`, `realtime` (opt-in WebSocket transport) |
 | Business examples | `storage`, `catalog`, `inventory`, `statistics`, `orders`, `sales`, `payments` |
 | Classified ads | `listings` (moderation and opt-in photos), `favorites` (bookmarks and saved searches) |
-| CRM building blocks | `kanban`, `leads`, `contacts`, `deals` (independent owner-scoped modules) |
+| CRM building blocks | `kanban`, `leads`, `contacts`, `deals` (independent), `crm_pipeline` (opt-in transactional adapter) |
 
 `users` includes per-user device/session management. `organizations` supplies a shared tenant permission policy adapter. There is also a **source-only module scaffold CLI** (not a runtime module) and dependency graph exporter.
 
@@ -130,7 +130,7 @@ Generate a project, then inside the **generated client** run `python -m apps.cor
 
 ## CRM starter (optional)
 
-Select `--preset crm` to compose four standalone private API modules: Kanban, Leads, Contacts and Deals. They have **no direct module dependencies or shared business model foreign keys**. Each can be installed individually with `--apps`. See [English CRM guide](docs/en/crm-starter.md) and [Russian CRM guide](docs/crm-starter.md).
+Select `--preset crm` to compose four standalone private API modules: Kanban, Leads, Contacts and Deals, plus opt-in `crm_pipeline` mapping for atomic Deal-to-Kanban projection. They have **no direct module dependencies or shared business model foreign keys**. Each can be installed individually with `--apps`. See [English CRM guide](docs/en/crm-starter.md) and [Russian CRM guide](docs/crm-starter.md).
 
 ## Classified listings (optional)
 

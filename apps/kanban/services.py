@@ -1,10 +1,14 @@
 """Owner-scoped, versioned Kanban operations."""
 
 from django.db import models, transaction
+from django.dispatch import Signal
 from django.utils import timezone
 from rest_framework.exceptions import NotFound, ValidationError
 
 from .models import Board, Card, CardMove, Column
+
+before_card_move = Signal()  # Optional integration-specific invariants.
+before_column_rename = Signal()  # Optional integration-specific column guard.
 
 
 class StaleCard(ValidationError):
@@ -52,6 +56,7 @@ def move_card(*, actor, card_id, target_column_id, expected_version, position=No
         raise ValidationError({"target_column_id": "Column must belong to this board."})
     if position is not None and (type(position) is not int or position < 0):
         raise ValidationError({"position": "Expected a non-negative integer."})
+    before_card_move.send(sender=Card, actor=actor, card=card, target_column=target)
 
     # All writers using this service serialize on the board. Reorder both affected
     # columns as dense integer positions, bumping affected card versions.
@@ -121,6 +126,25 @@ def create_card(*, actor, board_id, column_id, title, description=""):
         description=description,
         position=(max_position + 1 if max_position is not None else 0),
     )
+
+
+@transaction.atomic
+def rename_column(*, actor, column_id, name):
+    """Serialize schema-label edits with card moves on the same board."""
+    board_id = (
+        Column.objects.filter(pk=column_id, board__owner=actor)
+        .values_list("board_id", flat=True)
+        .first()
+    )
+    if board_id is None:
+        raise NotFound()
+    board = Board.objects.select_for_update().get(pk=board_id, owner=actor)
+    column = Column.objects.select_for_update().get(pk=column_id, board=board)
+    if column.name != name:
+        before_column_rename.send(sender=Column, actor=actor, column=column, name=name)
+        column.name = name
+        column.save(update_fields=("name", "updated_at"))
+    return column
 
 
 class StaleColumn(ValidationError):

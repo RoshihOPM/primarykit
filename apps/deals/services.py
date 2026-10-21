@@ -1,9 +1,12 @@
 """Versioned owner-private deal edits and explicit stage transitions."""
 
 from django.db import transaction
+from django.dispatch import Signal
 from rest_framework.exceptions import NotFound, ValidationError
 
 from .models import Deal
+
+deal_stage_transitioned = Signal()  # Optional synchronous projection subscribers.
 
 STAGES = {
     Deal.Stage.OPEN: {Deal.Stage.NEGOTIATION, Deal.Stage.LOST},
@@ -46,7 +49,10 @@ def transition_deal(*, actor, deal_id, expected_version, stage):
         raise StaleDeal()
     if stage not in STAGES[deal.stage]:
         raise ValidationError({"stage": "Invalid stage transition."})
+    previous_stage = deal.stage
     deal.stage = stage
     deal.version += 1
     deal.save(update_fields=("stage", "version", "updated_at"))
+    # Signal receivers run inside this atomic transaction; errors must roll back.
+    deal_stage_transitioned.send(sender=Deal, actor=actor, deal=deal, previous_stage=previous_stage)
     return deal

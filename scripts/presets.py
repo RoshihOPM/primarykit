@@ -19,6 +19,7 @@ PRESETS = {
             "leads",
             "contacts",
             "deals",
+            "crm_pipeline",
         ),
     },
     "marketplace": {

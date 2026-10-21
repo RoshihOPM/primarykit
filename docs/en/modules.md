@@ -2,7 +2,7 @@
 
 **Language:** English · [Русский](../modules.md) · [English index](README.md)
 
-The repository has **37** source apps in `apps/` at the reviewed commit (2026-10-18). The baseline copied into every generated project is **core + users + notifications**. All others are optional; however, individual modules have **hard dependencies** that the generator resolves.
+The repository has **38** source apps in `apps/` at the reviewed commit (2026-10-18). The baseline copied into every generated project is **core + users + notifications**. All others are optional; however, individual modules have **hard dependencies** that the generator resolves.
 
 | Module | Included behavior | Hard dependencies | Optional integrations |
 | --- | --- | --- | --- |
@@ -42,6 +42,7 @@ The repository has **37** source apps in `apps/` at the reviewed commit (2026-10
 | `leads` | Owner-private leads with versioned lifecycle | users | audit, organizations |
 | `contacts` | Private contact directory with versioned edits | users | audit |
 | `deals` | Private deal stages and monetary snapshots | users | audit |
+| `crm_pipeline` | Optional transactional Deal-to-Kanban mapping and move guard | deals, kanban | — |
 
 The hard/optional columns describe **manifest dependencies**; each optional integration can require additional configuration and schema choices. For the authoritative manifest contract, inspect `apps/<name>/manifest.py`.
 
@@ -59,6 +60,7 @@ The hard/optional columns describe **manifest dependencies**; each optional inte
 | Statistics | `/api/v1/statistics/` |
 | Listing favorites / saved searches | `/api/v1/favorites/`, `/api/v1/saved-searches/` |
 | Independent CRM APIs | `/api/v1/kanban/`, `/api/v1/leads/`, `/api/v1/contacts/`, `/api/v1/deals/` |
+| CRM pipeline adapter | `/api/v1/crm/pipeline/` |
 | Private chat | `/api/v1/chats/` |
 | WebSocket for one dialogue | `/ws/v1/chats/{dialogue_id}/` (opt-in) |
 

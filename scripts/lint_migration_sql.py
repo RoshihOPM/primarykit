@@ -13,12 +13,39 @@ ROOT = Path(__file__).resolve().parents[1]
 SQUAWK = ("uvx", "--from", "squawk-cli==2.65.0", "squawk")
 
 
+def _tracked_migration_files(root: Path) -> list[Path]:
+    """Only committed source migrations count, not transient makemigrations output."""
+    tracked = subprocess.run(
+        ["git", "ls-files", "--cached", "--", "apps"],
+        cwd=root,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    result = []
+    for filename in tracked.stdout.splitlines():
+        relative = Path(filename)
+        if (
+            len(relative.parts) != 4
+            or relative.parts[0] != "apps"
+            or relative.parts[2] != "migrations"
+            or not relative.stem[:1].isdigit()
+            or relative.suffix != ".py"
+        ):
+            continue
+        path = root / relative
+        if not path.is_file():
+            raise RuntimeError(f"Tracked migration missing: {filename}")
+        result.append(path)
+    return result
+
+
 def migration_candidates(root: Path) -> list[tuple[str, str]]:
-    """Lint numbered upgrades; a new module's 0001 creates empty tables."""
+    """Inspect only checked-in non-initial migration SQL from the source kit."""
     result: list[tuple[str, str]] = []
-    for path in sorted((root / "apps").glob("*/migrations/[0-9]*.py")):
+    for path in sorted(_tracked_migration_files(root)):
         version = path.stem.split("_", 1)[0]
-        if version.isdecimal() and int(version) > 1:
+        if version.isdecimal() and int(version) > 1 and not path.stem.endswith("_initial"):
             result.append((path.parents[1].name, path.stem))
     return result
 
@@ -62,9 +89,7 @@ def lint_upgrade_sql(root: Path = ROOT) -> None:
             sql_paths.append(str(output))
         # Squawk returns a nonzero code for violations and parsing errors.
         # Never suppress warnings or opt in to continue-on-error.
-        subprocess.run(
-            [*SQUAWK, "--pg-version=17.0", *sql_paths], cwd=root, check=True
-        )
+        subprocess.run([*SQUAWK, "--pg-version=17.0", *sql_paths], cwd=root, check=True)
 
 
 if __name__ == "__main__":

@@ -14,11 +14,22 @@ def add_migrations(root: Path, *revisions: str) -> None:
         (migrations / name).write_text("", encoding="utf-8")
 
 
-def test_upgrade_sql_linter_skips_only_initial_history(tmp_path: Path):
+@pytest.fixture
+def tracked_files(monkeypatch):
+    """Test discovery without requiring a Git index for temporary fixtures."""
+    monkeypatch.setattr(
+        lint,
+        "_tracked_migration_files",
+        lambda root: sorted((root / "apps").glob("*/migrations/[0-9]*.py")),
+    )
+
+
+def test_upgrade_sql_linter_skips_only_initial_history(tmp_path: Path, tracked_files):
     add_migrations(
         tmp_path,
         "__init__.py",
         "0001_initial.py",
+        "0002_initial.py",
         "0002_add_status.py",
         "0003_schedule.py",
     )
@@ -29,7 +40,7 @@ def test_upgrade_sql_linter_skips_only_initial_history(tmp_path: Path):
 
 
 def test_linter_runs_version_check_without_upgrade_migrations(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch, tracked_files
 ):
     calls = []
 
@@ -42,10 +53,10 @@ def test_linter_runs_version_check_without_upgrade_migrations(
     assert calls == [([*lint.SQUAWK, "--version"], {"cwd": tmp_path, "check": True})]
 
 
-def test_rendered_upgrade_sql_is_linted_by_pinned_squawk(tmp_path: Path, monkeypatch):
-    add_migrations(
-        tmp_path, "0001_initial.py", "0002_add_status.py", "0003_schedule.py"
-    )
+def test_rendered_upgrade_sql_is_linted_by_pinned_squawk(
+    tmp_path: Path, monkeypatch, tracked_files
+):
+    add_migrations(tmp_path, "0001_initial.py", "0002_add_status.py", "0003_schedule.py")
     commands = []
 
     def run(command, **kwargs):
@@ -53,15 +64,14 @@ def test_rendered_upgrade_sql_is_linted_by_pinned_squawk(tmp_path: Path, monkeyp
         assert kwargs["check"] is True and kwargs["cwd"] == tmp_path
         if command[0] == "docker":
             assert kwargs["capture_output"] and kwargs["text"]
-            return SimpleNamespace(
-                stdout="ALTER TABLE example ADD COLUMN flag boolean;\n"
-            )
+            return SimpleNamespace(stdout="ALTER TABLE example ADD COLUMN flag boolean;\n")
         assert command[: len(lint.SQUAWK)] == list(lint.SQUAWK)
         assert command[len(lint.SQUAWK)] == "--pg-version=17.0"
         sql_paths = command[len(lint.SQUAWK) + 1 :]
         assert len(sql_paths) == 2
         assert [Path(path).name for path in sql_paths] == [
-            "jobs-0002_add_status.sql", "jobs-0003_schedule.sql"
+            "jobs-0002_add_status.sql",
+            "jobs-0003_schedule.sql",
         ]
         assert all(
             Path(path).read_text() == "ALTER TABLE example ADD COLUMN flag boolean;\n"
@@ -75,7 +85,7 @@ def test_rendered_upgrade_sql_is_linted_by_pinned_squawk(tmp_path: Path, monkeyp
 
 
 @pytest.mark.parametrize("failure_stage", ["sqlmigrate", "squawk"])
-def test_lint_failures_block_ci(tmp_path: Path, monkeypatch, failure_stage):
+def test_lint_failures_block_ci(tmp_path: Path, monkeypatch, tracked_files, failure_stage):
     add_migrations(tmp_path, "0002_add_status.py")
     commands = []
 
@@ -84,9 +94,7 @@ def test_lint_failures_block_ci(tmp_path: Path, monkeypatch, failure_stage):
         if command[0] == "docker":
             if failure_stage == "sqlmigrate":
                 raise subprocess.CalledProcessError(1, command)
-            return SimpleNamespace(
-                stdout="ALTER TABLE t ADD COLUMN val int NOT NULL;\n"
-            )
+            return SimpleNamespace(stdout="ALTER TABLE t ADD COLUMN val int NOT NULL;\n")
         if failure_stage == "squawk":
             raise subprocess.CalledProcessError(1, command)
         return SimpleNamespace(stdout="")
@@ -97,7 +105,7 @@ def test_lint_failures_block_ci(tmp_path: Path, monkeypatch, failure_stage):
     assert len(commands) == (1 if failure_stage == "sqlmigrate" else 2)
 
 
-def test_empty_sqlmigrate_output_is_a_blocker(tmp_path: Path, monkeypatch):
+def test_empty_sqlmigrate_output_is_a_blocker(tmp_path: Path, monkeypatch, tracked_files):
     add_migrations(tmp_path, "0002_add_status.py")
 
     def run(command, **kwargs):
@@ -107,3 +115,26 @@ def test_empty_sqlmigrate_output_is_a_blocker(tmp_path: Path, monkeypatch):
     monkeypatch.setattr(lint.subprocess, "run", run)
     with pytest.raises(RuntimeError, match="no SQL"):
         lint.lint_upgrade_sql(tmp_path)
+
+
+def test_git_index_filters_out_transient_generated_migrations(tmp_path: Path, monkeypatch):
+    add_migrations(tmp_path, "0001_initial.py", "0002_reviewed.py", "0003_generated.py")
+
+    def run(command, **kwargs):
+        assert command == ["git", "ls-files", "--cached", "--", "apps"]
+        assert kwargs["cwd"] == tmp_path and kwargs["check"]
+        return SimpleNamespace(stdout="apps/jobs/migrations/0002_reviewed.py\n")
+
+    monkeypatch.setattr(lint.subprocess, "run", run)
+    assert lint._tracked_migration_files(tmp_path) == [
+        tmp_path / "apps" / "jobs" / "migrations" / "0002_reviewed.py"
+    ]
+
+
+def test_unavailable_git_index_fails_closed(tmp_path: Path, monkeypatch):
+    def run(command, **kwargs):
+        raise subprocess.CalledProcessError(128, command)
+
+    monkeypatch.setattr(lint.subprocess, "run", run)
+    with pytest.raises(subprocess.CalledProcessError):
+        lint._tracked_migration_files(tmp_path)
