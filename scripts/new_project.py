@@ -99,12 +99,16 @@ def _module_fingerprints(root: Path, selected: set[str]) -> dict[str, dict[str, 
 
 def _source_git_revision(root: Path) -> str | None:
     """Record an immutable source commit when generation runs from a Git checkout."""
-    completed = subprocess.run(
-        ["git", "-C", str(root), "rev-parse", "--verify", "HEAD"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    try:
+        completed = subprocess.run(
+            ["git", "-C", str(root), "rev-parse", "--verify", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except OSError:
+        # Production and minimal Docker images need not contain Git.
+        return None
     revision = completed.stdout.strip()
     return (
         revision
