@@ -1,0 +1,95 @@
+#!/usr/bin/env python3
+"""Build independent generated clients on PostgreSQL in CI."""
+
+import argparse
+import os
+import subprocess
+from pathlib import Path
+from tempfile import TemporaryDirectory
+
+from scripts.new_project import OPTIONAL_APPS, create_project
+
+CASES = {
+    "minimal": {"preset": "minimal"},
+    "api_keys": {"apps": ("api_keys",)},
+    "tasks": {"apps": ("tasks",)},
+    "webhooks": {"apps": ("webhooks",)},
+    "listings": {"apps": ("listings",)},
+    "marketplace": {"preset": "marketplace"},
+    "commerce": {"preset": "commerce"},
+    "crm": {"preset": "crm"},
+    "all": {"apps": tuple(sorted(OPTIONAL_APPS))},
+}
+
+
+def run_case(case: str) -> None:
+    """Use PostgreSQL: schema drift and failing client tests fail the CI job."""
+    if case not in CASES:
+        raise ValueError(f"Unknown matrix case: {case}")
+    if not os.environ.get("DATABASE_URL", "").startswith("postgresql://"):
+        raise RuntimeError("Explicit PostgreSQL DATABASE_URL is required")
+    options = CASES[case]
+    with TemporaryDirectory(prefix="primarykit-ci-") as work_dir:
+        target = Path(work_dir) / f"smoke-{case}"
+        create_project(
+            target,
+            name=f"smoke-{case}",
+            optional_apps=set(options.get("apps", ())),
+            preset=options.get("preset"),
+        )
+
+        def run(*command: str, capture: bool = False) -> str:
+            result = subprocess.run(
+                command,
+                cwd=target,
+                check=True,
+                text=True,
+                stdout=subprocess.PIPE if capture else None,
+            )
+            return result.stdout.strip() if capture else ""
+
+        run("uv", "sync", "--locked", "--all-groups")
+        run("uv", "run", "python", "-m", "apps.core.doctor", "--strict")
+        labels = run("uv", "run", "python", "-m", "apps.core.migration_plan", capture=True)
+        if labels:
+            run(
+                "uv",
+                "run",
+                "python",
+                "manage.py",
+                "makemigrations",
+                *labels.split(),
+                "--noinput",
+                "--settings=config.settings.postgres_test",
+            )
+        run(
+            "uv",
+            "run",
+            "python",
+            "manage.py",
+            "migrate",
+            "--noinput",
+            "--settings=config.settings.postgres_test",
+        )
+        run(
+            "uv",
+            "run",
+            "python",
+            "manage.py",
+            "makemigrations",
+            "--check",
+            "--dry-run",
+            "--settings=config.settings.postgres_test",
+        )
+        run("uv", "run", "python", "manage.py", "check", "--settings=config.settings.postgres_test")
+        run("uv", "run", "pytest", "-q", "--ds=config.settings.postgres_test")
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--case", choices=sorted(CASES), required=True)
+    run_case(parser.parse_args().case)
+
+
+if __name__ == "__main__":
+    main()

@@ -151,6 +151,8 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
     assert metadata["source_version"] == source_project["project"]["version"]
     assert ("Feature flags: configure FEATURE_FLAGS" in readme) == ("feature_flags" in apps)
     workflows = (target / ".github/workflows/ci.yaml").read_text()
+    assert "generated-clients:" not in workflows
+    assert "scripts/ci_generated_client.py" not in workflows
     assert project_plan(requested_apps=set(apps))["migrations"] == [
         name for name in migration_apps() if name in selected
     ]
