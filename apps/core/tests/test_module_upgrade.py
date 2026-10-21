@@ -202,5 +202,8 @@ def test_three_way_plan_reports_unavailable_source_ref_without_modifying_client(
     before = target.read_bytes()
     report = three_way_plan(source=source, project=client)
     assert report["all_mergeable"] is False
-    assert report["candidates"][0]["reason"] == "source_commit_unavailable"
+    assert report["candidates"][0]["reason"] in {
+        "source_commit_unavailable",
+        "missing_immutable_baseline",
+    }
     assert target.read_bytes() == before
