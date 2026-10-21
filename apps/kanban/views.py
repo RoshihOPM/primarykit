@@ -18,7 +18,7 @@ from .serializers import (
     ColumnSerializer,
     MoveSerializer,
 )
-from .services import create_card, create_column, edit_card, move_card, reorder_column
+from .services import create_card, create_column, edit_card, move_card, rename_column, reorder_column
 
 
 class BoardViewSet(viewsets.ModelViewSet):
@@ -64,7 +64,14 @@ class ColumnViewSet(viewsets.ModelViewSet):
     def perform_update(self, serializer):
         if "board" in serializer.validated_data:
             raise ValidationError({"board": "Board cannot be changed."})
-        serializer.save()
+        if "name" in serializer.validated_data:
+            serializer.instance = rename_column(
+                actor=self.request.user,
+                column_id=serializer.instance.pk,
+                name=serializer.validated_data["name"],
+            )
+        else:
+            serializer.save()
 
 
 class CardViewSet(
