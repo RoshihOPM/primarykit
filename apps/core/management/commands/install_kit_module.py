@@ -111,14 +111,17 @@ def _updated_origin(origin: Path, order: list[str], stage: Path, source: Path) -
     for name in order:
         fingerprints[name] = _module_fingerprint(stage / name)
     data["included_apps"] = sorted(set(included) | set(order))
-    revision = subprocess.run(
-        ["git", "-C", str(source), "rev-parse", "--verify", "HEAD"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    source_ref = revision.stdout.strip()
-    if revision.returncode != 0 or not re.fullmatch(r"[0-9a-f]{40,64}", source_ref):
+    try:
+        revision = subprocess.run(
+            ["git", "-C", str(source), "rev-parse", "--verify", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        source_ref = revision.stdout.strip()
+    except OSError:
+        source_ref = None
+    if not source_ref or not re.fullmatch(r"[0-9a-f]{40,64}", source_ref):
         source_ref = None
     module_refs = data.setdefault("module_source_refs", {})
     module_versions = data.setdefault("module_versions", {})
