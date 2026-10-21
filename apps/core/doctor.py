@@ -249,6 +249,25 @@ def inspect_project(root: Path) -> Report:
                 add("warning", "origin_invalid", "Provenance included_apps is invalid")
             elif set(included) != names:
                 add("warning", "origin_stale", "Optional provenance module list is outdated")
+            modes = metadata.get("schema_modes", {})
+            if not isinstance(modes, dict):
+                add("error", "schema_modes_invalid", "Expected mapping of pinned schema modes")
+            else:
+                for module, original in modes.items():
+                    if module not in {"catalog", "inventory"} or original not in {
+                        "tenant",
+                        "standalone",
+                    }:
+                        add("error", "schema_modes_invalid", f"Invalid pinned schema: {module}")
+                    elif module in names:
+                        actual = _mode(settings_path, f"{module.upper()}_MODE")
+                        if actual != original:
+                            add(
+                                "error",
+                                "schema_mode_changed",
+                                f"{module} schema mode changed from {original!r} to {actual!r}; "
+                                "do not switch an existing database without reviewed data migrations",
+                            )
         except (OSError, ValueError, TypeError, AttributeError):
             add("warning", "origin_invalid", "Optional provenance JSON is unreadable")
 
