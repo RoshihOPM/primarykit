@@ -154,9 +154,10 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
     assert project_plan(requested_apps=set(apps))["migrations"] == [
         name for name in migration_apps() if name in selected
     ]
-    assert workflows.count(
-        "makemigrations $(uv run python -m apps.core.migration_plan) --noinput"
-    ) == 2
+    assert (
+        workflows.count("makemigrations $(uv run python -m apps.core.migration_plan) --noinput")
+        == 2
+    )
     if "storage" in selected:
         assert (target / "apps/storage/tests/test_personal_storage.py").exists()
         assert (target / "apps/storage/tests/test_storage.py").exists()
