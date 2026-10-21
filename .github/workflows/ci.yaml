@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
+
+# Public pull requests must never receive write-capable GITHUB_TOKEN permissions.
+permissions:
+  contents: read
 
 jobs:
   test:
