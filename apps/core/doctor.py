@@ -128,14 +128,15 @@ def _manifest(path: Path, name: str) -> tuple[str, ...]:
                     "bool": type(default) is bool,
                     "int": type(default) is int,
                     "str": isinstance(default, str),
-                    "list": isinstance(default, tuple)
-                    and all(isinstance(v, str) for v in default),
+                    "list": isinstance(default, tuple) and all(isinstance(v, str) for v in default),
                 }[kind]
             ):
                 raise ValueError("invalid or duplicate typed environment contribution")
             declared.add(field)
     if "migration_policy" in kwargs and ast.literal_eval(kwargs["migration_policy"]) not in {
-        "none", "client", "bundled"
+        "none",
+        "client",
+        "bundled",
     }:
         raise ValueError("invalid migration policy")
     return requires
