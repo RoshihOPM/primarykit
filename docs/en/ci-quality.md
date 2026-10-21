@@ -9,7 +9,10 @@ not production DDL lock hazards.
 
 The catalog-only CI runner and matrix job are stripped from generated projects.
 The catalog also invokes a pinned Squawk linter after the PostgreSQL Docker
-integration tests. It uses Django's `sqlmigrate` on non-initial migrations and
-fails on unsafe SQL. Initial new-table DDL is omitted from the upgrade-risk
+integration tests. It uses Django's `sqlmigrate` on non-initial migrations, fails on unsafe SQL,
+and verifies the pinned CLI version even when no upgrades exist. Empty
+`sqlmigrate` output fails closed for manual investigation; CI tests cover
+successful invocation and both renderer/linter failures. This static lint
+cannot review `RunPython` data changes or replace a production migration plan. Initial new-table DDL is omitted from the upgrade-risk
 lane. The generated client does not carry this source-only helper. Full
 adoption and compatibility of versioned histories remain tracked under #88.
