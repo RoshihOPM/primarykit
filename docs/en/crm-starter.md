@@ -58,6 +58,8 @@ Deal and a Card in the matching initial column, then bind them using
 transaction**. A missing or ambiguous stage column rolls back the Deal change.
 Direct card moves across stages are rejected while bound. Binding is one-to-one
 and restricted to the current owner; stale versions still return 409.
+Renaming columns through the Kanban API is disallowed while the board has
+linked Deals; the board lock serializes renames against card moves.
 
 The adapter is enabled explicitly by `--apps crm_pipeline` (also included by the
 `crm` preset). Unselected base modules remain independent. Clients must review
