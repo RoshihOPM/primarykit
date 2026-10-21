@@ -31,317 +31,16 @@ jobs:
       - name: Ruff format
         run: uv run ruff format --check .
       - name: Generate project-specific migrations for tests
-        run: uv run python manage.py makemigrations users audit storage catalog inventory organizations orders sales payments tasks webhooks api_keys idempotency workflows usage_quotas chat privacy listings favorites kanban leads contacts deals crm_pipeline --noinput --settings=config.settings.test
+        run: uv run python manage.py makemigrations $(uv run python -m apps.core.migration_plan) --noinput --settings=config.settings.test
       - name: Django checks
         run: uv run python manage.py check --settings=config.settings.test
       - name: Tests
         run: uv run pytest
       - name: Moderated listing photos (optional Pillow)
         run: uv run --with 'Pillow>=11,<13' pytest -q apps/listings/tests/test_media.py
-      - name: CRM Kanban and Leads detached smoke
-        run: |
-          uv run python scripts/new_project.py /tmp/primarykit-crm-client --name crm-client --preset crm
-          cd /tmp/primarykit-crm-client
-          uv sync --locked --all-groups
-          uv run python -m apps.core.doctor --strict
-          uv run python manage.py makemigrations users audit storage organizations tasks kanban leads contacts deals crm_pipeline --noinput --settings=config.settings.test
-          uv run python manage.py check --settings=config.settings.test
-          uv run pytest -q apps/kanban/tests apps/leads/tests apps/contacts/tests apps/deals/tests apps/crm_pipeline/tests
-          cd -
       # PRIMARYKIT-GENERATOR-SMOKE-START
-      - name: OpenAPI compatibility comparator tests
-        run: uv run pytest -q scripts/tests/test_contract_check.py
-      - name: Generated project smoke test
-        run: |
-          uv run python scripts/new_project.py /tmp/primarykit-client --name client-backend --apps audit
-          cd /tmp/primarykit-client
-          uv sync --locked --all-groups
-          uv run python -m apps.core.doctor --strict
-          uv run python manage.py makemigrations users audit --noinput --settings=config.settings.test
-          uv run python manage.py check --settings=config.settings.test
-          uv run pytest
-          cd -
-          # Privacy requires Tasks and Audit even in generated clients.
-          uv run python scripts/new_project.py /tmp/primarykit-privacy-client --name privacy-client --apps privacy
-          cd /tmp/primarykit-privacy-client
-          uv sync --locked --all-groups
-          uv run python -m apps.core.doctor --strict
-          uv run python manage.py makemigrations users audit tasks privacy --noinput --settings=config.settings.test
-          uv run python manage.py check --settings=config.settings.test
-          uv run pytest -q apps/privacy/tests
-          cd -
-          # Check an independent feature-flags project with no external services.
-          uv run python scripts/new_project.py /tmp/primarykit-flags-client --name flags-client --apps feature_flags
-          cd /tmp/primarykit-flags-client
-          uv sync --locked --all-groups
-          uv run python -m apps.core.doctor --strict
-          uv run python manage.py makemigrations users --noinput --settings=config.settings.test
-          uv run python manage.py check --settings=config.settings.test
-          uv run pytest
-          cd -
-          # Search is a standalone PostgreSQL-only helper with no migrations.
-          uv run python scripts/new_project.py /tmp/primarykit-search-client --name search-client --apps search
-          cd /tmp/primarykit-search-client
-          uv sync --locked --all-groups
-          uv run python -m apps.core.doctor --strict
-          uv run python manage.py makemigrations users --noinput --settings=config.settings.test
-          uv run python manage.py check --settings=config.settings.test
-          uv run pytest
-          cd -
-          # CSV exchange can be copied alone; no optional infrastructure or migrations.
-          uv run python scripts/new_project.py /tmp/primarykit-csv-client --name csv-client --apps csv_exchange
-          cd /tmp/primarykit-csv-client
-          uv sync --locked --all-groups
-          uv run python -m apps.core.doctor --strict
-          uv run python manage.py makemigrations users --noinput --settings=config.settings.test
-          uv run python manage.py check --settings=config.settings.test
-          uv run pytest
-          cd -
-          # API keys own client-specific migrations and default-denied scopes.
-          uv run python scripts/new_project.py /tmp/primarykit-keys-client --name keys-client --apps api_keys
-          cd /tmp/primarykit-keys-client
-          uv sync --locked --all-groups
-          uv run python -m apps.core.doctor --strict
-          uv run python manage.py makemigrations users api_keys --noinput --settings=config.settings.test
-          uv run python manage.py check --settings=config.settings.test
-          uv run pytest
-          cd -
-          # Isolated PostgreSQL-backed command idempotency.
-          uv run python scripts/new_project.py /tmp/primarykit-idem-client --name idem-client --apps idempotency
-          cd /tmp/primarykit-idem-client
-          uv sync --locked --all-groups
-          uv run python -m apps.core.doctor --strict
-          uv run python manage.py makemigrations users idempotency --noinput --settings=config.settings.test
-          uv run python manage.py check --settings=config.settings.test
-          uv run pytest
-          cd -
-          # Usage quotas work independently of Organizations and Statistics.
-          uv run python scripts/new_project.py /tmp/primarykit-quotas-client --name quotas-client --apps usage_quotas
-          cd /tmp/primarykit-quotas-client
-          uv sync --locked --all-groups
-          uv run python -m apps.core.doctor --strict
-          uv run python manage.py makemigrations users usage_quotas --noinput --settings=config.settings.test
-          uv run python manage.py check --settings=config.settings.test
-          uv run pytest
-          cd -
-          # HTTP integrations have no required broker or database migrations.
-          uv run python scripts/new_project.py /tmp/primarykit-http-client --name http-client --apps http_integrations
-          cd /tmp/primarykit-http-client
-          uv sync --locked --all-groups
-          uv run python -m apps.core.doctor --strict
-          uv run python manage.py makemigrations users --noinput --settings=config.settings.test
-          uv run python manage.py check --settings=config.settings.test
-          uv run pytest
-          cd -
-          # Standalone classifieds module must boot without Catalog/Inventory.
-          uv run python scripts/new_project.py /tmp/primarykit-listings-client --name listings-client --apps listings
-          cd /tmp/primarykit-listings-client
-          uv sync --locked --all-groups
-          uv run python -m apps.core.doctor --strict
-          uv run python manage.py makemigrations users listings --noinput --settings=config.settings.test
-          uv run python manage.py check --settings=config.settings.test
-          uv run pytest -q apps/listings/tests
-          uv run --with 'Pillow>=11,<13' pytest -q apps/listings/tests/test_media.py
-          cd -
-          # Favorites is an opt-in Listings extension, without Catalog/Redis/Outbox.
-          uv run python scripts/new_project.py /tmp/primarykit-favorites-client --name favorites-client --apps favorites
-          cd /tmp/primarykit-favorites-client
-          uv sync --locked --all-groups
-          uv run python -m apps.core.doctor --strict
-          uv run python manage.py makemigrations users listings favorites --noinput --settings=config.settings.test
-          uv run python manage.py check --settings=config.settings.test
-          uv run pytest -q apps/favorites/tests
-          cd -
-          # Raw copy test: no generator edits or INSTALLED_APPS/URL changes after copying.
-          uv run python scripts/new_project.py /tmp/primarykit-copy-client --name copy-client
-          cp -a apps/storage /tmp/primarykit-copy-client/apps/
-          cd /tmp/primarykit-copy-client
-          uv sync --locked --all-groups
-          uv run python manage.py makemigrations users storage --noinput --settings=config.settings.test
-          uv run python manage.py check --settings=config.settings.test
-          uv run python -c 'import os; os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.test"); import django; django.setup(); from django.urls import reverse; assert reverse("stored-files-list") == "/api/v1/files/"'
-          uv run pytest
-          cd -
-          uv run python scripts/new_project.py /tmp/primarykit-storage-client --name storage-client --apps storage
-          cd /tmp/primarykit-storage-client
-          uv sync --locked --all-groups
-          uv run python manage.py makemigrations users storage --noinput --settings=config.settings.test
-          uv run python manage.py check --settings=config.settings.test
-          uv run pytest
-          cd -
-          # Actual raw folder-copy smoke from tracked source, without root settings edits.
-          uv run python scripts/new_project.py /tmp/primarykit-catalog-copy --name catalog-copy
-          git archive HEAD apps/catalog | tar -x -C /tmp/primarykit-catalog-copy
-          cd /tmp/primarykit-catalog-copy
-          uv sync --locked --all-groups
-          uv run python manage.py makemigrations users catalog --noinput --settings=config.settings.test
-          uv run python manage.py check --settings=config.settings.test
-          uv run pytest
-          cd -
-          uv run python scripts/new_project.py /tmp/primarykit-inventory-copy --name inventory-copy
-          git archive HEAD apps/inventory | tar -x -C /tmp/primarykit-inventory-copy
-          cd /tmp/primarykit-inventory-copy
-          uv sync --locked --all-groups
-          uv run python manage.py makemigrations users inventory --noinput --settings=config.settings.test
-          uv run python manage.py check --settings=config.settings.test
-          uv run pytest
-          cd -
-          # Statistics raw-copy test: copying one folder auto-registers its routes.
-          uv run python scripts/new_project.py /tmp/primarykit-statistics-copy --name stats-copy
-          git archive HEAD apps/statistics | tar -x -C /tmp/primarykit-statistics-copy
-          cd /tmp/primarykit-statistics-copy
-          uv sync --locked --all-groups
-          uv run python manage.py makemigrations users --noinput --settings=config.settings.test
-          uv run python manage.py check --settings=config.settings.test
-          uv run python -c 'import os; os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.test"); import django; django.setup(); from django.urls import reverse; assert reverse("statistics-metrics") == "/api/v1/statistics/"'
-          uv run pytest
-          cd -
-          # Commerce modules must all boot and work when copied independently.
-          # Optional infrastructure modules must generate without importing Celery or Redis.
-          uv run python scripts/new_project.py /tmp/primarykit-rate-client --name rate-client --apps rate_limit
-          cd /tmp/primarykit-rate-client
-          uv sync --locked --all-groups
-          uv run python -m apps.core.doctor --strict
-          uv run python manage.py makemigrations users --noinput --settings=config.settings.test
-          uv run python manage.py check --settings=config.settings.test
-          uv run pytest
-          cd -
-          uv run python scripts/new_project.py /tmp/primarykit-cache-client --name cache-client --apps cache
-          cd /tmp/primarykit-cache-client
-          uv sync --locked --all-groups
-          uv run python -m apps.core.doctor --strict
-          uv run python manage.py makemigrations users --noinput --settings=config.settings.test
-          uv run python manage.py check --settings=config.settings.test
-          uv run pytest
-          cd -
-          uv run python scripts/new_project.py /tmp/primarykit-celery-client --name celery-client --apps celery_tasks
-          cd /tmp/primarykit-celery-client
-          uv sync --locked --all-groups
-          uv run python -m apps.core.doctor --strict
-          uv run python manage.py makemigrations users --noinput --settings=config.settings.test
-          uv run python manage.py check --settings=config.settings.test
-          uv run pytest
-          cd -
-          uv run python scripts/new_project.py /tmp/primarykit-infra-client --name infra-client --apps cache celery_tasks
-          cd /tmp/primarykit-infra-client
-          uv sync --locked --all-groups
-          uv run python -m apps.core.doctor --strict
-          uv run python manage.py makemigrations users --noinput --settings=config.settings.test
-          uv run python manage.py check --settings=config.settings.test
-          uv run pytest
-          cd -
-          uv run python scripts/new_project.py /tmp/primarykit-observe-client --name observe-client --apps observability
-          cd /tmp/primarykit-observe-client
-          uv sync --locked --all-groups
-          uv run python -m apps.core.doctor --strict
-          uv run python manage.py makemigrations users --noinput --settings=config.settings.test
-          uv run python manage.py check --settings=config.settings.test
-          uv run pytest
-          cd -
-          uv run python scripts/new_project.py /tmp/primarykit-webhook-client --name webhook-client --apps webhooks
-          cd /tmp/primarykit-webhook-client
-          uv sync --locked --all-groups
-          uv run python -m apps.core.doctor --strict
-          uv run python manage.py makemigrations users tasks webhooks --noinput --settings=config.settings.test
-          uv run python manage.py check --settings=config.settings.test
-          uv run pytest
-          cd -
-          uv run python scripts/new_project.py /tmp/primarykit-outbox-client --name outbox-client --apps outbox
-          cd /tmp/primarykit-outbox-client
-          uv sync --locked --all-groups
-          uv run python -m apps.core.doctor --strict
-          uv run python manage.py makemigrations users tasks --noinput --settings=config.settings.test
-          uv run python manage.py check --settings=config.settings.test
-          uv run pytest
-          cd -
-          uv run python scripts/new_project.py /tmp/primarykit-tasks-client --name tasks-client --apps tasks
-          cd /tmp/primarykit-tasks-client
-          uv sync --locked --all-groups
-          uv run python -m apps.core.doctor --strict
-          uv run python manage.py makemigrations users tasks --noinput --settings=config.settings.test
-          uv run python manage.py check --settings=config.settings.test
-          uv run pytest
-          cd -
-          uv run python scripts/new_project.py /tmp/primarykit-orders-client --name orders-client --apps orders
-          cd /tmp/primarykit-orders-client
-          uv sync --locked --all-groups
-          uv run python manage.py makemigrations users orders --noinput --settings=config.settings.test
-          uv run python manage.py check --settings=config.settings.test
-          uv run pytest
-          cd -
-          uv run python scripts/new_project.py /tmp/primarykit-sales-client --name sales-client --apps sales
-          cd /tmp/primarykit-sales-client
-          uv sync --locked --all-groups
-          uv run python manage.py makemigrations users sales --noinput --settings=config.settings.test
-          uv run python manage.py check --settings=config.settings.test
-          uv run pytest
-          cd -
-          uv run python scripts/new_project.py /tmp/primarykit-payments-client --name payments-client --apps payments
-          cd /tmp/primarykit-payments-client
-          uv sync --locked --all-groups
-          uv run python manage.py makemigrations users payments --noinput --settings=config.settings.test
-          uv run python manage.py check --settings=config.settings.test
-          uv run pytest
-          cd -
-          uv run python scripts/new_project.py /tmp/primarykit-commerce-client --name commerce-client --apps orders sales payments statistics
-          cd /tmp/primarykit-commerce-client
-          uv sync --locked --all-groups
-          uv run python manage.py makemigrations users orders sales payments --noinput --settings=config.settings.test
-          uv run python manage.py check --settings=config.settings.test
-          uv run pytest
-          cd -
-          # Statistics must work without any optional business module.
-          uv run python scripts/new_project.py /tmp/primarykit-statistics-client --name stats-client --apps statistics
-          cd /tmp/primarykit-statistics-client
-          uv sync --locked --all-groups
-          uv run python manage.py makemigrations users --noinput --settings=config.settings.test
-          uv run python manage.py check --settings=config.settings.test
-          uv run pytest
-          cd -
-          # Verify conditional standalone providers without tenant models.
-          uv run python scripts/new_project.py /tmp/primarykit-statistics-inventory --name stats-inventory --apps statistics inventory
-          cd /tmp/primarykit-statistics-inventory
-          uv sync --locked --all-groups
-          uv run python manage.py makemigrations users inventory --noinput --settings=config.settings.test
-          uv run python manage.py check --settings=config.settings.test
-          uv run pytest
-          cd -
-          uv run python scripts/new_project.py /tmp/primarykit-catalog-client --name catalog-client --apps catalog
-          cd /tmp/primarykit-catalog-client
-          uv sync --locked --all-groups
-          uv run python manage.py makemigrations users catalog --noinput --settings=config.settings.test
-          uv run python manage.py check --settings=config.settings.test
-          uv run pytest
-          cd -
-          uv run python scripts/new_project.py /tmp/primarykit-inventory-client --name inventory-client --apps inventory
-          cd /tmp/primarykit-inventory-client
-          uv sync --locked --all-groups
-          uv run python manage.py makemigrations users inventory --noinput --settings=config.settings.test
-          uv run python manage.py check --settings=config.settings.test
-          uv run pytest
-          cd -
-          uv run python scripts/new_project.py /tmp/primarykit-tenant-client --name tenant-client --apps inventory catalog organizations
-          cd /tmp/primarykit-tenant-client
-          uv sync --locked --all-groups
-          uv run python manage.py makemigrations users catalog inventory organizations --noinput --settings=config.settings.test
-          uv run python manage.py check --settings=config.settings.test
-          uv run pytest
-          cd -
-          uv run python scripts/new_project.py /tmp/primarykit-org-client --name org-client --apps organizations
-          cd /tmp/primarykit-org-client
-          uv sync --locked --all-groups
-          uv run python manage.py makemigrations users organizations --noinput --settings=config.settings.test
-          uv run python manage.py check --settings=config.settings.test
-          uv run pytest
-      - name: Generated workflow-only client smoke
-        run: |
-          uv run python scripts/new_project.py /tmp/primarykit-workflow-client --name workflow-client --apps workflows
-          cd /tmp/primarykit-workflow-client
-          uv sync --locked --all-groups
-          uv run python -m apps.core.doctor --strict
-          uv run python manage.py makemigrations users workflows --noinput --settings=config.settings.test
-          uv run python manage.py migrate --noinput --settings=config.settings.test
-          uv run pytest -q apps/workflows
+      - name: Source-specific comparator and smoke configuration tests
+        run: uv run pytest -q scripts/tests/test_contract_check.py scripts/tests/test_generated_client_matrix.py
       # PRIMARYKIT-GENERATOR-SMOKE-END
       - name: Validate Docker Compose configurations
         run: |
@@ -361,7 +60,7 @@ jobs:
       - name: PostgreSQL integration smoke test
         run: |
           docker compose up -d
-          docker compose exec -T api python manage.py makemigrations users audit storage catalog inventory organizations orders sales payments tasks webhooks api_keys idempotency workflows usage_quotas chat privacy listings favorites kanban leads contacts deals crm_pipeline --noinput
+          docker compose exec -T api python manage.py makemigrations $(uv run python -m apps.core.migration_plan) --noinput
           docker compose exec -T api python manage.py migrate --noinput
           docker compose exec -T api python manage.py check
           docker compose exec -T api uv run pytest --ds=config.settings.postgres_test
@@ -399,3 +98,38 @@ jobs:
           docker compose -f compose.yaml -f compose.redis.yaml -f compose.celery.yaml down -v || true
           docker compose -f compose.yaml -f compose.seaweedfs.yaml down -v || true
           docker compose down -v || true
+
+  # PRIMARYKIT-MATRIX-JOB-START
+  generated-clients:
+    name: PostgreSQL generated ${{ matrix.case }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        case: [minimal, api_keys, tasks, webhooks, listings, marketplace, commerce, crm, all]
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: primarykit
+          POSTGRES_PASSWORD: primarykit_ci_only
+          POSTGRES_DB: primarykit
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U primarykit"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://primarykit:primarykit_ci_only@127.0.0.1:5432/primarykit
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.13"
+      - name: Install dependencies
+        run: uv sync --locked --all-groups
+      - name: Generate and test detached PostgreSQL client
+        run: uv run python scripts/ci_generated_client.py --case ${{ matrix.case }}
+  # PRIMARYKIT-MATRIX-JOB-END
