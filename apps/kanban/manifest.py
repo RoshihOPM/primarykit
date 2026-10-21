@@ -8,4 +8,5 @@ MODULE = Module(
     optional=("audit",),
     routes=(Route("api/v1/kanban/"),),
     priority=54,
+    migration_policy="client",
 )

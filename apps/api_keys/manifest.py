@@ -2,4 +2,4 @@
 
 from apps.core.module_registry import Module
 
-MODULE = Module(name="api_keys", requires=("users",), optional=("audit",), priority=35)
+MODULE = Module(name="api_keys", requires=("users",), optional=("audit",), priority=35, migration_policy="client")
