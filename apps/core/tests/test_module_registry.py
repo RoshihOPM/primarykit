@@ -10,6 +10,7 @@ from django.test import override_settings
 
 from apps.core.management.commands.install_kit_module import install_order
 from apps.core.module_registry import (
+    EnvSetting,
     Module,
     ModuleConfigurationError,
     Route,
@@ -17,6 +18,9 @@ from apps.core.module_registry import (
     dependency_closure,
     discover_modules,
     migration_apps,
+    module_env_settings,
+    module_middleware,
+    module_throttle_rates,
     module_routes,
     resolve_modules,
 )
@@ -118,3 +122,34 @@ def test_manifest_migration_policies_match_schema_owners():
     assert {"core", "notifications", "statistics", "observability"}.isdisjoint(labels)
     with pytest.raises(ModuleConfigurationError, match="Invalid migration policy"):
         migration_apps({"bad": Module("bad", migration_policy="invalid")})
+
+
+def test_manifest_configuration_contributions_are_typed_and_scoped():
+    import environ
+
+    entries = {
+        "chat": Module(
+            "chat",
+            env_settings=(EnvSetting("CHAT_RETENTION_DAYS", "int", 30),),
+            middleware=("apps.chat.middleware.request_tracking",),
+            throttle_rates=(("chat_read", "120/min"),),
+        )
+    }
+    result = module_env_settings(environ.Env(), entries)
+    assert result["CHAT_RETENTION_DAYS"] == 30
+    assert module_middleware(entries) == ("apps.chat.middleware.request_tracking",)
+    assert module_throttle_rates(entries) == {"chat_read": "120/min"}
+
+
+@pytest.mark.parametrize(
+    "definition",
+    [
+        Module("a", env_settings=(EnvSetting("DJANGO_SECRET_KEY", "str", "bad"),)),
+        Module("a", env_settings=(EnvSetting("A_PORT", "int", "bad"),)),
+        Module("a", middleware=("apps.other.middleware.unsafe",)),
+        Module("a", throttle_rates=(("bad key", "10/min"),)),
+    ],
+)
+def test_manifest_configuration_rejects_invalid_declarations(definition):
+    with pytest.raises(ModuleConfigurationError):
+        module_middleware({"a": definition})
