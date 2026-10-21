@@ -18,7 +18,14 @@ from .serializers import (
     ColumnSerializer,
     MoveSerializer,
 )
-from .services import create_card, create_column, edit_card, move_card, rename_column, reorder_column
+from .services import (
+    create_card,
+    create_column,
+    edit_card,
+    move_card,
+    rename_column,
+    reorder_column,
+)
 
 
 class BoardViewSet(viewsets.ModelViewSet):
