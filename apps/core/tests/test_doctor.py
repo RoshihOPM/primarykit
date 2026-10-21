@@ -135,7 +135,7 @@ def test_doctor_validates_typed_manifest_configuration_offline(tmp_path):
     )
     assert "invalid_manifest" in {item.code for item in inspect_project(target).findings}
 
-    chat_manifest.write_text(original.replace('priority=85,', 'priority=85, dangerous=True,'))
+    chat_manifest.write_text(original.replace("priority=85,", "priority=85, dangerous=True,"))
     assert "invalid_manifest" in {item.code for item in inspect_project(target).findings}
 
     chat_manifest.write_text(original)
