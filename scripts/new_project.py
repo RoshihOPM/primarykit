@@ -17,38 +17,17 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(SOURCE_ROOT))
 
 from apps.core.doctor import inspect_project  # noqa: E402
-from apps.core.module_registry import dependency_closure, discover_modules  # noqa: E402
+from apps.core.module_registry import (  # noqa: E402
+    dependency_closure,
+    discover_modules,
+    migration_apps,  # noqa: E402
+)
 from scripts.presets import PRESETS  # noqa: E402
 
 REQUIRED_APPS = frozenset({"core", "users", "notifications"})
 AVAILABLE_MODULES = discover_modules()
 OPTIONAL_APPS = frozenset(AVAILABLE_MODULES) - REQUIRED_APPS
-MIGRATION_APPS = (
-    "users",
-    "audit",
-    "storage",
-    "catalog",
-    "inventory",
-    "organizations",
-    "orders",
-    "sales",
-    "payments",
-    "tasks",
-    "webhooks",
-    "api_keys",
-    "idempotency",
-    "workflows",
-    "usage_quotas",
-    "chat",
-    "privacy",
-    "listings",
-    "favorites",
-    "kanban",
-    "leads",
-    "contacts",
-    "deals",
-)
-# Statistics uses existing module data only; it has no persistence migrations.
+MIGRATION_APPS = migration_apps(AVAILABLE_MODULES)
 
 
 def _ignore_excluded(directory, names):
@@ -176,10 +155,6 @@ def create_project(
         migrations = " ".join(a for a in MIGRATION_APPS if a in selected)
         workflow = target / ".github" / "workflows" / "ci.yaml"
         raw = workflow.read_text(encoding="utf-8")
-        phrase = "makemigrations users audit storage catalog inventory organizations orders sales payments tasks webhooks api_keys idempotency workflows usage_quotas chat privacy listings favorites kanban leads contacts deals --noinput"
-        if raw.count(phrase) != 2:
-            raise RuntimeError("CI migration template has changed")
-        raw = raw.replace(phrase, f"makemigrations {migrations} --noinput")
         start_marker = "      # PRIMARYKIT-GENERATOR-SMOKE-START\n"
         end_marker = "      # PRIMARYKIT-GENERATOR-SMOKE-END\n"
         if raw.count(start_marker) != 1 or raw.count(end_marker) != 1:
