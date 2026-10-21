@@ -2,13 +2,13 @@
 """Inspect or safely copy conflict-free module changes. No Django or network."""
 
 import argparse
+import ast
 import hashlib
 import json
-import re
-import subprocess
-import ast
 import os
+import re
 import shutil
+import subprocess
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
