@@ -109,6 +109,35 @@ def _updated_origin(origin: Path, order: list[str], stage: Path) -> str | None:
     for name in order:
         fingerprints[name] = _module_fingerprint(stage / name)
     data["included_apps"] = sorted(set(included) | set(order))
+    # Record schema mode on first installation. Never rewrite an existing pin.
+    schema_modes = data.setdefault("schema_modes", {})
+    if not isinstance(schema_modes, dict):
+        raise CommandError("Invalid provenance schema_modes; no modules installed.")
+    settings_file = origin.parent / "config" / "settings" / "base.py"
+    for name in order:
+        if name not in {"catalog", "inventory"} or name in schema_modes:
+            continue
+        if not settings_file.is_file():
+            raise CommandError("Missing settings file for schema mode pinning.")
+        tree = ast.parse(settings_file.read_text(encoding="utf-8"))
+        values = [
+            node.value
+            for node in tree.body
+            if isinstance(node, ast.Assign)
+            and any(
+                isinstance(target, ast.Name) and target.id == f"{name.upper()}_MODE"
+                for target in node.targets
+            )
+        ]
+        if len(values) != 1:
+            raise CommandError(f"Cannot detect pinned {name} schema mode")
+        try:
+            mode = ast.literal_eval(values[0])
+        except (SyntaxError, ValueError, TypeError) as exc:
+            raise CommandError(f"Invalid {name} schema mode") from exc
+        if mode not in {"tenant", "standalone"}:
+            raise CommandError(f"Invalid {name} schema mode")
+        schema_modes[name] = mode
     return json.dumps(data, indent=2, ensure_ascii=False) + "\n"
 
 

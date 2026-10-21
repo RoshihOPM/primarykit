@@ -89,3 +89,23 @@ def test_doctor_stale_metadata_is_warning_and_strict_fails(tmp_path):
     assert [item.code for item in report.findings] == ["origin_stale"]
     assert not report.failed()
     assert report.failed(strict=True)
+
+
+def test_doctor_denies_changed_pinned_schema_after_generation(tmp_path):
+    target = _project(tmp_path, {"catalog", "inventory", "organizations"})
+    provenance = json.loads((target / "primarykit-origin.json").read_text())
+    assert provenance["schema_modes"] == {"catalog": "tenant", "inventory": "tenant"}
+    base = target / "config/settings/base.py"
+    base.write_text(base.read_text().replace('CATALOG_MODE = "tenant"', 'CATALOG_MODE = "standalone"'))
+    findings = {item.code for item in inspect_project(target).findings}
+    assert "schema_mode_changed" in findings
+    assert inspect_project(target).failed()
+
+
+def test_schema_pin_does_not_break_older_clients_without_metadata(tmp_path):
+    target = _project(tmp_path, {"catalog"})
+    origin = target / "primarykit-origin.json"
+    metadata = json.loads(origin.read_text())
+    del metadata["schema_modes"]
+    origin.write_text(json.dumps(metadata))
+    assert not inspect_project(target).failed()
