@@ -20,7 +20,8 @@ environ.Env.read_env(BASE_DIR / ".env")
 globals().update(module_env_settings(env))
 if "RATE_LIMIT_SHARED_ACCOUNT_THROTTLE_ENABLED" in globals():
     SHARED_ACCOUNT_THROTTLE_ENABLED = env.bool(
-        "SHARED_ACCOUNT_THROTTLE_ENABLED", default=RATE_LIMIT_SHARED_ACCOUNT_THROTTLE_ENABLED
+        "SHARED_ACCOUNT_THROTTLE_ENABLED",
+        default=globals()["RATE_LIMIT_SHARED_ACCOUNT_THROTTLE_ENABLED"],
     )
 
 SECRET_KEY = env("DJANGO_SECRET_KEY", default="unsafe-local-only")
