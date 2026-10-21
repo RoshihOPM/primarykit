@@ -7,7 +7,7 @@ from django.core.management.base import CommandError
 
 from apps.core.doctor import inspect_project
 from apps.core.management.commands import install_kit_module
-from scripts.module_upgrade import apply_safe_updates, compare_modules
+from scripts.module_upgrade import apply_safe_updates, compare_modules, three_way_plan
 from scripts.new_project import SOURCE_ROOT, create_project
 
 
@@ -190,3 +190,20 @@ def test_apply_safe_update_refuses_untracked_source_migration(tmp_path):
     with pytest.raises(ValueError, match="migrations: manual schema review"):
         apply_safe_updates(source=source, project=client)
     assert not (client / "apps" / "audit" / "helpers.py").exists()
+
+
+def test_three_way_plan_reports_unavailable_source_ref_without_modifying_client(tmp_path):
+    source = create_project(tmp_path / "source", name="source-api", optional_apps={"audit"})
+    client = create_project(tmp_path / "client", name="client-api", optional_apps={"audit"})
+    helper = source / "apps" / "audit" / "helpers.py"
+    helper.write_text("def updated():\n    return True\n")
+    target = client / "apps" / "audit" / "helpers.py"
+    target.write_text("def local():\n    return True\n")
+    before = target.read_bytes()
+    report = three_way_plan(source=source, project=client)
+    assert report["all_mergeable"] is False
+    assert report["candidates"][0]["reason"] in {
+        "source_commit_unavailable",
+        "missing_immutable_baseline",
+    }
+    assert target.read_bytes() == before

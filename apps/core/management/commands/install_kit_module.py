@@ -12,6 +12,8 @@ import json
 import os
 import re
 import shutil
+import subprocess
+import tomllib
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -85,7 +87,7 @@ def _module_fingerprint(folder: Path) -> dict[str, str]:
     }
 
 
-def _updated_origin(origin: Path, order: list[str], stage: Path) -> str | None:
+def _updated_origin(origin: Path, order: list[str], stage: Path, source: Path) -> str | None:
     """Prepare provenance before moving any module into the running project."""
     if not origin.is_file():
         return None  # Provenance is optional for existing client projects.
@@ -109,6 +111,29 @@ def _updated_origin(origin: Path, order: list[str], stage: Path) -> str | None:
     for name in order:
         fingerprints[name] = _module_fingerprint(stage / name)
     data["included_apps"] = sorted(set(included) | set(order))
+    try:
+        revision = subprocess.run(
+            ["git", "-C", str(source), "rev-parse", "--verify", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        source_ref = revision.stdout.strip()
+    except OSError:
+        source_ref = None
+    if not source_ref or not re.fullmatch(r"[0-9a-f]{40,64}", source_ref):
+        source_ref = None
+    module_refs = data.setdefault("module_source_refs", {})
+    module_versions = data.setdefault("module_versions", {})
+    if not isinstance(module_refs, dict) or not isinstance(module_versions, dict):
+        raise CommandError("Invalid version tracking metadata; no modules installed.")
+    source_version = tomllib.loads((source / "pyproject.toml").read_text(encoding="utf-8"))[
+        "project"
+    ]["version"]
+    for name in order:
+        if source_ref:
+            module_refs[name] = source_ref
+        module_versions[name] = source_version
     # Record schema mode on first installation. Never rewrite an existing pin.
     schema_modes = data.setdefault("schema_modes", {})
     if not isinstance(schema_modes, dict):
@@ -185,7 +210,7 @@ class Command(BaseCommand):
                     for name in ("test_storage.py", "test_seaweedfs_integration.py"):
                         (stage / "storage" / "tests" / name).unlink(missing_ok=True)
                 origin = destination / "primarykit-origin.json"
-                updated = _updated_origin(origin, order, stage)
+                updated = _updated_origin(origin, order, stage, source)
                 if updated is not None:
                     staged_origin = stage / "primarykit-origin.json"
                     staged_origin.write_text(updated, encoding="utf-8")

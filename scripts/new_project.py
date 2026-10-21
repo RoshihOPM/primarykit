@@ -97,6 +97,26 @@ def _module_fingerprints(root: Path, selected: set[str]) -> dict[str, dict[str, 
     return result
 
 
+def _source_git_revision(root: Path) -> str | None:
+    """Record an immutable source commit when generation runs from a Git checkout."""
+    try:
+        completed = subprocess.run(
+            ["git", "-C", str(root), "rev-parse", "--verify", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except OSError:
+        # Production and minimal Docker images need not contain Git.
+        return None
+    revision = completed.stdout.strip()
+    return (
+        revision
+        if completed.returncode == 0 and re.fullmatch(r"[0-9a-f]{40,64}", revision)
+        else None
+    )
+
+
 def create_project(
     destination: Path,
     *,
@@ -212,7 +232,13 @@ def create_project(
         source_version = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))[
             "project"
         ]["version"]
+        source_commit = _source_git_revision(root)
         metadata = {
+            "source_commit": source_commit,
+            "module_source_refs": {name: source_commit for name in sorted(selected)}
+            if source_commit
+            else {},
+            "module_versions": {name: source_version for name in sorted(selected)},
             "origin": "RoshihOPM/primarykit",
             "source_version": source_version,
             "preset": preset,
