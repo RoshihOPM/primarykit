@@ -199,6 +199,31 @@ def apply_safe_updates(*, source: Path, project: Path) -> dict:
                 shutil.copy2(target_file, backup, follow_symlinks=False)
             prepared.append((module, path, staged_file, target_file, backup, data_hash))
 
+        # Re-anchor module ancestry only when source files exactly match a
+        # committed Git snapshot; an uncommitted source checkout has no immutable base.
+        refs = metadata.get("module_source_refs")
+        if isinstance(refs, dict):
+            head = subprocess.run(
+                ["git", "-C", str(source), "rev-parse", "--verify", "HEAD"],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            dirty = subprocess.run(
+                ["git", "-C", str(source), "status", "--porcelain", "--", "apps"],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            revision = head.stdout.strip()
+            if (
+                head.returncode == 0
+                and dirty.returncode == 0
+                and not dirty.stdout.strip()
+                and re.fullmatch(r"[0-9a-f]{40,64}", revision)
+            ):
+                for module, *_ in prepared:
+                    refs[module] = revision
         # Update provenance only after every file has been staged successfully.
         for module, path, _, _, _, data_hash in prepared:
             fingerprints[module][path] = data_hash
@@ -338,7 +363,19 @@ def three_way_plan(*, source: Path, project: Path) -> dict:
                     else:
                         result["mergeable"] = True
                         result["reason"] = None
-    return {"candidates": results, "all_mergeable": all(r["mergeable"] for r in results)}
+    blockers = [
+        f"{module}/{item['path']}"
+        for module, data in report["modules"].items()
+        for item in data["changes"]
+        if item["contract_review"]
+        or item["source_deleted"]
+        or item["change"] == "baseline_unknown"
+    ]
+    return {
+        "candidates": results,
+        "blocked": blockers,
+        "all_mergeable": bool(results) and not blockers and all(r["mergeable"] for r in results),
+    }
 
 
 if __name__ == "__main__":
