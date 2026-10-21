@@ -48,7 +48,7 @@ uv run python manage.py runserver
 | [Как устроена репа](docs/repository-guide.md) | Архитектура, manifest, Django/DDD, переносимость |
 | [Создание и подключение модулей](docs/module-development.md) | Пошаговая разработка своего Django-приложения |
 | [Генератор проектов](docs/project-generator.md) | CLI-аргументы, пресеты, dry-run, миграции, `--git-init` |
-| [Module upgrade check](docs/module-upgrades.md) | Offline diff и анализ риска без перезаписи клиентских файлов |
+| [Module upgrade check](docs/module-upgrades.md) | Offline diff и опциональный `--apply-safe` для безопасных неконтрактных Python-файлов ([ограничения](docs/module-updates.md)) |
 | [OpenAPI contract check](docs/api-compatibility.md) | Сравнение старой и новой схемы API до клиента |
 | [Commerce: Orders, Sales, Payments](docs/commerce-architecture.md) | API, состояния, деньги, инварианты, безопасность |
 | [Фоновые задачи](docs/tasks-architecture.md) | Очередь, обработчики клиента, worker, ограничения доставки |

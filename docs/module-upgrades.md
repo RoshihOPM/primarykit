@@ -19,8 +19,11 @@ digest, and current trusted source digest. It differentiates source-only changes
 client-only customization, and conflicts. Manifest/models/URLs/services/auth files
 are marked `contract_review` when changed.
 
-**The checker never copies, deletes, migrates, imports Django, accesses the
-network, or rewrites files.** A `conflict_review` entry requires a manual
+**The default report never modifies files.** Passing `--apply-safe` explicitly
+copies only clean source-only non-contract Python files and updates their
+recorded hashes. It refuses all contracts, migrations, deletions, conflicts and
+client-modified files (see [limitations](en/module-updates.md)). Neither mode
+imports Django, accesses the network, or runs migrations. A `conflict_review` entry requires a manual
 three-way merge; `source_update` is only a proposed update, never automatically
 safe. Review permissions, ORM indexes, migrations, standalone/tenant modes and
 OpenAPI before applying the change. Installing a new trusted module with `install_kit_module` now adds its copied-file
