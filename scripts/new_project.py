@@ -17,39 +17,17 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(SOURCE_ROOT))
 
 from apps.core.doctor import inspect_project  # noqa: E402
-from apps.core.module_registry import dependency_closure, discover_modules  # noqa: E402
+from apps.core.module_registry import (  # noqa: E402
+    dependency_closure,
+    discover_modules,
+    migration_apps,  # noqa: E402
+)
 from scripts.presets import PRESETS  # noqa: E402
 
 REQUIRED_APPS = frozenset({"core", "users", "notifications"})
 AVAILABLE_MODULES = discover_modules()
 OPTIONAL_APPS = frozenset(AVAILABLE_MODULES) - REQUIRED_APPS
-MIGRATION_APPS = (
-    "users",
-    "audit",
-    "storage",
-    "catalog",
-    "inventory",
-    "organizations",
-    "orders",
-    "sales",
-    "payments",
-    "tasks",
-    "webhooks",
-    "api_keys",
-    "idempotency",
-    "workflows",
-    "usage_quotas",
-    "chat",
-    "privacy",
-    "listings",
-    "favorites",
-    "kanban",
-    "leads",
-    "contacts",
-    "deals",
-    "crm_pipeline",
-)
-# Statistics uses existing module data only; it has no persistence migrations.
+MIGRATION_APPS = migration_apps(AVAILABLE_MODULES)
 
 
 def _ignore_excluded(directory, names):
@@ -58,7 +36,11 @@ def _ignore_excluded(directory, names):
         # Source catalog migrations are transient per-mode CI files. Each copied
         # client must generate its own schema after CATALOG_MODE/INVENTORY_MODE is pinned.
         if Path(directory).parent.name == "apps" and name == "migrations":
-            ignored.add(name)
+            # Only reviewed versioned source histories are copied; older modules
+            # retain the existing independent client-migration policy.
+            module = AVAILABLE_MODULES.get(Path(directory).name)
+            if module is None or module.migration_policy != "bundled":
+                ignored.add(name)
         if name in {
             ".git",
             ".venv",
@@ -119,6 +101,26 @@ def _module_fingerprints(root: Path, selected: set[str]) -> dict[str, dict[str, 
     return result
 
 
+def _source_git_revision(root: Path) -> str | None:
+    """Record an immutable source commit when generation runs from a Git checkout."""
+    try:
+        completed = subprocess.run(
+            ["git", "-C", str(root), "rev-parse", "--verify", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except OSError:
+        # Production and minimal Docker images need not contain Git.
+        return None
+    revision = completed.stdout.strip()
+    return (
+        revision
+        if completed.returncode == 0 and re.fullmatch(r"[0-9a-f]{40,64}", revision)
+        else None
+    )
+
+
 def create_project(
     destination: Path,
     *,
@@ -143,6 +145,14 @@ def create_project(
     target.parent.mkdir(parents=True, exist_ok=True)
     try:
         shutil.copytree(root, target, ignore=_ignore_excluded)
+        # Verify that versioned owners really ship immutable baseline migrations.
+        # A typo must never silently regenerate their schema under another history.
+        for module_name in selected:
+            if AVAILABLE_MODULES[module_name].migration_policy != "bundled":
+                continue
+            folder = target / "apps" / module_name / "migrations"
+            if not folder.is_dir() or not any(folder.glob("[0-9]*.py")):
+                raise RuntimeError(f"Bundled migrations missing for {module_name}")
         # Clients own their community policies; only the MIT notice follows copied code.
         for source_only in (
             "CONTRIBUTING.md",
@@ -177,17 +187,22 @@ def create_project(
         migrations = " ".join(a for a in MIGRATION_APPS if a in selected)
         workflow = target / ".github" / "workflows" / "ci.yaml"
         raw = workflow.read_text(encoding="utf-8")
-        phrase = "makemigrations users audit storage catalog inventory organizations orders sales payments tasks webhooks api_keys idempotency workflows usage_quotas chat privacy listings favorites kanban leads contacts deals crm_pipeline --noinput"
-        if raw.count(phrase) != 2:
-            raise RuntimeError("CI migration template has changed")
-        raw = raw.replace(phrase, f"makemigrations {migrations} --noinput")
         start_marker = "      # PRIMARYKIT-GENERATOR-SMOKE-START\n"
         end_marker = "      # PRIMARYKIT-GENERATOR-SMOKE-END\n"
         if raw.count(start_marker) != 1 or raw.count(end_marker) != 1:
             raise RuntimeError("Missing generator CI smoke test markers")
         start = raw.index(start_marker)
         end = raw.index(end_marker, start) + len(end_marker)
-        workflow.write_text(raw[:start] + raw[end:], encoding="utf-8")
+        raw = raw[:start] + raw[end:]
+        # Matrix jobs belong only to the catalog, never to generated clients.
+        matrix_start = "  # PRIMARYKIT-MATRIX-JOB-START\n"
+        matrix_end = "  # PRIMARYKIT-MATRIX-JOB-END\n"
+        if raw.count(matrix_start) != 1 or raw.count(matrix_end) != 1:
+            raise RuntimeError("Missing source-only CI matrix job markers")
+        matrix_begin = raw.index(matrix_start)
+        matrix_finish = raw.index(matrix_end, matrix_begin) + len(matrix_end)
+        raw = raw[:matrix_begin] + raw[matrix_finish:]
+        workflow.write_text(raw, encoding="utf-8")
 
         # Pin app schemas before the first migration; later module copies cannot
         # implicitly switch personal data into tenant-owned tables.
@@ -229,13 +244,25 @@ def create_project(
         source_version = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))[
             "project"
         ]["version"]
+        source_commit = _source_git_revision(root)
         metadata = {
+            "source_commit": source_commit,
+            "module_source_refs": {name: source_commit for name in sorted(selected)}
+            if source_commit
+            else {},
+            "module_versions": {name: source_version for name in sorted(selected)},
             "origin": "RoshihOPM/primarykit",
             "source_version": source_version,
             "preset": preset,
             "included_apps": sorted(selected),
             "module_fingerprints": _module_fingerprints(target, selected),
             "migration_policy": "Generate once and commit all client migrations",
+            "module_migration_policies": {
+                name: AVAILABLE_MODULES[name].migration_policy for name in sorted(selected)
+            },
+            "schema_modes": {
+                name: plan[f"{name}_mode"] for name in ("catalog", "inventory") if name in selected
+            },
         }
         (target / "primarykit-origin.json").write_text(
             json.dumps(metadata, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
