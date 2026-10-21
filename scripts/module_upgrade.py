@@ -241,7 +241,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--source", type=Path, default=Path.cwd())
     parser.add_argument("--project", required=True, type=Path)
     parser.add_argument("--json", action="store_true")
-    parser.add_argument("--three-way-plan", action="store_true", help="Read-only Git-backed merge assessment")
+    parser.add_argument(
+        "--three-way-plan", action="store_true", help="Read-only Git-backed merge assessment"
+    )
     parser.add_argument(
         "--apply-safe",
         action="store_true",
@@ -308,7 +310,9 @@ def three_way_plan(*, source: Path, project: Path) -> dict:
             if original.returncode != 0:
                 result["reason"] = "source_commit_unavailable"
                 continue
-            if hashlib.sha256(original.stdout).hexdigest() != fingerprints.get(module, {}).get(path):
+            if hashlib.sha256(original.stdout).hexdigest() != fingerprints.get(module, {}).get(
+                path
+            ):
                 result["reason"] = "baseline_hash_mismatch"
                 continue
             with TemporaryDirectory(prefix=".primarykit-merge-") as directory:
