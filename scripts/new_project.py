@@ -202,6 +202,13 @@ def create_project(
         matrix_begin = raw.index(matrix_start)
         matrix_finish = raw.index(matrix_end, matrix_begin) + len(matrix_end)
         raw = raw[:matrix_begin] + raw[matrix_finish:]
+        lint_start = "      # PRIMARYKIT-MIGRATION-LINT-START\n"
+        lint_end = "      # PRIMARYKIT-MIGRATION-LINT-END\n"
+        if raw.count(lint_start) != 1 or raw.count(lint_end) != 1:
+            raise RuntimeError("Missing source-only migration SQL lint markers")
+        lint_begin = raw.index(lint_start)
+        lint_finish = raw.index(lint_end, lint_begin) + len(lint_end)
+        raw = raw[:lint_begin] + raw[lint_finish:]
         workflow.write_text(raw, encoding="utf-8")
 
         # Pin app schemas before the first migration; later module copies cannot
