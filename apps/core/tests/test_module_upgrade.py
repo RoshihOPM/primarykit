@@ -7,7 +7,7 @@ from django.core.management.base import CommandError
 
 from apps.core.doctor import inspect_project
 from apps.core.management.commands import install_kit_module
-from scripts.module_upgrade import compare_modules
+from scripts.module_upgrade import apply_safe_updates, compare_modules
 from scripts.new_project import SOURCE_ROOT, create_project
 
 
@@ -128,3 +128,53 @@ def test_install_without_optional_origin_file(tmp_path, monkeypatch):
     install_kit_module.Command().handle(module="audit", source=SOURCE_ROOT, dry_run=False)
     assert (target / "apps" / "audit" / "manifest.py").is_file()
     assert not origin.exists()
+
+
+def test_apply_safe_update_copies_new_helper_and_advances_baseline(tmp_path):
+    source = create_project(tmp_path / "source", name="source-api", optional_apps={"audit"})
+    client = create_project(tmp_path / "client", name="client-api", optional_apps={"audit"})
+    helper = source / "apps" / "audit" / "helpers.py"
+    helper.write_text("def safe_helper():\n    return True\n", encoding="utf-8")
+
+    plan = compare_modules(source=source, project=client)
+    assert plan["modules"]["audit"]["changes"] == [
+        {
+            "path": "helpers.py",
+            "change": "source_update",
+            "contract_review": False,
+            "source_deleted": False,
+            "client_deleted": True,
+        }
+    ]
+    result = apply_safe_updates(source=source, project=client)
+    assert result == {"updated": ["audit/helpers.py"], "applied": True}
+    assert (client / "apps" / "audit" / "helpers.py").read_bytes() == helper.read_bytes()
+    assert compare_modules(source=source, project=client)["review_required"] is False
+    assert apply_safe_updates(source=source, project=client)["applied"] is False
+
+
+def test_apply_safe_update_refuses_contract_and_preserves_client(tmp_path):
+    source = create_project(tmp_path / "source", name="source-api", optional_apps={"audit"})
+    client = create_project(tmp_path / "client", name="client-api", optional_apps={"audit"})
+    service = source / "apps" / "audit" / "services.py"
+    service.write_text(service.read_text(encoding="utf-8") + "\n# Security fix\n")
+    origin = client / "primarykit-origin.json"
+    before = origin.read_bytes()
+    with pytest.raises(ValueError, match="Manual review required"):
+        apply_safe_updates(source=source, project=client)
+    assert origin.read_bytes() == before
+    assert (client / "apps" / "audit" / "services.py").read_bytes() != service.read_bytes()
+
+
+def test_apply_safe_update_refuses_client_conflict_and_source_deletion(tmp_path):
+    source = create_project(tmp_path / "source", name="source-api", optional_apps={"audit"})
+    client = create_project(tmp_path / "client", name="client-api", optional_apps={"audit"})
+    (source / "apps" / "audit" / "helpers.py").write_text("source\n")
+    (client / "apps" / "audit" / "helpers.py").write_text("client\n")
+    with pytest.raises(ValueError, match="Manual review required"):
+        apply_safe_updates(source=source, project=client)
+    (client / "apps" / "audit" / "helpers.py").unlink()
+    (source / "apps" / "audit" / "services.py").unlink()
+    with pytest.raises(ValueError, match="Manual review required"):
+        apply_safe_updates(source=source, project=client)
+    assert not (client / "apps" / "audit" / "helpers.py").exists()
