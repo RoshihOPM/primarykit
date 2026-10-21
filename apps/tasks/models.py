@@ -1,4 +1,4 @@
-"""Internal durable work queue. Models and migrations belong to copied clients."""
+"""Internal durable work queue. Models keep a reviewed source-owned migration baseline."""
 
 import uuid
 

@@ -6,5 +6,5 @@ MODULE = Module(
     name="tasks",
     requires=("core",),
     priority=25,
-    migration_policy="client",
+    migration_policy="bundled",
 )

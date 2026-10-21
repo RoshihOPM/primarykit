@@ -15,6 +15,7 @@ from apps.core.module_registry import (
     ModuleConfigurationError,
     Route,
     active_modules,
+    bundled_migration_apps,
     dependency_closure,
     discover_modules,
     migration_apps,
@@ -118,7 +119,11 @@ def test_manifest_migration_policies_match_schema_owners():
     found = discover_modules()
     labels = set(migration_apps(found))
     assert "users" in labels
-    assert {"tasks", "orders", "api_keys", "webhooks"} & set(found) <= labels
+    assert {"orders", "api_keys", "webhooks"} & set(found) <= labels
+    if "tasks" in found:
+        assert found["tasks"].migration_policy == "bundled"
+        assert "tasks" in bundled_migration_apps(found)
+        assert "tasks" not in labels
     assert {"core", "notifications", "statistics", "observability"}.isdisjoint(labels)
     with pytest.raises(ModuleConfigurationError, match="Invalid migration policy"):
         migration_apps({"bad": Module("bad", migration_policy="invalid")})
@@ -153,3 +158,9 @@ def test_manifest_configuration_contributions_are_typed_and_scoped():
 def test_manifest_configuration_rejects_invalid_declarations(definition):
     with pytest.raises(ModuleConfigurationError):
         module_middleware({"a": definition})
+
+
+def test_bundled_migration_owner_does_not_generate_client_initial_migration():
+    fake = {"bundled": Module("bundled", migration_policy="bundled")}
+    assert bundled_migration_apps(fake) == ("bundled",)
+    assert migration_apps(fake) == ()
