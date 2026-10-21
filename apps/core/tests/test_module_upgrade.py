@@ -178,3 +178,15 @@ def test_apply_safe_update_refuses_client_conflict_and_source_deletion(tmp_path)
     with pytest.raises(ValueError, match="Manual review required"):
         apply_safe_updates(source=source, project=client)
     assert not (client / "apps" / "audit" / "helpers.py").exists()
+
+
+def test_apply_safe_update_refuses_untracked_source_migration(tmp_path):
+    source = create_project(tmp_path / "source", name="source-api", optional_apps={"audit"})
+    client = create_project(tmp_path / "client", name="client-api", optional_apps={"audit"})
+    (source / "apps" / "audit" / "helpers.py").write_text("new helper\n")
+    migrations = source / "apps" / "audit" / "migrations"
+    migrations.mkdir()
+    (migrations / "0001_initial.py").write_text("# Requires schema review\n")
+    with pytest.raises(ValueError, match="migrations: manual schema review"):
+        apply_safe_updates(source=source, project=client)
+    assert not (client / "apps" / "audit" / "helpers.py").exists()

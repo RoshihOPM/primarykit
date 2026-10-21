@@ -154,6 +154,15 @@ def apply_safe_updates(*, source: Path, project: Path) -> dict:
                 blocked.append(f"{module}/{path}: unsafe path")
                 continue
             operations.append((module, path, source_file, target_file))
+    # Source migrations are excluded from the file fingerprints. Never silently
+    # advance code while ignoring a newly introduced catalog schema history.
+    for module in report["modules"]:
+        migration_dir = source / "apps" / module / "migrations"
+        if migration_dir.is_dir() and any(
+            file.is_file() and file.name != "__init__.py"
+            for file in migration_dir.glob("*.py")
+        ):
+            blocked.append(f"{module}/migrations: manual schema review required")
     if blocked:
         raise ValueError("Manual review required; no files changed: " + "; ".join(blocked))
     if not operations:
