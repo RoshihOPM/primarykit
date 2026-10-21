@@ -240,3 +240,20 @@ def test_generated_client_keeps_license_not_upstream_governance(tmp_path):
         "CHANGELOG.md",
     ):
         assert not (target / source_only).exists(), source_only
+
+
+def test_bundled_migration_folders_preserved_only_when_declared(monkeypatch):
+    from scripts import new_project
+    from apps.core.module_registry import Module
+
+    monkeypatch.setitem(
+        new_project.AVAILABLE_MODULES,
+        "fake_versioned",
+        Module("fake_versioned", migration_policy="bundled"),
+    )
+    assert "migrations" not in new_project._ignore_excluded(
+        "/root/apps/fake_versioned", ["migrations"]
+    )
+    assert "migrations" in new_project._ignore_excluded(
+        "/root/apps/fake_unversioned", ["migrations"]
+    )

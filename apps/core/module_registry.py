@@ -38,7 +38,7 @@ class Module:
     optional: tuple[str, ...] = ()
     routes: tuple[Route, ...] = ()
     priority: int = 100
-    migration_policy: str = "none"  # none or client (client-owned migrations)
+    migration_policy: str = "none"  # none, client, or bundled
     env_settings: tuple[EnvSetting, ...] = ()
     middleware: tuple[str, ...] = ()
     throttle_rates: tuple[tuple[str, str], ...] = ()
@@ -154,7 +154,7 @@ def migration_apps(modules: dict[str, Module] | None = None) -> tuple[str, ...]:
     """Return app labels requiring client-owned Django migrations."""
     ordered = resolve_modules(modules if modules is not None else discover_modules())
     for module in ordered:
-        if module.migration_policy not in {"none", "client"}:
+        if module.migration_policy not in {"none", "client", "bundled"}:
             raise ModuleConfigurationError(
                 f"Invalid migration policy in {module.name}: {module.migration_policy}"
             )
@@ -229,3 +229,14 @@ def module_middleware(modules: dict[str, Module] | None = None) -> tuple[str, ..
 
 def module_throttle_rates(modules: dict[str, Module] | None = None) -> dict[str, str]:
     return _module_configuration(modules)[2]
+
+
+def bundled_migration_apps(modules: dict[str, Module] | None = None) -> tuple[str, ...]:
+    """Return bundled-schema owners; creation must preserve these migration files."""
+    ordered = resolve_modules(modules if modules is not None else discover_modules())
+    for module in ordered:
+        if module.migration_policy not in {"none", "client", "bundled"}:
+            raise ModuleConfigurationError(
+                f"Invalid migration policy in {module.name}: {module.migration_policy}"
+            )
+    return tuple(module.name for module in ordered if module.migration_policy == "bundled")

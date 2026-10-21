@@ -15,6 +15,7 @@ from apps.core.module_registry import (
     ModuleConfigurationError,
     Route,
     active_modules,
+    bundled_migration_apps,
     dependency_closure,
     discover_modules,
     migration_apps,
@@ -153,3 +154,9 @@ def test_manifest_configuration_contributions_are_typed_and_scoped():
 def test_manifest_configuration_rejects_invalid_declarations(definition):
     with pytest.raises(ModuleConfigurationError):
         module_middleware({"a": definition})
+
+
+def test_bundled_migration_owner_does_not_generate_client_initial_migration():
+    fake = {"bundled": Module("bundled", migration_policy="bundled")}
+    assert bundled_migration_apps(fake) == ("bundled",)
+    assert migration_apps(fake) == ()

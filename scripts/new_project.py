@@ -36,7 +36,11 @@ def _ignore_excluded(directory, names):
         # Source catalog migrations are transient per-mode CI files. Each copied
         # client must generate its own schema after CATALOG_MODE/INVENTORY_MODE is pinned.
         if Path(directory).parent.name == "apps" and name == "migrations":
-            ignored.add(name)
+            # Only reviewed versioned source histories are copied; older modules
+            # retain the existing independent client-migration policy.
+            module = AVAILABLE_MODULES.get(Path(directory).name)
+            if module is None or module.migration_policy != "bundled":
+                ignored.add(name)
         if name in {
             ".git",
             ".venv",
@@ -121,6 +125,14 @@ def create_project(
     target.parent.mkdir(parents=True, exist_ok=True)
     try:
         shutil.copytree(root, target, ignore=_ignore_excluded)
+        # Verify that versioned owners really ship immutable baseline migrations.
+        # A typo must never silently regenerate their schema under another history.
+        for module_name in selected:
+            if AVAILABLE_MODULES[module_name].migration_policy != "bundled":
+                continue
+            folder = target / "apps" / module_name / "migrations"
+            if not folder.is_dir() or not any(folder.glob("[0-9]*.py")):
+                raise RuntimeError(f"Bundled migrations missing for {module_name}")
         # Clients own their community policies; only the MIT notice follows copied code.
         for source_only in (
             "CONTRIBUTING.md",
@@ -219,6 +231,9 @@ def create_project(
             "included_apps": sorted(selected),
             "module_fingerprints": _module_fingerprints(target, selected),
             "migration_policy": "Generate once and commit all client migrations",
+            "module_migration_policies": {
+                name: AVAILABLE_MODULES[name].migration_policy for name in sorted(selected)
+            },
             "schema_modes": {
                 name: plan[f"{name}_mode"] for name in ("catalog", "inventory") if name in selected
             },
