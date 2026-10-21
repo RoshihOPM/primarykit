@@ -87,9 +87,7 @@ def _module_fingerprint(folder: Path) -> dict[str, str]:
     }
 
 
-def _updated_origin(
-    origin: Path, order: list[str], stage: Path, source: Path
-) -> str | None:
+def _updated_origin(origin: Path, order: list[str], stage: Path, source: Path) -> str | None:
     """Prepare provenance before moving any module into the running project."""
     if not origin.is_file():
         return None  # Provenance is optional for existing client projects.
