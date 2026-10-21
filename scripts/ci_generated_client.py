@@ -35,10 +35,11 @@ def run_case(case: str) -> None:
         raise RuntimeError("Explicit PostgreSQL DATABASE_URL is required")
     options = CASES[case]
     with TemporaryDirectory(prefix="primarykit-ci-") as work_dir:
-        target = Path(work_dir) / f"smoke-{case}"
+        project_name = f"smoke-{case.replace(chr(95), chr(45))}"
+        target = Path(work_dir) / project_name
         create_project(
             target,
-            name=f"smoke-{case}",
+            name=project_name,
             optional_apps=set(options.get("apps", ())),
             preset=options.get("preset"),
         )
