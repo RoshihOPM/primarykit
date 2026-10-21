@@ -3,7 +3,7 @@ import tomllib
 
 import pytest
 
-from apps.core.module_registry import dependency_closure, discover_modules
+from apps.core.module_registry import dependency_closure, discover_modules, migration_apps
 from scripts.new_project import SOURCE_ROOT, create_project, project_plan
 from scripts.presets import PRESETS
 
@@ -147,27 +147,12 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
     assert metadata["source_version"] == source_project["project"]["version"]
     assert ("Feature flags: configure FEATURE_FLAGS" in readme) == ("feature_flags" in apps)
     workflows = (target / ".github/workflows/ci.yaml").read_text()
-    migration_apps = (
-        "users"
-        + (" audit" if "audit" in selected else "")
-        + (" storage" if "storage" in apps else "")
-        + (" catalog" if "catalog" in selected else "")
-        + (" inventory" if "inventory" in selected else "")
-        + (" organizations" if "organizations" in selected else "")
-        + (" orders" if "orders" in selected else "")
-        + (" sales" if "sales" in selected else "")
-        + (" payments" if "payments" in selected else "")
-        + (" tasks" if "tasks" in selected else "")
-        + (" webhooks" if "webhooks" in selected else "")
-        + (" api_keys" if "api_keys" in selected else "")
-        + (" idempotency" if "idempotency" in selected else "")
-        + (" workflows" if "workflows" in selected else "")
-        + (" chat" if "chat" in selected else "")
-        + (" privacy" if "privacy" in selected else "")
-        + (" listings" if "listings" in selected else "")
-        + (" favorites" if "favorites" in selected else "")
-    )
-    assert workflows.count(f"makemigrations {migration_apps} --noinput") == 2
+    assert project_plan(requested_apps=set(apps))["migrations"] == [
+        name for name in migration_apps() if name in selected
+    ]
+    assert workflows.count(
+        "makemigrations $(uv run python -m apps.core.migration_plan) --noinput"
+    ) == 2
     if "storage" in selected:
         assert (target / "apps/storage/tests/test_personal_storage.py").exists()
         assert (target / "apps/storage/tests/test_storage.py").exists()
