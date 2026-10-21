@@ -23,7 +23,10 @@ def _schema_modes(root: Path) -> dict:
     settings_file = root / "config" / "settings" / "base.py"
     settings_tree = ast.parse(settings_file.read_text(encoding="utf-8"))
     for name, expected in modes.items():
-        if name not in {"catalog", "inventory"} or expected not in {"tenant", "standalone"}:
+        if (
+            name not in {"catalog", "inventory"}
+            or expected not in {"tenant", "standalone"}
+        ):
             raise ValueError("Unexpected schema mode in provenance")
         key = name.upper() + "_MODE"
         expressions = [
@@ -33,7 +36,9 @@ def _schema_modes(root: Path) -> dict:
             and any(isinstance(t, ast.Name) and t.id == key for t in stmt.targets)
         ]
         if len(expressions) != 1 or ast.literal_eval(expressions[0]) != expected:
-            raise ValueError(f"Schema profile changed for {name}; manual migration review")
+            raise ValueError(
+                f"Schema profile changed for {name}; manual migration review"
+            )
     return modes
 
 
@@ -42,7 +47,7 @@ def _history(folder: Path) -> dict[str, str]:
         return {}
     result = {}
     for file in sorted(folder.iterdir()):
-        if file.name == "__init__.py":
+        if file.name in {"__init__.py", "__pycache__"}:
             continue
         if file.suffix != ".py" or not file.stem[:1].isdigit() or file.is_symlink():
             raise ValueError(f"Unreviewed artifact in migration folder: {file.name}")
