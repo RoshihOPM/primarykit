@@ -106,7 +106,11 @@ def _source_git_revision(root: Path) -> str | None:
         check=False,
     )
     revision = completed.stdout.strip()
-    return revision if completed.returncode == 0 and re.fullmatch(r"[0-9a-f]{40,64}", revision) else None
+    return (
+        revision
+        if completed.returncode == 0 and re.fullmatch(r"[0-9a-f]{40,64}", revision)
+        else None
+    )
 
 
 def create_project(
