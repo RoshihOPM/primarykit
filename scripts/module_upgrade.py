@@ -222,6 +222,7 @@ def apply_safe_updates(*, source: Path, project: Path) -> dict:
         "applied": True,
     }
 
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Read-only copied-module upgrade report")
     parser.add_argument("--source", type=Path, default=Path.cwd())
