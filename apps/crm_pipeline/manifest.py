@@ -7,4 +7,5 @@ MODULE = Module(
     requires=("deals", "kanban"),
     routes=(Route("api/v1/crm/pipeline/"),),
     priority=85,
+    migration_policy="client",
 )
