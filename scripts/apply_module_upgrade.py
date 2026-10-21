@@ -54,9 +54,13 @@ def apply_three_way_updates(*, source: Path, project: Path) -> dict:
 
     for module, detail in report["modules"].items():
         directory = source / "apps" / module
-        if detail["changes"] and (directory / "migrations").is_dir() and any(
-            f.is_file() and f.name != "__init__.py"
-            for f in (directory / "migrations").glob("*.py")
+        if (
+            detail["changes"]
+            and (directory / "migrations").is_dir()
+            and any(
+                f.is_file() and f.name != "__init__.py"
+                for f in (directory / "migrations").glob("*.py")
+            )
         ):
             blocked.append(f"{module}: reviewed schema adoption required")
         for change in detail["changes"]:
@@ -96,20 +100,23 @@ def apply_three_way_updates(*, source: Path, project: Path) -> dict:
                     blocked.append(f"{module}/{path}: missing source ref")
                     continue
                 original = subprocess.run(
-                    ["git", "-C", str(source), "show",
-                     f"{ancestor_ref}:apps/{module}/{path}"],
-                    check=True, capture_output=True,
+                    ["git", "-C", str(source), "show", f"{ancestor_ref}:apps/{module}/{path}"],
+                    check=True,
+                    capture_output=True,
                 ).stdout
                 if hashlib.sha256(original).hexdigest() != fingerprints[module].get(path):
                     blocked.append(f"{module}/{path}: corrupted ancestor")
                     continue
                 with TemporaryDirectory(prefix="primarykit-three-way-") as td:
                     files = [Path(td) / x for x in ("client.py", "base.py", "source.py")]
-                    for filename, data in zip(files, (target.read_bytes(), original, upstream), strict=True):
+                    for filename, data in zip(
+                        files, (target.read_bytes(), original, upstream), strict=True
+                    ):
                         filename.write_bytes(data)
                     merge = subprocess.run(
                         ["git", "merge-file", "--stdout", *(str(p) for p in files)],
-                        check=False, capture_output=True,
+                        check=False,
+                        capture_output=True,
                     )
                     if merge.returncode:
                         blocked.append(f"{module}/{path}: merge conflict")
