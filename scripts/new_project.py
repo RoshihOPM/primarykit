@@ -161,7 +161,16 @@ def create_project(
             raise RuntimeError("Missing generator CI smoke test markers")
         start = raw.index(start_marker)
         end = raw.index(end_marker, start) + len(end_marker)
-        workflow.write_text(raw[:start] + raw[end:], encoding="utf-8")
+        raw = raw[:start] + raw[end:]
+        # Matrix jobs belong only to the catalog, never to generated clients.
+        matrix_start = "  # PRIMARYKIT-MATRIX-JOB-START\n"
+        matrix_end = "  # PRIMARYKIT-MATRIX-JOB-END\n"
+        if raw.count(matrix_start) != 1 or raw.count(matrix_end) != 1:
+            raise RuntimeError("Missing source-only CI matrix job markers")
+        matrix_begin = raw.index(matrix_start)
+        matrix_finish = raw.index(matrix_end, matrix_begin) + len(matrix_end)
+        raw = raw[:matrix_begin] + raw[matrix_finish:]
+        workflow.write_text(raw, encoding="utf-8")
 
         # Pin app schemas before the first migration; later module copies cannot
         # implicitly switch personal data into tenant-owned tables.
