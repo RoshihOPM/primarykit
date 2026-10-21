@@ -1,25 +1,32 @@
-# Versioned source ancestry and three-way planning
+# Version-aware source updates and reviewed three-way apply
 
-New generated projects record a source Git revision, source module refs and
-module source versions in `primarykit-origin.json`. These are informational,
-not a runtime dependency. Projects generated outside a Git checkout have
-missing revision metadata and cannot use the history-aware planner until a
-reviewed baseline is established.
+New generated projects record source Git SHA, per-module source refs and
+fingerprints in `primarykit-origin.json`. These are audit metadata, not runtime
+dependencies. Generate from a trusted Git checkout and retain its full history.
 
-From a trusted **full-history** source checkout run:
+```bash
+python scripts/module_upgrade.py --source . --project ../client --three-way-plan --json
+# Work on the CLIENT repository; start with committed changes and a feature branch.
+git -C ../client switch -c chore/primarykit-module-upgrade
+python scripts/module_upgrade.py --source . --project ../client --apply-three-way --json
+git -C ../client diff --check
+git -C ../client diff
+# Commit the client changes, run pytest/PostgreSQL CI, and open a client PR.
+```
 
-    python scripts/module_upgrade.py --project ../client --three-way-plan --json
+The opt-in apply refuses dirty client or source trees, the default branch, missing
+immutable Git ancestry, ambiguous conflict merges, changed schema contracts,
+source deletions, unreviewed module migration histories, unsafe symlink paths
+and invalid Python. Clients' independent local changes are preserved.
+Client hashes and module ancestry advance to the incoming source version only
+after all staged replacements succeed; otherwise changes are rolled back.
 
-This is read-only. For files edited both upstream and in the client it:
-- retrieves the exact historical source blob with `git show`;
-- verifies its SHA-256 against the original copy fingerprint;
-- runs a dry, three-way `git merge-file` and Python syntax parse;
-- reports whether a merge is technically clean or requires human resolution.
+This tool **does not create Git commits, push code, open a PR, resolve schema
+migrations, or deploy**. It applies only non-contract Python to a reviewable
+feature branch. The client owner must review the resulting diff, test with
+PostgreSQL, commit and create its own pull request.
 
-Sensitive API/models/services and migration files are never automatically
-merged. A clean textual merge is **not** approval to deploy: run unit,
-PostgreSQL and API compatibility checks and review all resulting changes.
-
-Still not implemented: applying clean three-way merges, schema upgrades,
-per-module independent SemVer releases, automated PR creation and last-three-
-release upgrade CI. Issue #89 remains open until those controls are proven.
+Still required for complete #89: true independently tagged SemVer module
+releases, read-only reviewed schema adoption across historical baselines and
+three-version stateful PostgreSQL upgrade CI. The feature above is a
+fail-closed lifecycle milestone, not a production migration mechanism.

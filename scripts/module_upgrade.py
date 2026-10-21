@@ -278,7 +278,23 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Copy clean non-contract Python changes; abort on any conflict or contract change",
     )
+    parser.add_argument(
+        "--apply-three-way",
+        action="store_true",
+        help="Opt-in non-schema merge in a clean client feature branch",
+    )
     args = parser.parse_args(argv)
+    if args.apply_safe and args.apply_three_way:
+        parser.error("Choose only one apply mode")
+    if args.apply_three_way:
+        from scripts.apply_module_upgrade import apply_three_way_updates
+
+        result = apply_three_way_updates(source=args.source, project=args.project)
+        if args.json:
+            print(json.dumps(result, indent=2, ensure_ascii=False))
+        else:
+            print(f"Applied {len(result['updated'])} non-schema changes to client branch.")
+        return 0
     result = (
         apply_safe_updates(source=args.source, project=args.project)
         if args.apply_safe
