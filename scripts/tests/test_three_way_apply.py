@@ -22,7 +22,16 @@ def git(root: Path, *args: str) -> str:
 
 def commit(root: Path, message: str):
     git(root, "add", ".")
-    git(root, "-c", "user.name=Tests", "-c", "user.email=tests@example.test", "commit", "-m", message)
+    git(
+        root,
+        "-c",
+        "user.name=Tests",
+        "-c",
+        "user.email=tests@example.test",
+        "commit",
+        "-m",
+        message,
+    )
 
 
 def fixtures(tmp_path):
@@ -61,9 +70,10 @@ def test_three_way_merges_disjoint_client_and_upstream_changes(tmp_path):
     assert "# client 2" in local.read_text()
     assert "# upstream 60" in local.read_text()
     metadata = json.loads((client / "primarykit-origin.json").read_text())
-    assert metadata["module_fingerprints"]["audit"]["helper.py"] == hashlib.sha256(
-        up.read_bytes()
-    ).hexdigest()
+    assert (
+        metadata["module_fingerprints"]["audit"]["helper.py"]
+        == hashlib.sha256(up.read_bytes()).hexdigest()
+    )
     assert metadata["module_source_refs"]["audit"] == git(source, "rev-parse", "HEAD")
     assert git(client, "status", "--porcelain")
     assert apply_three_way_updates not in (None,)
