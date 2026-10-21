@@ -19,3 +19,19 @@ tenant ORM models: never copy one mode's migrations to the other.
 
 Existing client projects remain on their own migration history. Do not
 manually rewrite applied migration files or assume `--fake` is safe.
+
+## PostgreSQL state retention smoke
+
+The generated-client PostgreSQL matrix now persists a real Tasks row after
+`migrate`, repeats `migrate --noinput` and asserts the row is unchanged.
+The `tasks`, `crm` and `all` matrix combinations verify the shipped Tasks
+`0001_initial` history is idempotent on an existing database. Mode-specific
+Catalog/Inventory model families remain covered by the independent `commerce`
+(standalone) and `all` (tenant) fresh-client matrix cases.
+
+**Not yet covered:** applying a newer bundled migration to an *older*
+independently generated client, data-preserving cross-version upgrades or all
+mode-specific source histories. Those require reviewed migration adoption,
+releases and PostgreSQL fixtures before Issue #88 may be closed. Do not copy
+source migrations over a client's applied migration files or use `--fake`
+as a shortcut.
