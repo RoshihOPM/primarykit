@@ -15,4 +15,5 @@ MODULE = Module(
         ),
     ),
     priority=60,
+    migration_policy="client",
 )

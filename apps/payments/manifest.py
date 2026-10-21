@@ -11,4 +11,5 @@ MODULE = Module(
         Route("api/v1/admin/payments/", urlconf="apps.payments.admin_urls"),
     ),
     priority=83,
+    migration_policy="client",
 )
