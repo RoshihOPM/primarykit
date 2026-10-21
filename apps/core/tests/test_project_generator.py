@@ -3,7 +3,11 @@ import tomllib
 
 import pytest
 
-from apps.core.module_registry import dependency_closure, discover_modules, migration_apps
+from apps.core.module_registry import (
+    dependency_closure,
+    discover_modules,
+    migration_apps,
+)
 from scripts.new_project import SOURCE_ROOT, create_project, project_plan
 from scripts.presets import PRESETS
 

@@ -2,4 +2,9 @@
 
 from apps.core.module_registry import Module
 
-MODULE = Module(name="tasks", requires=("core",), priority=25, migration_policy="client")
+MODULE = Module(
+    name="tasks",
+    requires=("core",),
+    priority=25,
+    migration_policy="client",
+)

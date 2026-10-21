@@ -16,8 +16,8 @@ from apps.core.module_registry import (
     active_modules,
     dependency_closure,
     discover_modules,
-    module_routes,
     migration_apps,
+    module_routes,
     resolve_modules,
 )
 

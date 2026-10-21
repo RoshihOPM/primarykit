@@ -2,4 +2,9 @@
 
 from apps.core.module_registry import Module
 
-MODULE = Module(name="webhooks", requires=("core", "outbox"), priority=31, migration_policy="client")
+MODULE = Module(
+    name="webhooks",
+    requires=("core", "outbox"),
+    priority=31,
+    migration_policy="client",
+)

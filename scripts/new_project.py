@@ -17,7 +17,8 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(SOURCE_ROOT))
 
 from apps.core.doctor import inspect_project  # noqa: E402
-from apps.core.module_registry import dependency_closure, discover_modules, migration_apps  # noqa: E402
+from apps.core.module_registry import dependency_closure, discover_modules  # noqa: E402
+from apps.core.module_registry import migration_apps  # noqa: E402
 from scripts.presets import PRESETS  # noqa: E402
 
 REQUIRED_APPS = frozenset({"core", "users", "notifications"})
