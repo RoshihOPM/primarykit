@@ -4,6 +4,9 @@
 import argparse
 import hashlib
 import json
+import re
+import subprocess
+import ast
 import os
 import shutil
 from pathlib import Path
@@ -111,6 +114,8 @@ def compare_modules(*, source: Path, project: Path) -> dict:
             )
         modules[name] = {"changes": changes, "needs_review": bool(changes)}
     return {
+        "module_versions": metadata.get("module_versions", {}),
+        "source_commit": metadata.get("source_commit"),
         "source": str(source),
         "project": str(project),
         "source_version_at_creation": metadata.get("source_version"),
@@ -236,6 +241,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--source", type=Path, default=Path.cwd())
     parser.add_argument("--project", required=True, type=Path)
     parser.add_argument("--json", action="store_true")
+    parser.add_argument("--three-way-plan", action="store_true", help="Read-only Git-backed merge assessment")
     parser.add_argument(
         "--apply-safe",
         action="store_true",
@@ -245,10 +251,17 @@ def main(argv: list[str] | None = None) -> int:
     result = (
         apply_safe_updates(source=args.source, project=args.project)
         if args.apply_safe
-        else compare_modules(source=args.source, project=args.project)
+        else (
+            three_way_plan(source=args.source, project=args.project)
+            if args.three_way_plan
+            else compare_modules(source=args.source, project=args.project)
+        )
     )
     if args.json:
         print(json.dumps(result, indent=2, ensure_ascii=False))
+    elif args.three_way_plan:
+        for item in result["candidates"]:
+            print(f"{item['module']}/{item['path']}: {item['reason'] or 'clean merge possible'}")
     elif args.apply_safe:
         print(f"Applied {len(result['updated'])} safe file update(s).")
     else:
@@ -259,6 +272,69 @@ def main(argv: list[str] | None = None) -> int:
         if not result["review_required"]:
             print("All installed module files match the source catalog.")
     return 0  # Report mode remains advisory; apply-safe is explicitly opt-in.
+
+
+def three_way_plan(*, source: Path, project: Path) -> dict:
+    """Assess mergeability using immutable Git blobs; never write client files."""
+    report = compare_modules(source=source, project=project)
+    source = source.expanduser().resolve()
+    project = project.expanduser().resolve()
+    meta = json.loads((project / "primarykit-origin.json").read_text(encoding="utf-8"))
+    refs = meta.get("module_source_refs", {})
+    fingerprints = meta["module_fingerprints"]
+    results = []
+    for module, data in report["modules"].items():
+        for change in data["changes"]:
+            if change["change"] != "conflict_review":
+                continue
+            path = change["path"]
+            result = {"module": module, "path": path, "mergeable": False}
+            results.append(result)
+            if change["contract_review"] or change["source_deleted"] or change["client_deleted"]:
+                result["reason"] = "contract_or_deletion"
+                continue
+            revision = refs.get(module) if isinstance(refs, dict) else None
+            if not isinstance(revision, str) or not re.fullmatch(r"[0-9a-f]{40,64}", revision):
+                result["reason"] = "missing_immutable_baseline"
+                continue
+            if Path(path).is_absolute() or ".." in Path(path).parts or not path.endswith(".py"):
+                result["reason"] = "invalid_path"
+                continue
+            original = subprocess.run(
+                ["git", "-C", str(source), "show", f"{revision}:apps/{module}/{path}"],
+                capture_output=True,
+                check=False,
+            )
+            if original.returncode != 0:
+                result["reason"] = "source_commit_unavailable"
+                continue
+            if hashlib.sha256(original.stdout).hexdigest() != fingerprints.get(module, {}).get(path):
+                result["reason"] = "baseline_hash_mismatch"
+                continue
+            with TemporaryDirectory(prefix=".primarykit-merge-") as directory:
+                folder = Path(directory)
+                mine = folder / "mine.py"
+                ancestor = folder / "ancestor.py"
+                theirs = folder / "theirs.py"
+                mine.write_bytes((project / "apps" / module / path).read_bytes())
+                ancestor.write_bytes(original.stdout)
+                theirs.write_bytes((source / "apps" / module / path).read_bytes())
+                merged = subprocess.run(
+                    ["git", "merge-file", "--stdout", str(mine), str(ancestor), str(theirs)],
+                    capture_output=True,
+                    check=False,
+                )
+                if merged.returncode != 0:
+                    result["reason"] = "merge_conflict"
+                else:
+                    try:
+                        ast.parse(merged.stdout.decode("utf-8"))
+                    except (SyntaxError, UnicodeDecodeError):
+                        result["reason"] = "merged_python_invalid"
+                    else:
+                        result["mergeable"] = True
+                        result["reason"] = None
+    return {"candidates": results, "all_mergeable": all(r["mergeable"] for r in results)}
 
 
 if __name__ == "__main__":
