@@ -10,13 +10,19 @@ from django.test import override_settings
 
 from apps.core.management.commands.install_kit_module import install_order
 from apps.core.module_registry import (
+    EnvSetting,
     Module,
     ModuleConfigurationError,
     Route,
     active_modules,
+    bundled_migration_apps,
     dependency_closure,
     discover_modules,
+    migration_apps,
+    module_env_settings,
+    module_middleware,
     module_routes,
+    module_throttle_rates,
     resolve_modules,
 )
 
@@ -107,3 +113,54 @@ def test_copy_installer_does_not_write_on_invalid_dependency(tmp_path):
         with pytest.raises(CommandError, match="Missing installable module"):
             call_command("install_kit_module", "broken", source=source)
     assert not (destination / "apps" / "broken").exists()
+
+
+def test_manifest_migration_policies_match_schema_owners():
+    found = discover_modules()
+    labels = set(migration_apps(found))
+    assert "users" in labels
+    assert {"orders", "api_keys", "webhooks"} & set(found) <= labels
+    if "tasks" in found:
+        assert found["tasks"].migration_policy == "bundled"
+        assert "tasks" in bundled_migration_apps(found)
+        assert "tasks" not in labels
+    assert {"core", "notifications", "statistics", "observability"}.isdisjoint(labels)
+    with pytest.raises(ModuleConfigurationError, match="Invalid migration policy"):
+        migration_apps({"bad": Module("bad", migration_policy="invalid")})
+
+
+def test_manifest_configuration_contributions_are_typed_and_scoped():
+    import environ
+
+    entries = {
+        "chat": Module(
+            "chat",
+            env_settings=(EnvSetting("CHAT_RETENTION_DAYS", "int", 30),),
+            middleware=("apps.chat.middleware.request_tracking",),
+            throttle_rates=(("chat_read", "120/min"),),
+        )
+    }
+    result = module_env_settings(environ.Env(), entries)
+    assert result["CHAT_RETENTION_DAYS"] == 30
+    assert module_middleware(entries) == ("apps.chat.middleware.request_tracking",)
+    assert module_throttle_rates(entries) == {"chat_read": "120/min"}
+
+
+@pytest.mark.parametrize(
+    "definition",
+    [
+        Module("a", env_settings=(EnvSetting("DJANGO_SECRET_KEY", "str", "bad"),)),
+        Module("a", env_settings=(EnvSetting("A_PORT", "int", "bad"),)),
+        Module("a", middleware=("apps.other.middleware.unsafe",)),
+        Module("a", throttle_rates=(("bad key", "10/min"),)),
+    ],
+)
+def test_manifest_configuration_rejects_invalid_declarations(definition):
+    with pytest.raises(ModuleConfigurationError):
+        module_middleware({"a": definition})
+
+
+def test_bundled_migration_owner_does_not_generate_client_initial_migration():
+    fake = {"bundled": Module("bundled", migration_policy="bundled")}
+    assert bundled_migration_apps(fake) == ("bundled",)
+    assert migration_apps(fake) == ()

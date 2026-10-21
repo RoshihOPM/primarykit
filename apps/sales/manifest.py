@@ -8,4 +8,5 @@ MODULE = Module(
     optional=("orders", "payments", "inventory", "statistics", "audit"),
     routes=(Route("api/v1/sales/"),),
     priority=82,
+    migration_policy="client",
 )

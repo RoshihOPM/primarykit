@@ -4,6 +4,7 @@ Copying a module directory under apps/ is enough to register it if its declared
 hard dependencies are present. Never silently enable missing dependencies.
 """
 
+import re
 from dataclasses import dataclass
 from importlib import import_module
 from pathlib import Path
@@ -22,12 +23,25 @@ class Route:
 
 
 @dataclass(frozen=True)
+class EnvSetting:
+    """A strictly typed, module-owned environment configuration field."""
+
+    name: str
+    kind: str  # bool, int, str or list
+    default: bool | int | str | tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class Module:
     name: str
     requires: tuple[str, ...] = ()
     optional: tuple[str, ...] = ()
     routes: tuple[Route, ...] = ()
     priority: int = 100
+    migration_policy: str = "none"  # none, client, or bundled
+    env_settings: tuple[EnvSetting, ...] = ()
+    middleware: tuple[str, ...] = ()
+    throttle_rates: tuple[tuple[str, str], ...] = ()
 
 
 def discover_modules(root: Path | None = None) -> dict[str, Module]:
@@ -134,3 +148,95 @@ def dependency_closure(modules: dict[str, Module], selected: set[str]) -> set[st
     for name in sorted(selected):
         add(name)
     return result
+
+
+def migration_apps(modules: dict[str, Module] | None = None) -> tuple[str, ...]:
+    """Return app labels requiring client-owned Django migrations."""
+    ordered = resolve_modules(modules if modules is not None else discover_modules())
+    for module in ordered:
+        if module.migration_policy not in {"none", "client", "bundled"}:
+            raise ModuleConfigurationError(
+                f"Invalid migration policy in {module.name}: {module.migration_policy}"
+            )
+    return tuple(module.name for module in ordered if module.migration_policy == "client")
+
+
+def _module_configuration(modules: dict[str, Module] | None = None):
+    """Validate trusted declarative contributions without importing settings."""
+    selected = resolve_modules(modules if modules is not None else discover_modules())
+    fields: list[EnvSetting] = []
+    middleware: list[str] = []
+    throttles: dict[str, str] = {}
+    seen_fields: set[str] = set()
+    for module in selected:
+        for item in module.env_settings:
+            if not isinstance(item, EnvSetting) or not re.fullmatch(r"[A-Z][A-Z0-9_]*", item.name):
+                raise ModuleConfigurationError(f"Invalid env setting in {module.name}")
+            if not item.name.startswith(f"{module.name.upper()}_") or item.name in seen_fields:
+                raise ModuleConfigurationError(f"Invalid or duplicate env key: {item.name}")
+            kinds = {
+                "bool": type(item.default) is bool,
+                "int": type(item.default) is int,
+                "str": isinstance(item.default, str),
+                "list": isinstance(item.default, tuple)
+                and all(isinstance(v, str) for v in item.default),
+            }
+            if not kinds.get(item.kind, False):
+                raise ModuleConfigurationError(f"Invalid env default for {item.name}")
+            fields.append(item)
+            seen_fields.add(item.name)
+        for dotted_path in module.middleware:
+            if (
+                not isinstance(dotted_path, str)
+                or not dotted_path.startswith(f"apps.{module.name}.")
+                or dotted_path in middleware
+            ):
+                raise ModuleConfigurationError(f"Invalid module middleware in {module.name}")
+            middleware.append(dotted_path)
+        for key, rate in module.throttle_rates:
+            if (
+                not isinstance(key, str)
+                or not re.fullmatch(r"[a-z][a-z0-9_]*", key)
+                or not isinstance(rate, str)
+                or not rate
+                or key in throttles
+            ):
+                raise ModuleConfigurationError(f"Invalid or duplicate throttle: {key}")
+            throttles[key] = rate
+    return fields, tuple(middleware), throttles
+
+
+def module_env_settings(env, modules: dict[str, Module] | None = None) -> dict:
+    """Read only declared configuration with django-environ's strict converters."""
+    fields, _, _ = _module_configuration(modules)
+    values = {}
+    for item in fields:
+        if item.kind == "bool":
+            value = env.bool(item.name, default=item.default)
+        elif item.kind == "int":
+            value = env.int(item.name, default=item.default)
+        elif item.kind == "list":
+            value = tuple(env.list(item.name, default=list(item.default)))
+        else:
+            value = env(item.name, default=item.default)
+        values[item.name] = value
+    return values
+
+
+def module_middleware(modules: dict[str, Module] | None = None) -> tuple[str, ...]:
+    return _module_configuration(modules)[1]
+
+
+def module_throttle_rates(modules: dict[str, Module] | None = None) -> dict[str, str]:
+    return _module_configuration(modules)[2]
+
+
+def bundled_migration_apps(modules: dict[str, Module] | None = None) -> tuple[str, ...]:
+    """Return bundled-schema owners; creation must preserve these migration files."""
+    ordered = resolve_modules(modules if modules is not None else discover_modules())
+    for module in ordered:
+        if module.migration_policy not in {"none", "client", "bundled"}:
+            raise ModuleConfigurationError(
+                f"Invalid migration policy in {module.name}: {module.migration_policy}"
+            )
+    return tuple(module.name for module in ordered if module.migration_policy == "bundled")

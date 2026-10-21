@@ -1,0 +1,14 @@
+# Keep the default rules. Precisely suppress one confirmed synthetic test fixture.
+# Historical commits 39ab85985b46 and 51fc92828fe5 both contain the same
+# non-credential idempotency key inside an authorization regression test.
+# NEVER whitelist the whole test directory or all idempotency keys.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "One historical synthetic idempotency test fixture, not an API credential"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "line"
+paths = ['''^apps/inventory/tests/test_tenant_policy_api\.py$''']
+regexes = ['''"idempotency_key"\s*:\s*"policy-allowed-001"''']
