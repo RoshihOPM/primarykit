@@ -37,8 +37,16 @@ def lint_upgrade_sql(root: Path = ROOT) -> None:
         for app, revision in upgrades:
             rendered = subprocess.run(
                 [
-                    "docker", "compose", "exec", "-T", "api", "python", "manage.py",
-                    "sqlmigrate", app, revision,
+                    "docker",
+                    "compose",
+                    "exec",
+                    "-T",
+                    "api",
+                    "python",
+                    "manage.py",
+                    "sqlmigrate",
+                    app,
+                    revision,
                 ],
                 cwd=root,
                 check=True,
@@ -54,7 +62,9 @@ def lint_upgrade_sql(root: Path = ROOT) -> None:
             sql_paths.append(str(output))
         # Squawk returns a nonzero code for violations and parsing errors.
         # Never suppress warnings or opt in to continue-on-error.
-        subprocess.run([*SQUAWK, "--pg-version=17.0", *sql_paths], cwd=root, check=True)
+        subprocess.run(
+            [*SQUAWK, "--pg-version=17.0", *sql_paths], cwd=root, check=True
+        )
 
 
 if __name__ == "__main__":
