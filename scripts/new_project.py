@@ -231,7 +231,9 @@ def create_project(
         source_commit = _source_git_revision(root)
         metadata = {
             "source_commit": source_commit,
-            "module_source_refs": {name: source_commit for name in sorted(selected)} if source_commit else {},
+            "module_source_refs": {name: source_commit for name in sorted(selected)}
+            if source_commit
+            else {},
             "module_versions": {name: source_version for name in sorted(selected)},
             "origin": "RoshihOPM/primarykit",
             "source_version": source_version,
