@@ -7,7 +7,14 @@ from scripts.ci_generated_client import CASES, run_case
 
 def test_matrix_compositions():
     assert {
-        "minimal", "crm", "marketplace", "commerce", "api_keys", "tasks", "webhooks", "all"
+        "minimal",
+        "crm",
+        "marketplace",
+        "commerce",
+        "api_keys",
+        "tasks",
+        "webhooks",
+        "all",
     } <= set(CASES)
 
 
