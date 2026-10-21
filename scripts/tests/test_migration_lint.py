@@ -16,7 +16,11 @@ def add_migrations(root: Path, *revisions: str) -> None:
 
 def test_upgrade_sql_linter_skips_only_initial_history(tmp_path: Path):
     add_migrations(
-        tmp_path, "__init__.py", "0001_initial.py", "0002_add_status.py", "0003_schedule.py"
+        tmp_path,
+        "__init__.py",
+        "0001_initial.py",
+        "0002_add_status.py",
+        "0003_schedule.py",
     )
     assert lint.migration_candidates(tmp_path) == [
         ("jobs", "0002_add_status"),
@@ -24,7 +28,9 @@ def test_upgrade_sql_linter_skips_only_initial_history(tmp_path: Path):
     ]
 
 
-def test_linter_runs_version_check_without_upgrade_migrations(tmp_path: Path, monkeypatch):
+def test_linter_runs_version_check_without_upgrade_migrations(
+    tmp_path: Path, monkeypatch
+):
     calls = []
 
     def run(command, **kwargs):
@@ -37,7 +43,9 @@ def test_linter_runs_version_check_without_upgrade_migrations(tmp_path: Path, mo
 
 
 def test_rendered_upgrade_sql_is_linted_by_pinned_squawk(tmp_path: Path, monkeypatch):
-    add_migrations(tmp_path, "0001_initial.py", "0002_add_status.py", "0003_schedule.py")
+    add_migrations(
+        tmp_path, "0001_initial.py", "0002_add_status.py", "0003_schedule.py"
+    )
     commands = []
 
     def run(command, **kwargs):
@@ -45,7 +53,9 @@ def test_rendered_upgrade_sql_is_linted_by_pinned_squawk(tmp_path: Path, monkeyp
         assert kwargs["check"] is True and kwargs["cwd"] == tmp_path
         if command[0] == "docker":
             assert kwargs["capture_output"] and kwargs["text"]
-            return SimpleNamespace(stdout="ALTER TABLE example ADD COLUMN flag boolean;\n")
+            return SimpleNamespace(
+                stdout="ALTER TABLE example ADD COLUMN flag boolean;\n"
+            )
         assert command[: len(lint.SQUAWK)] == list(lint.SQUAWK)
         assert command[len(lint.SQUAWK)] == "--pg-version=17.0"
         sql_paths = command[len(lint.SQUAWK) + 1 :]
@@ -74,7 +84,9 @@ def test_lint_failures_block_ci(tmp_path: Path, monkeypatch, failure_stage):
         if command[0] == "docker":
             if failure_stage == "sqlmigrate":
                 raise subprocess.CalledProcessError(1, command)
-            return SimpleNamespace(stdout="ALTER TABLE t ADD COLUMN val int NOT NULL;\n")
+            return SimpleNamespace(
+                stdout="ALTER TABLE t ADD COLUMN val int NOT NULL;\n"
+            )
         if failure_stage == "squawk":
             raise subprocess.CalledProcessError(1, command)
         return SimpleNamespace(stdout="")
