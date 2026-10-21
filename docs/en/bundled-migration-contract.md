@@ -10,7 +10,7 @@ The registry accepts three explicit per-module migration policies:
 The generator **rejects** a bundled module whose source migration history is
 missing. This avoids silently creating different migration origins.
 
-**No existing source module has been migrated to bundled mode yet.**
+**Pilot:** `tasks` ships a reviewed immutable `0001_initial.py` migration for new generated clients. Clients with an existing Tasks migration graph must keep their own history and use reviewed adoption.
 Before enabling it for an actual module, publish a stable baseline, test
 cross-application dependencies and PostgreSQL migrations, and establish an
 adoption path for existing databases that already have independently generated
