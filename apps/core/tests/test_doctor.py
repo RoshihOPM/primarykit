@@ -96,7 +96,9 @@ def test_doctor_denies_changed_pinned_schema_after_generation(tmp_path):
     provenance = json.loads((target / "primarykit-origin.json").read_text())
     assert provenance["schema_modes"] == {"catalog": "tenant", "inventory": "tenant"}
     base = target / "config/settings/base.py"
-    base.write_text(base.read_text().replace('CATALOG_MODE = "tenant"', 'CATALOG_MODE = "standalone"'))
+    base.write_text(
+        base.read_text().replace('CATALOG_MODE = "tenant"', 'CATALOG_MODE = "standalone"')
+    )
     findings = {item.code for item in inspect_project(target).findings}
     assert "schema_mode_changed" in findings
     assert inspect_project(target).failed()
