@@ -193,7 +193,7 @@ def apply_safe_updates(*, source: Path, project: Path) -> dict:
         applied = []
         created_dirs = []
         try:
-            for module, path, staged_file, target_file, backup, _ in prepared:
+            for _module, _path, staged_file, target_file, backup, _ in prepared:
                 missing = []
                 parent = target_file.parent
                 while not parent.exists():
