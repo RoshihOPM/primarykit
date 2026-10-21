@@ -85,7 +85,7 @@ python manage.py migrate
 
 Installed modules register their Django applications and URLs via their manifests. A plain copy into an arbitrary non-PrimaryKit Django project is **not** guaranteed to work. There is **no automatic source update or migration** of client projects.
 
-The source catalog additionally supports project presets, a project dry-run, a read-only module upgrade report, an offline OpenAPI compatibility comparison and `scripts/module_scaffold.py` for creating a new source module.
+The source catalog additionally supports project presets, a project dry-run, a read-only module upgrade report and opt-in `--apply-safe` copying of unchanged non-contract Python files (see [updates](docs/en/module-updates.md)), an offline OpenAPI compatibility comparison and `scripts/module_scaffold.py` for creating a new source module.
 
 ## Security and production boundaries
 
