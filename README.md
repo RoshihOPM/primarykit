@@ -6,7 +6,9 @@
 
 **PrimaryKit is a copy-based Django REST API project generator and portable module catalog.** Choose a set of modules, generate a standalone backend, then implement and deploy your own business rules. A generated application owns its code, migrations, dependencies, data, infrastructure and releases.
 
-> **Status:** source version `0.1.0`, actively developed. This repository is not a SaaS, a hosted backend, a microservices framework, or a shared runtime library. Modules are reusable starting points, not certified production-ready business solutions.
+> **Status:** source version `0.1.0`, actively developed and publicly accessible. This repository is not a SaaS, a hosted backend, a microservices framework, or a shared runtime library. Modules are reusable starting points, not certified production-ready business solutions.
+>
+> **Public repository security status (2026-10-21):** Full-history/IP audit and confirmation of active `main` protection remain open. See [project status](docs/en/project-status.md) and the [post-publication audit checklist](docs/pre-public-audit.md).
 
 ## Why PrimaryKit?
 
