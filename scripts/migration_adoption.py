@@ -20,6 +20,20 @@ def _schema_modes(root: Path) -> dict:
     modes = data.get("schema_modes", {})
     if not isinstance(modes, dict):
         raise ValueError("Invalid pinned schema modes")
+    settings_file = root / "config" / "settings" / "base.py"
+    settings_tree = ast.parse(settings_file.read_text(encoding="utf-8"))
+    for name, expected in modes.items():
+        if name not in {"catalog", "inventory"} or expected not in {"tenant", "standalone"}:
+            raise ValueError("Unexpected schema mode in provenance")
+        key = name.upper() + "_MODE"
+        expressions = [
+            stmt.value
+            for stmt in settings_tree.body
+            if isinstance(stmt, ast.Assign)
+            and any(isinstance(t, ast.Name) and t.id == key for t in stmt.targets)
+        ]
+        if len(expressions) != 1 or ast.literal_eval(expressions[0]) != expected:
+            raise ValueError(f"Schema profile changed for {name}; manual migration review")
     return modes
 
 
