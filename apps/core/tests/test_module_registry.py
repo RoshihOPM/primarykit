@@ -119,7 +119,11 @@ def test_manifest_migration_policies_match_schema_owners():
     found = discover_modules()
     labels = set(migration_apps(found))
     assert "users" in labels
-    assert {"tasks", "orders", "api_keys", "webhooks"} & set(found) <= labels
+    assert {"orders", "api_keys", "webhooks"} & set(found) <= labels
+    if "tasks" in found:
+        assert found["tasks"].migration_policy == "bundled"
+        assert "tasks" in bundled_migration_apps(found)
+        assert "tasks" not in labels
     assert {"core", "notifications", "statistics", "observability"}.isdisjoint(labels)
     with pytest.raises(ModuleConfigurationError, match="Invalid migration policy"):
         migration_apps({"bad": Module("bad", migration_policy="invalid")})
