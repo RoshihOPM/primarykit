@@ -4,12 +4,25 @@ from pathlib import Path
 import environ
 from django.core.exceptions import ImproperlyConfigured
 
-from apps.core.module_registry import installed_module_apps
+from apps.core.module_registry import (
+    installed_module_apps,
+    module_env_settings,
+    module_middleware,
+    module_throttle_rates,
+)
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 
 env = environ.Env()
 environ.Env.read_env(BASE_DIR / ".env")
+
+# Module-owned environment fields are declared in typed manifests.
+globals().update(module_env_settings(env))
+if "RATE_LIMIT_SHARED_ACCOUNT_THROTTLE_ENABLED" in globals():
+    SHARED_ACCOUNT_THROTTLE_ENABLED = env.bool(
+        "SHARED_ACCOUNT_THROTTLE_ENABLED",
+        default=globals()["RATE_LIMIT_SHARED_ACCOUNT_THROTTLE_ENABLED"],
+    )
 
 SECRET_KEY = env("DJANGO_SECRET_KEY", default="unsafe-local-only")
 DEBUG = False
@@ -32,6 +45,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    *module_middleware(),
     "django.middleware.security.SecurityMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -42,10 +56,6 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
-
-# Request correlation middleware is copied only with the optional module.
-if "apps.observability" in INSTALLED_APPS:
-    MIDDLEWARE.insert(0, "apps.observability.middleware.request_id_middleware")
 
 ROOT_URLCONF = "config.urls"
 TEMPLATES = [
@@ -135,7 +145,6 @@ elif STORAGE_BACKEND != "local":
 # Listing photos are never stored in the shared Storage module or MEDIA_ROOT.
 # Client production deployments must configure durable, dedicated private storage.
 if "apps.listings" in INSTALLED_APPS:
-    LISTINGS_MEDIA_ENABLED = env.bool("LISTINGS_MEDIA_ENABLED", default=False)
     STORAGES["listings_private"] = {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
         "OPTIONS": {
@@ -170,12 +179,6 @@ DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="PrimaryKit <no-reply@exa
 MAILERS = {"default": {"BACKEND": "django.core.mail.backends.console.EmailBackend"}}
 
 # Both optional modules leave the baseline independent of Redis and brokers.
-if "apps.chat" in INSTALLED_APPS:
-    CHAT_RETENTION_DAYS = env.int("CHAT_RETENTION_DAYS", default=30)
-if "apps.realtime" in INSTALLED_APPS:
-    REALTIME_ENABLED = env.bool("REALTIME_ENABLED", default=False)
-    REALTIME_ALLOWED_ORIGINS = tuple(env.list("REALTIME_ALLOWED_ORIGINS", default=[]))
-
 # Register only trusted application callables; tasks are internal, never user-invoked by name.
 # Optional copied Redis cache module. With no explicit opt-in, Django uses local memory.
 if "apps.cache" in INSTALLED_APPS:
@@ -198,10 +201,6 @@ if "apps.cache" in INSTALLED_APPS:
                 backend=REDIS_CACHE_DJANGO_BACKEND,
             )
         }
-
-# Redis shared auth limits are optional and enabled explicitly in deployed clients.
-if "apps.rate_limit" in INSTALLED_APPS:
-    SHARED_ACCOUNT_THROTTLE_ENABLED = env.bool("SHARED_ACCOUNT_THROTTLE_ENABLED", default=False)
 
 # Optional Celery adapter. No broker is connected during Django initialization.
 if "apps.celery_tasks" in INSTALLED_APPS:
@@ -240,14 +239,7 @@ REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {
     "account_email_request": "3/hour",
     "account_email_confirm": "10/min",
 }
-if "apps.chat" in INSTALLED_APPS:
-    REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"].update(
-        {"chat_read": "120/min", "chat_write": "30/min"}
-    )
-if "apps.favorites" in INSTALLED_APPS:
-    REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"].update(
-        {"favorites_read": "120/min", "favorites_write": "60/min"}
-    )
+REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"].update(module_throttle_rates())
 
 
 SIMPLE_JWT = {
