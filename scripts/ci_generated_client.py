@@ -4,10 +4,15 @@
 import argparse
 import os
 import subprocess
+import sys
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from scripts.new_project import OPTIONAL_APPS, create_project
+ROOT = Path(__file__).resolve().parents[1]
+if __package__ in (None, ""):
+    sys.path.insert(0, str(ROOT))
+
+from scripts.new_project import OPTIONAL_APPS, create_project  # noqa: E402
 
 CASES = {
     "minimal": {"preset": "minimal"},
