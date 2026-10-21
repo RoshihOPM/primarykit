@@ -33,3 +33,11 @@ def guard_mapped_card_move(sender, *, actor, card, target_column, **kwargs):
         raise ValidationError(
             {"target_column_id": "This card projects a Deal stage; transition the Deal."}
         )
+
+
+def guard_linked_board_rename(sender, *, actor, column, name, **kwargs):
+    """Keep a linked board's stage names immutable while projections are active."""
+    if DealCardLink.objects.filter(owner=actor, card__board_id=column.board_id).exists():
+        raise ValidationError(
+            {"name": "Unbind linked deals before renaming columns on this board."}
+        )
