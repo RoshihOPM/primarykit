@@ -17,7 +17,7 @@ from apps.users.models import User
 
 @pytest.mark.django_db
 def test_column_rename_is_allowed_only_before_pipeline_binding():
-    owner = User.objects.create_user(email="column-guard@example.test", password="secret")
+    owner = User.objects.create_user(email="column-guard@example.test", password="secret", email_verified=True)
     deal, card, columns = setup_deal_board(owner)
     api = client(owner)
     url = f"/api/v1/kanban/columns/{columns[Deal.Stage.NEGOTIATION].pk}/"
