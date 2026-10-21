@@ -89,7 +89,7 @@ def _manifest(path: Path, name: str) -> tuple[str, ...]:
             if any(
                 not isinstance(item, str)
                 or not item.startswith(f"apps.{name}.")
-                or not re.fullmatch(r"[a-zA-Z_]\\w*(?:\\.[a-zA-Z_]\\w*)+", item)
+                or not re.fullmatch(r"[a-zA-Z_]\w*(?:\.[a-zA-Z_]\w*)+", item)
                 for item in value
             ) or len(set(value)) != len(value):
                 raise ValueError("invalid or repeated module middleware")
