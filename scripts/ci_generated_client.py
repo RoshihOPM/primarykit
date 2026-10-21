@@ -81,7 +81,11 @@ def run_case(case: str) -> None:
         # This is a stateful idempotency smoke, NOT an historical upgrade claim.
         if (target / "apps" / "tasks" / "models.py").exists():
             run(
-                "uv", "run", "python", "manage.py", "shell",
+                "uv",
+                "run",
+                "python",
+                "manage.py",
+                "shell",
                 "--settings=config.settings.postgres_test",
                 "-c",
                 "from apps.tasks.models import BackgroundJob; "
@@ -90,11 +94,20 @@ def run_case(case: str) -> None:
                 "payload={'probe': True}, max_attempts=1)",
             )
             run(
-                "uv", "run", "python", "manage.py", "migrate", "--noinput",
+                "uv",
+                "run",
+                "python",
+                "manage.py",
+                "migrate",
+                "--noinput",
                 "--settings=config.settings.postgres_test",
             )
             run(
-                "uv", "run", "python", "manage.py", "shell",
+                "uv",
+                "run",
+                "python",
+                "manage.py",
+                "shell",
                 "--settings=config.settings.postgres_test",
                 "-c",
                 "from apps.tasks.models import BackgroundJob; "
