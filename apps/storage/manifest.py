@@ -11,4 +11,5 @@ MODULE = Module(
         Route("api/v1/organizations/<uuid:org_id>/", requires=("organizations",)),
     ),
     priority=40,
+    migration_policy="client",
 )

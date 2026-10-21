@@ -8,4 +8,5 @@ MODULE = Module(
     optional=(),
     routes=(Route("api/v1/admin/audit/"),),
     priority=30,
+    migration_policy="client",
 )

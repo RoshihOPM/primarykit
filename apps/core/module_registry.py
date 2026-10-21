@@ -28,6 +28,7 @@ class Module:
     optional: tuple[str, ...] = ()
     routes: tuple[Route, ...] = ()
     priority: int = 100
+    migration_policy: str = "none"  # none or client (client-owned migrations)
 
 
 def discover_modules(root: Path | None = None) -> dict[str, Module]:
@@ -134,3 +135,14 @@ def dependency_closure(modules: dict[str, Module], selected: set[str]) -> set[st
     for name in sorted(selected):
         add(name)
     return result
+
+
+def migration_apps(modules: dict[str, Module] | None = None) -> tuple[str, ...]:
+    """Return app labels requiring client-owned Django migrations."""
+    ordered = resolve_modules(modules if modules is not None else discover_modules())
+    for module in ordered:
+        if module.migration_policy not in {"none", "client"}:
+            raise ModuleConfigurationError(
+                f"Invalid migration policy in {module.name}: {module.migration_policy}"
+            )
+    return tuple(module.name for module in ordered if module.migration_policy == "client")

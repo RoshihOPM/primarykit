@@ -7,4 +7,5 @@ MODULE = Module(
     requires=("listings",),
     routes=(Route("api/v1/"),),
     priority=57,
+    migration_policy="client",
 )

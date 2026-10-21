@@ -2,4 +2,10 @@
 
 from apps.core.module_registry import Module
 
-MODULE = Module(name="workflows", requires=("core",), optional=("audit", "outbox"), priority=28)
+MODULE = Module(
+    name="workflows",
+    requires=("core",),
+    optional=("audit", "outbox"),
+    priority=28,
+    migration_policy="client",
+)

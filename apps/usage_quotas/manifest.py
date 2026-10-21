@@ -7,4 +7,5 @@ MODULE = Module(
     requires=("users",),
     optional=("organizations", "statistics"),
     priority=77,
+    migration_policy="client",
 )
