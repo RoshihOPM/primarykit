@@ -211,9 +211,7 @@ def create_project(
             "module_fingerprints": _module_fingerprints(target, selected),
             "migration_policy": "Generate once and commit all client migrations",
             "schema_modes": {
-                name: plan[f"{name}_mode"]
-                for name in ("catalog", "inventory")
-                if name in selected
+                name: plan[f"{name}_mode"] for name in ("catalog", "inventory") if name in selected
             },
         }
         (target / "primarykit-origin.json").write_text(
