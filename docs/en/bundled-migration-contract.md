@@ -35,3 +35,19 @@ mode-specific source histories. Those require reviewed migration adoption,
 releases and PostgreSQL fixtures before Issue #88 may be closed. Do not copy
 source migrations over a client's applied migration files or use `--fake`
 as a shortcut.
+
+## Read-only client adoption inventory
+
+From a trusted source kit checkout, inspect a client's existing migration files:
+
+```bash
+python scripts/migration_adoption.py --source . --project ../customer-backend
+```
+
+The report inventories bundled histories (currently Tasks), distinguishes
+identical copied files from histories requiring review and rejects drift from
+pinned Catalog/Inventory schema profiles. It does not import module code,
+modify project files or database tables. An identical file history **does not**
+prove the migrations were applied safely: compare the actual
+`django_migrations` table, model state, FK edges and persisted data before
+approving any adoption. Never replace historical client migrations.
