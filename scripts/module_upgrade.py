@@ -367,9 +367,7 @@ def three_way_plan(*, source: Path, project: Path) -> dict:
         f"{module}/{item['path']}"
         for module, data in report["modules"].items()
         for item in data["changes"]
-        if item["contract_review"]
-        or item["source_deleted"]
-        or item["change"] == "baseline_unknown"
+        if item["contract_review"] or item["source_deleted"] or item["change"] == "baseline_unknown"
     ]
     return {
         "candidates": results,
