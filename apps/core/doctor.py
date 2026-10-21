@@ -64,6 +64,80 @@ def _manifest(path: Path, name: str) -> tuple[str, ...]:
         not isinstance(item, str) or not MODULE_NAME.fullmatch(item) for item in requires
     ):
         raise ValueError("requires must be a tuple of module names")
+    # Validate typed manifest contributions statically. Doctor runs in copied
+    # projects before Django imports, so never evaluate module Python code.
+    known = {
+        "name",
+        "requires",
+        "optional",
+        "routes",
+        "priority",
+        "migration_policy",
+        "env_settings",
+        "middleware",
+        "throttle_rates",
+    }
+    if set(kwargs) - known or any(key is None for key in kwargs):
+        raise ValueError("unknown or unpacked manifest configuration field")
+    for key in ("middleware", "throttle_rates"):
+        if key not in kwargs:
+            continue
+        value = ast.literal_eval(kwargs[key])
+        if not isinstance(value, tuple):
+            raise ValueError(f"{key} must be a literal tuple")
+        if key == "middleware":
+            if any(
+                not isinstance(item, str)
+                or not item.startswith(f"apps.{name}.")
+                or not re.fullmatch(r"[a-zA-Z_][\\w]*(?:\\.[a-zA-Z_][\\w]*)+", item)
+                for item in value
+            ) or len(set(value)) != len(value):
+                raise ValueError("invalid or repeated module middleware")
+        elif any(
+            not isinstance(item, tuple)
+            or len(item) != 2
+            or not isinstance(item[0], str)
+            or not re.fullmatch(r"[a-z][a-z0-9_]*", item[0])
+            or not isinstance(item[1], str)
+            or not item[1]
+            for item in value
+        ) or len({item[0] for item in value}) != len(value):
+            raise ValueError("invalid or duplicate throttle configuration")
+    declared: set[str] = set()
+    if "env_settings" in kwargs:
+        values = kwargs["env_settings"]
+        if not isinstance(values, ast.Tuple):
+            raise ValueError("env_settings must be a literal tuple")
+        for item in values.elts:
+            if not (
+                isinstance(item, ast.Call)
+                and isinstance(item.func, ast.Name)
+                and item.func.id == "EnvSetting"
+                and len(item.args) == 3
+                and not item.keywords
+            ):
+                raise ValueError("env_settings requires literal EnvSetting(name, kind, default)")
+            field, kind, default = (ast.literal_eval(v) for v in item.args)
+            if (
+                not isinstance(field, str)
+                or not re.fullmatch(r"[A-Z][A-Z0-9_]*", field)
+                or not field.startswith(f"{name.upper()}_")
+                or field in declared
+                or kind not in {"bool", "int", "str", "list"}
+                or not {
+                    "bool": type(default) is bool,
+                    "int": type(default) is int,
+                    "str": isinstance(default, str),
+                    "list": isinstance(default, tuple)
+                    and all(isinstance(v, str) for v in default),
+                }[kind]
+            ):
+                raise ValueError("invalid or duplicate typed environment contribution")
+            declared.add(field)
+    if "migration_policy" in kwargs and ast.literal_eval(kwargs["migration_policy"]) not in {
+        "none", "client", "bundled"
+    }:
+        raise ValueError("invalid migration policy")
     return requires
 
 
