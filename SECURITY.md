@@ -14,7 +14,7 @@ In scope: security issues in PrimaryKit source code, its generator and provided 
 
 **Do not disclose an unpatched vulnerability in a public Issue, PR, Discussion, screenshot or log.**
 
-1. After this repository becomes **public**, check [GitHub Security Advisories](https://github.com/RoshihOPM/primarykit/security/advisories). Use **Report a vulnerability** **only if private vulnerability reporting is enabled** by maintainers.
+1. This repository is **public**. Check [GitHub Security Advisories](https://github.com/RoshihOPM/primarykit/security/advisories). Use **Report a vulnerability** **only if private vulnerability reporting is enabled** by maintainers.
 2. If that private reporting feature is unavailable, open a public issue with **only** the title "Request private security contact" and a request to establish a confidential channel. **Do not** include affected endpoints, exploit steps, tokens, PII or a vulnerability description in the issue.
 3. Until a private channel is agreed, do not transmit sensitive details or run intrusive tests. GitHub itself provides a platform abuse-reporting mechanism for misconduct; it is not a substitute for disclosure to the maintainer.
 
@@ -33,7 +33,7 @@ Please allow maintainers to validate and fix issues privately before public disc
 
 Do not scan or exploit third-party systems, real clients or production infrastructure without authorization. Do not submit sensitive data as test fixtures. Security-sensitive PRs require appropriate negative IDOR/BOLA tests, service-layer authorization, PostgreSQL concurrency checks and independent generated-client validation.
 
-Using the source code under [MIT](LICENSE) does **not** transfer responsibility for hardening production clients. Each deployment still requires TLS, secure secrets, trusted proxies, backups/test-restores, logging policies, rate limiting and provider-specific verification. Scan **full Git history** for secrets and redistribution rights before switching visibility to public; scanning only the checkout is insufficient.
+Using the source code under [MIT](LICENSE) does **not** transfer responsibility for hardening production clients. Each deployment still requires TLS, secure secrets, trusted proxies, backups/test-restores, logging policies, rate limiting and provider-specific verification. Because the repository is already public, perform and document the outstanding **full Git history** secret and redistribution-rights audit urgently (see [audit checklist](docs/pre-public-audit.md)); scanning only the current checkout is insufficient. Never publish possible secret findings in an issue or PR.
 
 ## Русский
 
@@ -47,7 +47,7 @@ PrimaryKit развивается в линии **0.1.x** и не позицио
 
 **Не публикуйте подробности неисправленной уязвимости в открытых Issues, PR и Discussions.**
 
-1. После перехода репозитория в **Public** откройте [GitHub Security Advisories](https://github.com/RoshihOPM/primarykit/security/advisories) и выберите **Report a vulnerability**, **только если** владелец включил private vulnerability reporting.
+1. Репозиторий **публичный**. Откройте [GitHub Security Advisories](https://github.com/RoshihOPM/primarykit/security/advisories) и выберите **Report a vulnerability**, **только если** владелец включил private vulnerability reporting.
 2. Если такой функции нет, создайте публичный Issue **без технических подробностей** с темой "Request private security contact", запросив закрытый канал связи. Не отправляйте туда токены, данные клиентов, PoC или адреса уязвимых endpoint.
 3. До согласования приватного канала не передавайте секреты и не проводите активные проверки посторонних систем.
 
@@ -63,4 +63,4 @@ PrimaryKit развивается в линии **0.1.x** и не позицио
 
 Нельзя сканировать или эксплуатировать чужую инфраструктуру без разрешения. Для исправлений требуются негативные тесты авторизации, проверка границ доступа и PostgreSQL race tests там, где это необходимо.
 
-MIT-лицензия не означает гарантии безопасности production. Клиент самостоятельно обеспечивает HTTPS, управление секретами, резервные копии с проверкой восстановления, ограничения запросов, аудит и проверку сторонних интеграций. Перед публикацией репозитория следует проверить **полную Git-историю** на секреты, приватные данные и права распространения исходников.
+MIT-лицензия не означает гарантии безопасности production. Клиент самостоятельно обеспечивает HTTPS, управление секретами, резервные копии с проверкой восстановления, ограничения запросов, аудит и проверку сторонних интеграций. Репозиторий уже публичный: необходим ретроспективный аудит **полной Git-истории** на секреты, приватные данные и права распространения исходников ([чек-лист](docs/pre-public-audit.md)). Возможные секреты нельзя публиковать в Issues или PR.
