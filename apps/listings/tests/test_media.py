@@ -10,6 +10,7 @@ import pytest
 from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
+from django.core.management.base import CommandError
 from django.db import close_old_connections, connection, connections
 from django.test import override_settings
 from django.utils import timezone
@@ -351,3 +352,79 @@ def test_postgres_two_writers_one_gallery_slot():
     assert sorted(result) == ["ok", "stale"]
     assert ListingImage.objects.filter(listing_id=listing).count() == 1
     assert Listing.objects.get(pk=listing).version == 1
+
+
+def test_alpha_image_is_flattened_and_large_image_is_resized():
+    _, api = api_user("media-alpha@example.test")
+    listing = create_listing(api)
+    source = io.BytesIO()
+    image = Image.new("RGBA", (2300, 1150), (255, 0, 0, 0))
+    image.save(source, format="PNG")
+
+    response = upload(api, listing, 0, uploaded(source.getvalue()))
+    assert response.status_code == 201, response.data
+    photo = ListingImage.objects.get(pk=response.data["id"])
+    assert (photo.width, photo.height) == (2048, 1024)
+    with private_storage().open(photo.private_key, "rb") as handle:
+        with Image.open(io.BytesIO(handle.read())) as cleaned:
+            assert cleaned.format == "JPEG"
+            assert cleaned.mode == "RGB"
+            assert cleaned.size == (2048, 1024)
+            # Transparent source pixels cannot leak alpha into the public JPEG.
+            assert cleaned.getpixel((0, 0)) == (255, 255, 255)
+
+
+def test_audit_failure_rolls_back_listing_upload_and_removes_private_blob(monkeypatch):
+    seller, api = api_user("media-atomicity@example.test")
+    listing_id = create_listing(api)
+
+    def fail_audit(**_kwargs):
+        raise RuntimeError("audit unavailable")
+
+    monkeypatch.setattr("apps.listings.media.record_audit_event", fail_audit)
+    with pytest.raises(RuntimeError, match="audit unavailable"):
+        add_image(
+            actor=seller,
+            listing_id=listing_id,
+            expected_version=0,
+            uploaded=uploaded(),
+        )
+
+    assert not ListingImage.objects.filter(listing_id=listing_id).exists()
+    assert Listing.objects.get(pk=listing_id).version == 0
+    assert private_storage().listdir("listing-photos")[1] == []
+
+
+@pytest.mark.django_db(transaction=True)
+def test_purge_has_shared_limit_and_never_deletes_recent_orphans():
+    _, api = api_user("media-cleanup@example.test")
+    listing_id = create_listing(api)
+    photo_id = upload(api, listing_id, 0).data["id"]
+    old_key = ListingImage.objects.get(pk=photo_id).private_key
+    Listing.objects.filter(pk=listing_id).update(
+        status=Listing.Status.ARCHIVED,
+        updated_at=timezone.now() - timedelta(days=10),
+    )
+    storage = private_storage()
+    old_orphan = storage.save("listing-photos/older-orphan.jpg", ContentFile(photo_bytes()))
+    fresh_orphan = storage.save("listing-photos/fresh-orphan.jpg", ContentFile(photo_bytes()))
+    old_timestamp = (timezone.now() - timedelta(days=10)).timestamp()
+    os.utime(storage.path(old_orphan), (old_timestamp, old_timestamp))
+
+    # First pass removes the one retired DB photo and its blob after commit.
+    call_command("purge_listing_media", days=7, limit=1)
+    assert not ListingImage.objects.filter(pk=photo_id).exists()
+    assert not storage.exists(old_key)
+    assert storage.exists(old_orphan)
+    assert storage.exists(fresh_orphan)
+
+    # A second run reclaims old unreferenced blobs but protects recent uploads.
+    call_command("purge_listing_media", days=7, limit=1)
+    assert not storage.exists(old_orphan)
+    assert storage.exists(fresh_orphan)
+
+
+@pytest.mark.parametrize("options", [{"days": 0}, {"limit": 0}, {"limit": 10001}])
+def test_purge_rejects_invalid_retention_options(options):
+    with pytest.raises(CommandError, match="days >= 1"):
+        call_command("purge_listing_media", **options)
