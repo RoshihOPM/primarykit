@@ -6,7 +6,7 @@ from threading import Barrier, Thread
 
 import pytest
 from django.core.exceptions import PermissionDenied
-from django.db import close_old_connections, connection
+from django.db import close_old_connections, connection, connections
 from django.utils import timezone
 
 from apps.audit.models import AuditEvent
@@ -390,7 +390,7 @@ def test_postgresql_simultaneous_replay_yields_one_request(administrator, subjec
         except Exception as exc:
             errors.append(exc)
         finally:
-            close_old_connections()
+            connections.close_all()
 
     threads = [Thread(target=runner) for _ in range(2)]
     for thread in threads:
