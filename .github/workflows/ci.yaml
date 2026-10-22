@@ -39,8 +39,20 @@ jobs:
         run: uv run python manage.py makemigrations $(uv run python -m apps.core.migration_plan) --noinput --settings=config.settings.test
       - name: Django checks
         run: uv run python manage.py check --settings=config.settings.test
-      - name: Tests
-        run: uv run pytest
+      - name: Full Django source coverage (SQLite)
+        run: |
+          uv run --with 'pytest-cov==7.1.0' pytest -q \
+            --cov=apps --cov-branch \
+            --cov-report=term-missing:skip-covered \
+            --cov-report=xml:coverage-all.xml
+      - name: Upload Django source coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: django-source-coverage
+          path: coverage-all.xml
+          if-no-files-found: ignore
+          retention-days: 14
       # Source-only SQLite coverage is a guardrail, not PostgreSQL race coverage.
       # The full PostgreSQL suite, including concurrency tests, runs below.
       - name: Commerce coverage floor (orders, sales, payments)
