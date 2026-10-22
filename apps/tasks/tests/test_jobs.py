@@ -136,7 +136,7 @@ def test_postgresql_two_workers_claim_a_single_job():
     claimed, errors = [], []
 
     def runner():
-        from django.db import close_old_connections
+        from django.db import close_old_connections, connections
 
         close_old_connections()
         try:
@@ -147,7 +147,7 @@ def test_postgresql_two_workers_claim_a_single_job():
         except Exception as exc:
             errors.append(exc)
         finally:
-            close_old_connections()
+            connections.close_all()
 
     workers = [Thread(target=runner) for _ in range(2)]
     for worker in workers:
