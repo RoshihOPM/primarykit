@@ -2,7 +2,7 @@
 
 import pytest
 from django.apps import apps
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -118,3 +118,79 @@ def test_cancel_blocks_settlement_and_prevents_cross_order_payment():
             ).status_code
             == 404
         )
+
+
+def test_reconciliation_event_key_cannot_settle_another_intent():
+    """Global settlement event IDs may not be silently replayed for another payment."""
+    owner, _ = actor("pay-event-owner@tests.example")
+    root, _ = actor("pay-event-root@tests.example", is_root=True)
+    first = create_intent(actor=owner, **request_data())
+    second = create_intent(
+        actor=owner,
+        currency="USD",
+        amount_minor=235,
+        idempotency_key="another-payment-request",
+    )
+    evidence = {
+        "event_key": "provider-event-id-shared",
+        "outcome": "succeeded",
+        "amount_minor": 235,
+        "currency": "USD",
+    }
+    reconcile_manual(actor=root, payment_id=first.pk, **evidence)
+    with pytest.raises(ValidationError, match="Event key conflicts"):
+        reconcile_manual(actor=root, payment_id=second.pk, **evidence)
+
+    second.refresh_from_db()
+    assert second.status == PaymentIntent.Status.PENDING
+    assert PaymentEvent.objects.count() == 1
+
+
+def test_only_one_successful_payment_per_order():
+    """Two pending payment intents may reference one order, but only one can succeed."""
+    if not apps.is_installed("apps.orders"):
+        pytest.skip("Orders module not installed")
+    from apps.orders.services import place_order
+
+    owner, _ = actor("pay-order-owner@tests.example")
+    root, _ = actor("pay-order-root@tests.example", is_root=True)
+    order = place_order(
+        actor=owner,
+        currency="USD",
+        lines=[{"sku": "book", "title": "Book", "quantity": 1, "unit_price_minor": 235}],
+        idempotency_key="payments-order-same-order",
+    )
+    first = create_intent(
+        actor=owner,
+        source_order_id=order.pk,
+        currency="USD",
+        amount_minor=235,
+        idempotency_key="pay-order-first-intent",
+    )
+    second = create_intent(
+        actor=owner,
+        source_order_id=order.pk,
+        currency="USD",
+        amount_minor=235,
+        idempotency_key="pay-order-second-intent",
+    )
+    reconcile_manual(
+        actor=root,
+        payment_id=first.pk,
+        event_key="provider-first-order-success",
+        outcome="succeeded",
+        amount_minor=235,
+        currency="USD",
+    )
+    with pytest.raises(ValidationError, match="already has a successful payment"):
+        reconcile_manual(
+            actor=root,
+            payment_id=second.pk,
+            event_key="provider-second-order-success",
+            outcome="succeeded",
+            amount_minor=235,
+            currency="USD",
+        )
+    second.refresh_from_db()
+    assert second.status == PaymentIntent.Status.PENDING
+    assert PaymentEvent.objects.count() == 1
