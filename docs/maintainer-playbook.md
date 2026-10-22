@@ -4,30 +4,11 @@
 
 ## English
 
-### 1. GitHub branch protection (owner action required)
+### 1. GitHub branch protection (verified 2026-10-22)
 
-**Repository status (2026-10-21): Public (verified via GitHub repository metadata).** Public visibility makes free branch-protection features eligible, but **active enforcement has not been verified**. The installed integration cannot read or change protection settings. This guide and `CODEOWNERS` do not enable protection. Issue [#67](https://github.com/RoshihOPM/primarykit/issues/67) remains open until the owner verifies a live ruleset.
+[Ruleset 25549376](https://github.com/RoshihOPM/primarykit/rules/25549376) is **Active**, targets only `refs/heads/main`, requires pull requests (squash only), resolved conversations and **strict** successful `test` + `scan-history` checks. Branch deletion and non-fast-forward updates are blocked; no bypass actors are configured. [#67](https://github.com/RoshihOPM/primarykit/issues/67) is closed.
 
-For an eligible account/repository, open **Settings → Rules → Rulesets → New branch ruleset** (or **Settings → Branches → Add branch protection rule** where supported). Configure:
-
-| Setting | Recommended |
-| --- | --- |
-| Target branch | `main` only |
-| Enforcement | **Active**, not Evaluate/Disabled |
-| Require pull request before merging | **On** |
-| Required successful status check | **`test`** from **Core CI**; verify the exact check name in Actions |
-| Keep branches up to date before merging | **On**, if CI capacity allows |
-| Require conversation resolution | **On** |
-| Dismiss stale approvals on new commits | **On** if approvals enabled |
-| Required approving reviewers | **1 only when a separate trusted reviewer has write access**; otherwise don't deadlock a single-maintainer repo |
-| Require Code Owners review | Enable only with an independent eligible code owner/reviewer |
-| Force pushes and branch deletion | **Disallowed** |
-| Bypass for administrators | **Disallowed** / enforce rules for administrators if the plan permits |
-| Required signed commits / linear history | Optional; first verify merge strategy and contributor tooling |
-
-Avoid **Lock branch**: it also prevents normal reviewed merges. Do not rely on `CODEOWNERS` or CI documentation as enforcement without a GitHub branch protection rule.
-
-Now that the repository is public, configure protection directly in GitHub Settings; do not assume the old private-repository 403 still describes the current eligibility. Verify the rule is **Active** and targets only `main`, inspect the protected-branch state and test the rule using a safe non-production PR (do not try a destructive force push). Keep a dated screenshot or owner attestation and close #67 only after verification. [Official requirements](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches).
+The required approving review count is **zero** to avoid deadlocking a one-maintainer repository. This is not an independent peer review; request a trusted second reviewer for security-sensitive changes and raise the minimum to 1 once they have write access. Re-verify protection after ruleset changes and periodically test enforcement with a safe PR. Never test destructive force pushes or disable required checks to force a merge.
 
 ### 2. Post-publication security and licensing review (incomplete)
 
@@ -44,35 +25,34 @@ The repository has already been published, but the historical/IP audit is **not 
 
 Every PR needs green `test` CI, review of changed files and dependency risks, security checks for sensitive code, docs consistency and tested generated-client migration policy. Dependabot update PRs follow the **same** gate. Never auto-merge security-sensitive dependency changes solely on a semver range.
 
-### 4. CI restoration and releases
+### 4. CI evidence, security/coverage and releases
 
-**Issue [#99](https://github.com/RoshihOPM/primarykit/issues/99):** GitHub reported that Actions jobs were not admitted due to account payment or spending-limit restrictions while the repository was private. Public visibility does not prove the restriction is resolved. Check Actions jobs on a new commit, confirm at least one actual step ran, rerun **Core CI** and **Full History Secrets Audit**, and require green results before declaring recovery. Use the workflow's manual trigger if necessary. Never disable required checks to work around billing.
+The previous runner-admission problem ([#99](https://github.com/RoshihOPM/primarykit/issues/99)) is resolved: [Core CI](https://github.com/RoshihOPM/primarykit/actions/runs/39726369491) and [Full History Secrets Audit](https://github.com/RoshihOPM/primarykit/actions/runs/39726369481) both completed successfully on `main` `df8282a` on 2026-10-22. Re-evaluate if jobs stop starting or a new PR fails.
+
+The additional quality gates measure a 40% minimum **aggregate** coverage across Orders, Sales and Payments using SQLite tests and use `pip-audit` against exported, locked **production** dependencies. This is an initial regression floor, not a target level or proof of race safety. PostgreSQL integration tests remain mandatory in Core CI, especially for `select_for_update`. Extra Redis/Celery dependencies installed outside `uv.lock` require a separate audit. High-signal Ruff Bandit rules are enabled selectively; expand after reviewing baseline findings rather than suppressing new vulnerabilities.
 
 Release steps:
 
-- Select a reviewed commit in protected `main`.
-- Run locked install, Ruff, Django checks, pytest and detached project smoke. For DB-dependent features, run PostgreSQL concurrency/integration tests.
-- Confirm module changes, migration guidance, API breaking changes, known limitations and security advisories.
-- Update version/changelog, create a tag and GitHub prerelease (e.g. `v0.1.0-beta.1`), with explicit limitations. **This repository is not ready to be described as production-certified.**
-- Do not deploy or apply migrations to any customer environment as part of tagging this source catalog.
+- Select a reviewed commit in protected `main`; confirm current green checks with actual executed steps.
+- Run locked install, Ruff, Django checks, pytest and detached project smoke; test PostgreSQL transaction races for DB-dependent changes.
+- Confirm migrations, API breaking changes, third-party rights/history review, dependency advisories and security advisories.
+- Update version/changelog, create a tag and GitHub prerelease (e.g. `v0.1.0-alpha.1`) only after risk sign-off. **This source catalog is not production-certified.**
+- No releases or migrations should modify a customer environment automatically.
 
 ## Русский
 
 ### Защита `main`
 
-По состоянию на **21 октября 2026 года репозиторий публичный** (проверено по GitHub). Но действующий ruleset для `main` **не подтверждён**: подключённый инструмент не позволяет управлять защитой ветки или проверить настройки. **CODEOWNERS, этот документ и CI сами по себе не защищают `main`.** См. [#67](https://github.com/RoshihOPM/primarykit/issues/67).
+**Проверено 22.10.2026:** [ruleset 25549376](https://github.com/RoshihOPM/primarykit/rules/25549376) активен только для `main`. Обязательны PR (только squash), разрешение обсуждений, актуальные проверки `test` и `scan-history`; force push, удаление ветки и обход правил запрещены. [#67](https://github.com/RoshihOPM/primarykit/issues/67) закрыт.
 
-При доступном тарифе откройте **Settings → Rules → Rulesets → New branch ruleset** (или **Settings → Branches → Add branch protection rule**): target `main`, Enforcement **Active**, обязательный PR, проверка **`test`** из **Core CI**, актуальность ветки, разрешение дискуссий, запрет force push/delete, запрет bypass администраторам. Требуйте 1 независимого reviewer только при наличии другого участника с доступом — иначе владелец не сможет смержить PR. **Lock branch** не включайте.
-
-Поскольку репозиторий уже Public, настройте и включите (`Active`) ruleset в GitHub Settings. Проверьте действительное применение к `main` на безопасном тестовом PR и зафиксируйте результат. Не закрывайте #67 без подтверждения.
+Число обязательных approvals — **0**, чтобы единственный сопровождающий мог работать. Это не независимое ревью; при появлении доверенного второго участника следует включить минимум 1 одобрение. После изменения правил перепроверяйте enforcement на безопасном PR.
 
 ### После публикации — аудит пока не завершён
 
-Репозиторий уже публичен, но [#68](https://github.com/RoshihOPM/primarykit/issues/68) остаётся открытым. Требуется полный клон и проверка всех доступных refs, возможных orphaned objects, истории на секреты и данные клиентов, лицензий и прав на код. Подтверждённые ключи нужно немедленно отозвать у провайдера и проверить доступы. Включить и проверить Dependabot alerts, private vulnerability reporting, secret scanning (при доступности); результат и подпись владельца хранить в закрытом аудиторском отчёте, без секретов в публичных Issues.
+[#68](https://github.com/RoshihOPM/primarykit/issues/68) **открыт**: автоматический Gitleaks на доступных refs уже проходит, но полный скан доверенного клона, возможных orphaned объектов, конфигураций, PII, архивов и прав на чужой код **не подписан**. Нужно проверить Dependabot alerts, secret scanning и private vulnerability reporting (где доступны). Подтверждённые секреты немедленно отзывать у провайдера. Не публикуйте значения секретов и личные данные в Issues.
 
 ### CI, PR и релизы
 
-[#99](https://github.com/RoshihOPM/primarykit/issues/99): GitHub ранее не запускал jobs из-за ограничений оплаты/лимитов аккаунта. Публичность сама по себе **не доказывает**, что CI заработал. Необходимо увидеть реальные шаги новых прогонов Core CI и Full History Secrets Audit и зелёные проверки. Не отключать обязательные проверки ради merge.
+На `main` `df8282a` 22.10.2026 реально выполнены [Core CI](https://github.com/RoshihOPM/primarykit/actions/runs/39726369491) и [Full History Secrets Audit](https://github.com/RoshihOPM/primarykit/actions/runs/39726369481): оба успешны. [#99](https://github.com/RoshihOPM/primarykit/issues/99) закрыт.
 
-
-Перед merge: зелёный `test`, ревью, негативные проверки IDOR/тенантов, PostgreSQL races по необходимости, совместимость миграций сгенерированных проектов, обновление RU/EN документации. Для релиза: фиксированная версия и коммит, changelog, теги/prerelease с известными ограничениями, smoke и интеграционные тесты. Теги PrimaryKit **не** мигрируют и не деплоят клиентские приложения.
+Для PR: строго зелёные обязательные checks, просмотр diff и миграций, отрицательные тесты IDOR/tenant и PostgreSQL-конкурентности по риску, RU/EN документация. Первичный порог aggregate coverage денежной логики — **40%**, его нужно повышать после замера; SQLite не проверяет транзакционные гонки. `pip-audit` проверяет production lockfile, но не динамически устанавливаемые Redis/Celery пакеты. Выборочные Ruff S-правила не заменяют полноценный security-аудит. Для релиза нужны подтверждённые права на код, версионированные изменения, теги и явные ограничения.
