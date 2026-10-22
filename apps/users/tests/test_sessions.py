@@ -259,9 +259,8 @@ def test_parallel_refresh_has_one_winner(client):
     def refresh():
         close_old_connections()
         try:
-            return APIClient().post(
-                reverse("auth-refresh"), {"refresh": tokens["refresh"]}
-            ).status_code
+            response = APIClient().post(reverse("auth-refresh"), {"refresh": tokens["refresh"]})
+            return response.status_code
         finally:
             connections.close_all()
 
