@@ -50,7 +50,9 @@ def _parser() -> argparse.ArgumentParser:
     upgrade = commands.add_parser("upgrade", help="Read-only module upgrade report")
     upgrade.add_argument("--project", type=Path, default=Path.cwd())
     upgrade.add_argument("--source", type=Path, required=True, help="Trusted source checkout")
-    upgrade.add_argument("--dry-run", action="store_true", help="Explicit read-only intent (default)")
+    upgrade.add_argument(
+        "--dry-run", action="store_true", help="Explicit read-only intent (default)"
+    )
     upgrade.add_argument("--three-way-plan", action="store_true")
     upgrade.add_argument("--json", action="store_true")
 
@@ -141,7 +143,9 @@ def main(argv: list[str] | None = None) -> int:
             source = args.source.expanduser().resolve()
             script = source / "scripts" / "module_upgrade.py"
             if not script.is_file() or not (project / "primarykit-origin.json").is_file():
-                raise ValueError("Expected a trusted source updater and generated project provenance")
+                raise ValueError(
+                    "Expected a trusted source updater and generated project provenance"
+                )
             command = [
                 sys.executable,
                 str(script),
