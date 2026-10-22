@@ -45,7 +45,11 @@ def generate_typescript_sdk(
     schema_file = None
     if schema is not None:
         schema_file = (project / schema).expanduser().resolve()
-        if not schema_file.is_file() or schema_file.suffix.lower() not in {".yaml", ".yml", ".json"}:
+        if not schema_file.is_file() or schema_file.suffix.lower() not in {
+            ".yaml",
+            ".yml",
+            ".json",
+        }:
             raise ValueError("OpenAPI schema must be an existing local YAML or JSON file")
     output_files = (target / "schema.d.ts", target / "client.ts")
     if not force and any(path.exists() for path in output_files):
@@ -65,8 +69,10 @@ def generate_typescript_sdk(
         return 0
 
     binary = (
-        frontend / "node_modules" / ".bin" /
-        ("openapi-typescript.cmd" if os.name == "nt" else "openapi-typescript")
+        frontend
+        / "node_modules"
+        / ".bin"
+        / ("openapi-typescript.cmd" if os.name == "nt" else "openapi-typescript")
     )
     if not binary.is_file():
         raise ValueError(
