@@ -1,6 +1,8 @@
 # ruff: noqa: E402
 """Independent Inventory API, stock correctness, idempotency and negative IDOR tests."""
 
+import warnings
+
 import pytest
 from django.conf import settings
 
@@ -8,6 +10,7 @@ if settings.INVENTORY_MODE != "standalone":
     pytest.skip("Personal Inventory schema not selected", allow_module_level=True)
 
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.core.paginator import UnorderedObjectListWarning
 from django.urls import reverse
 from rest_framework.exceptions import NotFound
 from rest_framework.test import APIClient
@@ -174,3 +177,31 @@ def test_owner_must_match_foreign_keys_for_direct_model_writes(stock):
             item=stock["item"],
         )
     assert not StockBalance.objects.exists()
+
+
+def test_standalone_balances_and_reservations_are_stably_paginated(stock):
+    for suffix, warehouse in (("a", stock["source"]), ("b", stock["target"])):
+        received = command(
+            stock, "receive", key=f"pagination-receive-{suffix}", quantity=5, source=warehouse
+        )
+        assert received.status_code == 200, received.data
+        reserved = command(
+            stock, "reserve", key=f"pagination-reserve-{suffix}", quantity=1, source=warehouse
+        )
+        assert reserved.status_code == 200, reserved.data
+
+    for endpoint, model in (
+        ("inventory-balances-list", StockBalance),
+        ("inventory-reservations-list", StockReservation),
+    ):
+        expected_ids = list(model.objects.order_by("pk").values_list("pk", flat=True))
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", UnorderedObjectListWarning)
+            pages = [
+                stock["api"].get(reverse(endpoint), {"page_size": 1, "page": page})
+                for page in (1, 2)
+            ]
+        assert all(response.status_code == 200 for response in pages)
+        assert [str(page.data["results"][0]["id"]) for page in pages] == [
+            str(identifier) for identifier in expected_ids
+        ]
