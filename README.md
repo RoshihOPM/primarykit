@@ -64,6 +64,8 @@ For exact requirements, routes and compatibility constraints: [English module ca
 
 ## CLI workflows
 
+PrimaryKit also provides an offline CLI copied with every generated project: `python -m apps.core.cli`. It wraps existing commands for `new` (source-only), `modules list`, `add`, `doctor`, read-only `upgrade` and `sdk typescript`. The SDK produces a typed `openapi-fetch` client from **that project's own OpenAPI schema**, without requiring a source checkout or Node dependencies on the Django server. See the [CLI and TypeScript SDK guide](docs/en/cli-typescript-sdk.md).
+
 Generate a minimal backend:
 
 ```bash
