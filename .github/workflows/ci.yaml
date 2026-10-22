@@ -41,6 +41,23 @@ jobs:
         run: uv run python manage.py check --settings=config.settings.test
       - name: Tests
         run: uv run pytest
+      # Measurement first: SQLite coverage is a guardrail, not PostgreSQL race coverage.
+      # The full PostgreSQL suite, including concurrency tests, runs below.
+      - name: Commerce coverage floor (orders, sales, payments)
+        run: |
+          uv run --with 'pytest-cov==7.1.0' pytest -q \
+            apps/orders/tests apps/sales/tests apps/payments/tests \
+            --cov=apps.orders --cov=apps.sales --cov=apps.payments \
+            --cov-report=term-missing:skip-covered \
+            --cov-report=xml:coverage-commerce.xml \
+            --cov-fail-under=40
+      - name: Audit locked production dependencies (PyPI advisories)
+        run: |
+          uv export --locked --no-dev --no-emit-project --no-hashes \
+            --format requirements.txt --output-file /tmp/primarykit-locked-requirements.txt
+          uvx --from 'pip-audit==2.10.1' pip-audit \
+            --no-deps --disable-pip \
+            --requirement /tmp/primarykit-locked-requirements.txt
       - name: Moderated listing photos (optional Pillow)
         run: uv run --with 'Pillow>=11,<13' pytest -q apps/listings/tests/test_media.py
       # PRIMARYKIT-GENERATOR-SMOKE-START
