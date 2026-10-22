@@ -294,6 +294,10 @@ def create_project(
             "about the selected modules and safe implementation boundaries.\n"
             "Run `python -m apps.core.doctor --strict` to validate copied modules "
             "without Django startup, database access, or the source kit.\n"
+            "Portable CLI: `python -m apps.core.cli --help` (new is source-only).\n"
+            "Generate a typed Vue/React client from this project with `python -m "
+            "apps.core.cli sdk typescript --frontend ../frontend --out src/api`; "
+            "install openapi-fetch/openapi-typescript in the frontend first.\n"
             "Configure SMTP, object storage, secrets and reverse proxy before production.\n"
             + (
                 "SeaweedFS: docker compose -f compose.yaml -f compose.seaweedfs.yaml up -d --build\n"
