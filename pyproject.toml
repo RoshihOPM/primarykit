@@ -43,3 +43,7 @@ ignore = ["E501"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["apps", "config"]
+
+[tool.coverage.run]
+# Source-only measurement: including the test suite inflates the percentage.
+omit = ["*/tests/*", "*/migrations/*"]

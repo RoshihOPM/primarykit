@@ -124,7 +124,7 @@ uv run python manage.py check --settings=config.settings.test
 uv run pytest
 ```
 
-CI additionally exercises detached generated clients, PostgreSQL, Docker and optional services. It enforces an initial 40% aggregate coverage floor for Orders/Sales/Payments and audits locked production dependencies; optional infrastructure dependencies need separate review. See [agent development rules](AGENTS.md), [project roadmap](docs/module-roadmap.md) and [contributing](CONTRIBUTING.md).
+CI additionally exercises detached generated clients, PostgreSQL, Docker and optional services. It enforces an initial 75% source-only aggregate coverage floor for Orders/Sales/Payments and audits locked production dependencies; optional infrastructure dependencies need separate review. See [agent development rules](AGENTS.md), [project roadmap](docs/module-roadmap.md) and [contributing](CONTRIBUTING.md).
 
 **Stack:** Python 3.13 · Django 6.1 · DRF · PostgreSQL 17 · uv · Docker Compose · pytest · Ruff.
 

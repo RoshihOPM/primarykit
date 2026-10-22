@@ -168,7 +168,7 @@ uv run python manage.py check --settings=config.settings.test
 uv run pytest
 ```
 
-CI дополнительно проверяет генератор и разные составы модулей, Docker, PostgreSQL и SeaweedFS, измеряет coverage денежной логики с начальным порогом 40% и проверяет зафиксированные production-зависимости на известные уязвимости. Необязательные зависимости сервисов проверяются отдельно.
+CI дополнительно проверяет генератор и разные составы модулей, Docker, PostgreSQL и SeaweedFS, измеряет coverage денежной логики с начальным порогом 75% и проверяет зафиксированные production-зависимости на известные уязвимости. Необязательные зависимости сервисов проверяются отдельно.
 
 Python 3.13 · Django 6.1 · DRF · PostgreSQL 17 · uv · Docker Compose · pytest · Ruff.
 
