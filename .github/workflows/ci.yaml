@@ -70,8 +70,23 @@ jobs:
           uvx --from 'pip-audit==2.10.1' pip-audit \
             --no-deps --disable-pip \
             --requirement /tmp/primarykit-locked-requirements.txt
-      - name: Moderated listing photos (optional Pillow)
-        run: uv run --with 'Pillow>=11,<13' pytest -q apps/listings/tests/test_media.py
+      - name: Moderated listing photos and focused branch coverage (Pillow)
+        run: |
+          uv run --with 'Pillow>=11,<13' --with 'pytest-cov==7.1.0' pytest -q \
+            apps/listings/tests/test_media.py \
+            --cov=apps.listings.media \
+            --cov=apps.listings.media_views \
+            --cov=apps.listings.management.commands.purge_listing_media \
+            --cov-branch --cov-report=term-missing:skip-covered \
+            --cov-report=xml:coverage-listing-media.xml
+      - name: Upload isolated listing media coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: django-listing-media-coverage
+          path: coverage-listing-media.xml
+          if-no-files-found: ignore
+          retention-days: 14
       # PRIMARYKIT-GENERATOR-SMOKE-START
       - name: Source-specific comparator and smoke configuration tests
         run: |
@@ -105,7 +120,14 @@ jobs:
             --cov-report=term-missing:skip-covered \
             --cov-report=xml:/tmp/coverage-postgres.xml
           docker compose exec -T api cat /tmp/coverage-postgres.xml > coverage-postgres.xml
-          docker compose exec -T api uv run --with 'Pillow>=11,<13' pytest -q apps/listings/tests/test_media.py --ds=config.settings.postgres_test
+          docker compose exec -T api uv run --with 'Pillow>=11,<13' --with 'pytest-cov==7.1.0' pytest -q \
+            apps/listings/tests/test_media.py --ds=config.settings.postgres_test \
+            --cov=apps.listings.media \
+            --cov=apps.listings.media_views \
+            --cov=apps.listings.management.commands.purge_listing_media \
+            --cov-branch --cov-report=term-missing:skip-covered \
+            --cov-report=xml:/tmp/coverage-listing-media-postgres.xml
+          docker compose exec -T api cat /tmp/coverage-listing-media-postgres.xml > coverage-listing-media-postgres.xml
           curl --fail --retry 12 --retry-connrefused --retry-delay 2 http://127.0.0.1:8000/health/ready/
       - name: Upload PostgreSQL Django coverage
         if: always()
@@ -113,6 +135,14 @@ jobs:
         with:
           name: django-postgres-coverage
           path: coverage-postgres.xml
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Upload PostgreSQL listing media coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: django-listing-media-postgres-coverage
+          path: coverage-listing-media-postgres.xml
           if-no-files-found: ignore
           retention-days: 14
       # PRIMARYKIT-MIGRATION-LINT-START
