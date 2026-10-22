@@ -106,7 +106,7 @@ class BalanceViewSet(
         return StockBalance.objects.filter(
             organization=organization,
             warehouse__in=self.get_accessible_warehouses(),
-        ).select_related("warehouse", "item")
+        ).select_related("warehouse", "item").order_by("pk")
 
 
 class ReservationViewSet(
@@ -124,7 +124,7 @@ class ReservationViewSet(
         return StockReservation.objects.filter(
             balance__organization=membership.organization,
             balance__warehouse__in=self.get_accessible_warehouses(),
-        ).select_related("balance")
+        ).select_related("balance").order_by("pk")
 
 
 class OperationViewSet(
