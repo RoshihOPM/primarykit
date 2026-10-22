@@ -39,8 +39,20 @@ jobs:
         run: uv run python manage.py makemigrations $(uv run python -m apps.core.migration_plan) --noinput --settings=config.settings.test
       - name: Django checks
         run: uv run python manage.py check --settings=config.settings.test
-      - name: Tests
-        run: uv run pytest
+      - name: Full Django source coverage (SQLite)
+        run: |
+          uv run --with 'pytest-cov==7.1.0' pytest -q \
+            --cov=apps --cov-branch \
+            --cov-report=term-missing:skip-covered \
+            --cov-report=xml:coverage-all.xml
+      - name: Upload Django source coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: django-source-coverage
+          path: coverage-all.xml
+          if-no-files-found: ignore
+          retention-days: 14
       # Source-only SQLite coverage is a guardrail, not PostgreSQL race coverage.
       # The full PostgreSQL suite, including concurrency tests, runs below.
       - name: Commerce coverage floor (orders, sales, payments)
@@ -88,9 +100,21 @@ jobs:
           docker compose exec -T api python manage.py makemigrations $(uv run python -m apps.core.migration_plan) --noinput
           docker compose exec -T api python manage.py migrate --noinput
           docker compose exec -T api python manage.py check
-          docker compose exec -T api uv run pytest --ds=config.settings.postgres_test
+          docker compose exec -T api uv run --with 'pytest-cov==7.1.0' pytest -q \
+            --ds=config.settings.postgres_test --cov=apps --cov-branch \
+            --cov-report=term-missing:skip-covered \
+            --cov-report=xml:/tmp/coverage-postgres.xml
+          docker compose exec -T api cat /tmp/coverage-postgres.xml > coverage-postgres.xml
           docker compose exec -T api uv run --with 'Pillow>=11,<13' pytest -q apps/listings/tests/test_media.py --ds=config.settings.postgres_test
           curl --fail --retry 12 --retry-connrefused --retry-delay 2 http://127.0.0.1:8000/health/ready/
+      - name: Upload PostgreSQL Django coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: django-postgres-coverage
+          path: coverage-postgres.xml
+          if-no-files-found: ignore
+          retention-days: 14
       # PRIMARYKIT-MIGRATION-LINT-START
       - name: Squawk PostgreSQL migration SQL lint
         run: uv run python scripts/lint_migration_sql.py
