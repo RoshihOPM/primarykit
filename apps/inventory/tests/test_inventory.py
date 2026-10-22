@@ -1,7 +1,10 @@
 # ruff: noqa: E402
+import warnings
+
 import pytest
 from django.conf import settings
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.core.paginator import UnorderedObjectListWarning
 from django.urls import reverse as django_reverse
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -267,3 +270,31 @@ def test_warehouse_and_ledger_cannot_be_mutated_by_api(stock):
         ).status_code
         == 405
     )
+
+
+def test_inventory_balances_and_reservations_are_stably_paginated(stock):
+    for suffix, warehouse in (("a", stock["source"]), ("b", stock["destination"])):
+        received = command(
+            stock, "receive", key=f"pagination-receive-{suffix}", quantity=5, warehouse=warehouse
+        )
+        assert received.status_code == 200, received.data
+        reserved = command(
+            stock, "reserve", key=f"pagination-reserve-{suffix}", quantity=1, warehouse=warehouse
+        )
+        assert reserved.status_code == 200, reserved.data
+
+    for endpoint, model in (
+        ("inventory-balances-list", StockBalance),
+        ("inventory-reservations-list", StockReservation),
+    ):
+        expected_ids = list(model.objects.order_by("pk").values_list("pk", flat=True))
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", UnorderedObjectListWarning)
+            pages = [
+                stock["api"].get(reverse(endpoint), {"page_size": 1, "page": page})
+                for page in (1, 2)
+            ]
+        assert all(response.status_code == 200 for response in pages)
+        assert [str(page.data["results"][0]["id"]) for page in pages] == [
+            str(identifier) for identifier in expected_ids
+        ]

@@ -103,10 +103,14 @@ class BalanceViewSet(
 
     def get_queryset(self):
         organization = self.get_scope()[0]
-        return StockBalance.objects.filter(
-            organization=organization,
-            warehouse__in=self.get_accessible_warehouses(),
-        ).select_related("warehouse", "item")
+        return (
+            StockBalance.objects.filter(
+                organization=organization,
+                warehouse__in=self.get_accessible_warehouses(),
+            )
+            .select_related("warehouse", "item")
+            .order_by("pk")
+        )
 
 
 class ReservationViewSet(
@@ -121,10 +125,14 @@ class ReservationViewSet(
         _, membership = self.get_scope()
         if membership.role not in WRITERS:
             raise PermissionDenied("Only inventory staff may read reservations.")
-        return StockReservation.objects.filter(
-            balance__organization=membership.organization,
-            balance__warehouse__in=self.get_accessible_warehouses(),
-        ).select_related("balance")
+        return (
+            StockReservation.objects.filter(
+                balance__organization=membership.organization,
+                balance__warehouse__in=self.get_accessible_warehouses(),
+            )
+            .select_related("balance")
+            .order_by("pk")
+        )
 
 
 class OperationViewSet(

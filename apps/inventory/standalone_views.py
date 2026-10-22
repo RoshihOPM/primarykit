@@ -69,8 +69,10 @@ class BalanceViewSet(
     serializer_class = BalanceSerializer
 
     def get_queryset(self):
-        return StockBalance.objects.filter(owner=self.request.user).select_related(
-            "warehouse", "item"
+        return (
+            StockBalance.objects.filter(owner=self.request.user)
+            .select_related("warehouse", "item")
+            .order_by("pk")
         )
 
 
@@ -83,8 +85,10 @@ class ReservationViewSet(
     serializer_class = ReservationSerializer
 
     def get_queryset(self):
-        return StockReservation.objects.filter(balance__owner=self.request.user).select_related(
-            "balance"
+        return (
+            StockReservation.objects.filter(balance__owner=self.request.user)
+            .select_related("balance")
+            .order_by("pk")
         )
 
 
