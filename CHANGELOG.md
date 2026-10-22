@@ -5,7 +5,7 @@ All notable PrimaryKit source changes are described here. Generated clients have
 ## [Unreleased]
 
 ### Added
-- Initial measured 40% aggregate commerce-test coverage gate (Orders, Sales, Payments), locked production dependency audit and focused Ruff security checks.
+- Initial measured 75% aggregate commerce-test coverage gate (Orders, Sales, Payments), locked production dependency audit and focused Ruff security checks.
 - Updated RU/EN project status and maintainer runbook with verified `main` ruleset and CI runs (2026-10-22); historical rights review remains open.
 - MIT license, bilingual security, contribution and conduct policies.
 - GitHub issue/PR templates, CODEOWNERS and weekly Dependabot configuration.

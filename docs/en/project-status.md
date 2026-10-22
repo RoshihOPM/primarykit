@@ -13,7 +13,7 @@ A standalone backend generator, module registry and presets, offline `doctor`, m
 - [Core CI succeeded](https://github.com/RoshihOPM/primarykit/actions/runs/39726369491) on `df8282a` (2026-10-22), with actual GitHub-hosted jobs and the PostgreSQL matrix. Runner admission is restored ([#99](https://github.com/RoshihOPM/primarykit/issues/99)).
 - [Full History Secrets Audit succeeded](https://github.com/RoshihOPM/primarykit/actions/runs/39726369481) on the same commit. An automated scan of fetched refs does **not** attest to unreachable Git objects, copyright ownership or a full manual security review.
 - [main ruleset](https://github.com/RoshihOPM/primarykit/rules/25549376) is **Active**, targeting `refs/heads/main`: PRs (squash only), resolved conversations, strict `test` and `scan-history` status checks, no force pushes/deletion or bypass actors. [#67](https://github.com/RoshihOPM/primarykit/issues/67) is closed.
-- Quality gates being strengthened with an initial 40% combined coverage floor for Orders/Sales/Payments, pinned-production-dependency auditing, and selected high-signal Ruff S rules.
+- Quality gates being strengthened with an initial 75% combined coverage floor for Orders/Sales/Payments, pinned-production-dependency auditing, and selected high-signal Ruff S rules.
 
 ## Still outstanding
 
