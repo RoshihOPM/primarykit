@@ -54,11 +54,18 @@ def test_cli_add_and_upgrade_use_trusted_source_and_no_shell(tmp_path, monkeypat
         return SimpleNamespace(returncode=0)
 
     monkeypatch.setattr(cli.subprocess, "run", run)
-    assert cli.main(["add", "listings", "--project", str(project), "--source", str(source), "--dry-run"]) == 0
+    assert (
+        cli.main(
+            ["add", "listings", "--project", str(project), "--source", str(source), "--dry-run"]
+        )
+        == 0
+    )
     assert calls[0][0][1:4] == ["manage.py", "install_kit_module", "listings"]
     assert calls[0][0][-1] == "--dry-run"
     assert calls[0][1] == {"cwd": project, "check": False}
-    assert cli.main(["upgrade", "--project", str(project), "--source", str(source), "--dry-run"]) == 0
+    assert (
+        cli.main(["upgrade", "--project", str(project), "--source", str(source), "--dry-run"]) == 0
+    )
     assert calls[1][0][1] == str(source / "scripts" / "module_upgrade.py")
     assert "--apply-safe" not in calls[1][0]
     assert "--apply-three-way" not in calls[1][0]
@@ -72,9 +79,12 @@ def test_cli_rejects_self_module_copy(tmp_path):
 
 def test_typescript_sdk_dry_run_is_offline_and_read_only(tmp_path, capsys):
     project, frontend = _workspace(tmp_path)
-    assert typescript_sdk.generate_typescript_sdk(
-        project=project, frontend=frontend, output=Path("src/api"), dry_run=True
-    ) == 0
+    assert (
+        typescript_sdk.generate_typescript_sdk(
+            project=project, frontend=frontend, output=Path("src/api"), dry_run=True
+        )
+        == 0
+    )
     assert json.loads(capsys.readouterr().out)["schema_source"] == "manage.py spectacular"
     assert not (frontend / "src").exists()
 
@@ -126,9 +136,12 @@ def test_typescript_sdk_stages_then_publishes(tmp_path, monkeypatch):
         return SimpleNamespace(returncode=0)
 
     monkeypatch.setattr(typescript_sdk.subprocess, "run", run)
-    assert typescript_sdk.generate_typescript_sdk(
-        project=project, frontend=frontend, output=Path("src/api")
-    ) == 0
+    assert (
+        typescript_sdk.generate_typescript_sdk(
+            project=project, frontend=frontend, output=Path("src/api")
+        )
+        == 0
+    )
     output = frontend / "src" / "api"
     assert (output / "schema.d.ts").read_text() == "export interface paths {}\n"
     assert "createPrimaryKitClient" in (output / "client.ts").read_text()
