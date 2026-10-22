@@ -4,6 +4,7 @@ import asyncio
 import json
 
 import pytest
+from asgiref.sync import ThreadSensitiveContext
 from django.apps import apps as django_apps
 from django.test import override_settings
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -27,11 +28,14 @@ async def connection(path, frames, *, query=b"", origin=None):
         sent.append(payload)
 
     headers = [(b"origin", origin.encode())] if origin else []
-    await websocket_application(
-        {"type": "websocket", "path": path, "query_string": query, "headers": headers},
-        receive,
-        send,
-    )
+    # Release sync_to_async's thread-sensitive executor after every test WebSocket.
+    # Otherwise its thread can keep the test PostgreSQL database open at teardown.
+    async with ThreadSensitiveContext():
+        await websocket_application(
+            {"type": "websocket", "path": path, "query_string": query, "headers": headers},
+            receive,
+            send,
+        )
     return sent
 
 
