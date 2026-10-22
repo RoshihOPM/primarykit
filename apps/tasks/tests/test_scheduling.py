@@ -5,7 +5,7 @@ from threading import Barrier, Thread
 
 import pytest
 from django.core.management import call_command
-from django.db import close_old_connections, connection, transaction
+from django.db import close_old_connections, connection, connections, transaction
 from django.test import override_settings
 
 from apps.tasks.models import BackgroundJob, JobSchedule
@@ -250,7 +250,7 @@ def test_two_postgresql_schedulers_do_not_duplicate_firing():
         except Exception as exc:
             errors.append(exc)
         finally:
-            close_old_connections()
+            connections.close_all()
 
     workers = [Thread(target=runner) for _ in range(2)]
     for worker in workers:
@@ -280,7 +280,7 @@ def test_postgresql_leader_lock_is_nonblocking():
         except Exception as exc:
             errors.append(exc)
         finally:
-            close_old_connections()
+            connections.close_all()
 
     with transaction.atomic():
         with connection.cursor() as cursor:
