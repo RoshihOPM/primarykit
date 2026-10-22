@@ -6,7 +6,7 @@ from threading import Barrier
 
 import pytest
 from django.conf import settings
-from django.db import close_old_connections, connection
+from django.db import close_old_connections, connection, connections
 from rest_framework.exceptions import ValidationError
 
 if settings.INVENTORY_MODE != "tenant":
@@ -62,7 +62,7 @@ def test_two_writers_cannot_overdraw_the_same_stock():
         except ValidationError:
             return "rejected"
         finally:
-            close_old_connections()
+            connections.close_all()
 
     with ThreadPoolExecutor(max_workers=2) as pool:
         results = list(pool.map(worker, (1, 2)))
