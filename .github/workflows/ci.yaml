@@ -41,7 +41,7 @@ jobs:
         run: uv run python manage.py check --settings=config.settings.test
       - name: Tests
         run: uv run pytest
-      # Measurement first: SQLite coverage is a guardrail, not PostgreSQL race coverage.
+      # Source-only SQLite coverage is a guardrail, not PostgreSQL race coverage.
       # The full PostgreSQL suite, including concurrency tests, runs below.
       - name: Commerce coverage floor (orders, sales, payments)
         run: |
@@ -50,7 +50,7 @@ jobs:
             --cov=apps.orders --cov=apps.sales --cov=apps.payments \
             --cov-report=term-missing:skip-covered \
             --cov-report=xml:coverage-commerce.xml \
-            --cov-fail-under=40
+            --cov-fail-under=75
       - name: Audit locked production dependencies (PyPI advisories)
         run: |
           uv export --locked --no-dev --no-emit-project --no-hashes \
