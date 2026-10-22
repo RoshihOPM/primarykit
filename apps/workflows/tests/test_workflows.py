@@ -5,7 +5,7 @@ from dataclasses import FrozenInstanceError
 from threading import Barrier
 
 import pytest
-from django.db import close_old_connections, connection, models
+from django.db import close_old_connections, connection, connections, models
 from django.test.utils import isolate_apps
 
 from apps.workflows.domain import (
@@ -291,7 +291,7 @@ def test_postgresql_concurrent_double_transition(aggregate_model, definition):
             except StaleTransition:
                 return "stale"
         finally:
-            close_old_connections()
+            connections.close_all()
 
     with ThreadPoolExecutor(max_workers=2) as pool:
         futures = [pool.submit(worker) for _ in range(2)]

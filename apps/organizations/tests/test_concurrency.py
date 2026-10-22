@@ -4,7 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
 
 import pytest
-from django.db import close_old_connections, connection
+from django.db import close_old_connections, connection, connections
 from rest_framework.exceptions import ValidationError
 
 from apps.organizations.models import Membership, Organization
@@ -45,7 +45,7 @@ def test_concurrent_owner_demotions_cannot_leave_company_ownerless():
         except ValidationError:
             return "rejected"
         finally:
-            close_old_connections()
+            connections.close_all()
 
     with ThreadPoolExecutor(max_workers=2) as pool:
         futures = [

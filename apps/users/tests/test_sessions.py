@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 from django.core.management import call_command
-from django.db import connection
+from django.db import close_old_connections, connection, connections
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework.test import APIClient
@@ -257,7 +257,12 @@ def test_parallel_refresh_has_one_winner(client):
     tokens = login(client, member)
 
     def refresh():
-        return APIClient().post(reverse("auth-refresh"), {"refresh": tokens["refresh"]}).status_code
+        close_old_connections()
+        try:
+            response = APIClient().post(reverse("auth-refresh"), {"refresh": tokens["refresh"]})
+            return response.status_code
+        finally:
+            connections.close_all()
 
     with ThreadPoolExecutor(max_workers=2) as pool:
         results = list(pool.map(lambda _: refresh(), range(2)))
@@ -272,11 +277,19 @@ def test_revoke_all_wins_against_inflight_refresh(client):
     tokens = login(client, member)
 
     def refresh():
-        response = APIClient().post(reverse("auth-refresh"), {"refresh": tokens["refresh"]})
-        return response.data.get("refresh") if response.status_code == 200 else None
+        close_old_connections()
+        try:
+            response = APIClient().post(reverse("auth-refresh"), {"refresh": tokens["refresh"]})
+            return response.data.get("refresh") if response.status_code == 200 else None
+        finally:
+            connections.close_all()
 
     def revoke():
-        return api(tokens["access"]).post(reverse("users-sessions-revoke-all")).status_code
+        close_old_connections()
+        try:
+            return api(tokens["access"]).post(reverse("users-sessions-revoke-all")).status_code
+        finally:
+            connections.close_all()
 
     with ThreadPoolExecutor(max_workers=2) as pool:
         future_refresh = pool.submit(refresh)

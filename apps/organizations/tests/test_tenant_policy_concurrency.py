@@ -4,7 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 from threading import Event
 
 import pytest
-from django.db import close_old_connections, connection, transaction
+from django.db import close_old_connections, connection, connections, transaction
 from rest_framework.exceptions import NotFound, PermissionDenied
 
 from apps.organizations.models import Branch, BranchAccess, Membership, Organization
@@ -43,7 +43,7 @@ def test_owner_demotion_commits_before_locked_writer_authorization():
                 changed.set()
                 assert release.wait(timeout=10)
         finally:
-            close_old_connections()
+            connections.close_all()
 
     def attempt_write():
         close_old_connections()
@@ -57,7 +57,7 @@ def test_owner_demotion_commits_before_locked_writer_authorization():
                 return "denied"
             return "allowed"
         finally:
-            close_old_connections()
+            connections.close_all()
 
     with ThreadPoolExecutor(max_workers=2) as pool:
         change = pool.submit(downgrade)
@@ -101,7 +101,7 @@ def test_branch_revocation_commits_before_locked_branch_authorization():
                 changed.set()
                 assert release.wait(timeout=10)
         finally:
-            close_old_connections()
+            connections.close_all()
 
     def attempt_branch_command():
         close_old_connections()
@@ -116,7 +116,7 @@ def test_branch_revocation_commits_before_locked_branch_authorization():
                 return "denied"
             return "allowed"
         finally:
-            close_old_connections()
+            connections.close_all()
 
     with ThreadPoolExecutor(max_workers=2) as pool:
         change = pool.submit(revoke)
