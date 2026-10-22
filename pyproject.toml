@@ -38,7 +38,7 @@ target-version = "py313"
 extend-exclude = ["*/migrations/*"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "B", "UP"]
+select = ["E", "F", "I", "B", "UP", "S301", "S307", "S324", "S501", "S506"]
 ignore = ["E501"]
 
 [tool.ruff.lint.isort]

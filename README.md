@@ -8,7 +8,7 @@
 
 > **Status:** source version `0.1.0`, actively developed and publicly accessible. This repository is not a SaaS, a hosted backend, a microservices framework, or a shared runtime library. Modules are reusable starting points, not certified production-ready business solutions.
 >
-> **Public repository security status (2026-10-21):** Full-history/IP audit and confirmation of active `main` protection remain open. See [project status](docs/en/project-status.md) and the [post-publication audit checklist](docs/pre-public-audit.md).
+> **Public repository security status (2026-10-22):** `main` has an active, non-bypassable PR ruleset requiring `test` and `scan-history`; both checks passed on `df8282a`. The full manual history/IP rights review is **not signed off** ([#68](https://github.com/RoshihOPM/primarykit/issues/68)). See [project status](docs/en/project-status.md).
 
 ## Why PrimaryKit?
 
@@ -122,7 +122,7 @@ uv run python manage.py check --settings=config.settings.test
 uv run pytest
 ```
 
-CI additionally exercises detached generated clients, PostgreSQL, Docker and optional services. See [agent development rules](AGENTS.md), [project roadmap](docs/module-roadmap.md) and [contributing](CONTRIBUTING.md).
+CI additionally exercises detached generated clients, PostgreSQL, Docker and optional services. It enforces an initial 40% aggregate coverage floor for Orders/Sales/Payments and audits locked production dependencies; optional infrastructure dependencies need separate review. See [agent development rules](AGENTS.md), [project roadmap](docs/module-roadmap.md) and [contributing](CONTRIBUTING.md).
 
 **Stack:** Python 3.13 · Django 6.1 · DRF · PostgreSQL 17 · uv · Docker Compose · pytest · Ruff.
 
