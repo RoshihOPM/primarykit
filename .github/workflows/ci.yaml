@@ -77,7 +77,8 @@ jobs:
             --cov=apps.listings.media \
             --cov=apps.listings.media_views \
             --cov=apps.listings.management.commands.purge_listing_media \
-            --cov-branch --cov-report=term-missing:skip-covered \
+            --cov-branch --cov-fail-under=85 \
+            --cov-report=term-missing:skip-covered \
             --cov-report=xml:coverage-listing-media.xml
       - name: Upload isolated listing media coverage
         if: always()
@@ -125,7 +126,8 @@ jobs:
             --cov=apps.listings.media \
             --cov=apps.listings.media_views \
             --cov=apps.listings.management.commands.purge_listing_media \
-            --cov-branch --cov-report=term-missing:skip-covered \
+            --cov-branch --cov-fail-under=85 \
+            --cov-report=term-missing:skip-covered \
             --cov-report=xml:/tmp/coverage-listing-media-postgres.xml
           docker compose exec -T api cat /tmp/coverage-listing-media-postgres.xml > coverage-listing-media-postgres.xml
           curl --fail --retry 12 --retry-connrefused --retry-delay 2 http://127.0.0.1:8000/health/ready/
