@@ -77,6 +77,45 @@ def run_case(case: str) -> None:
             "--noinput",
             "--settings=config.settings.postgres_test",
         )
+        # Versioned Tasks 0001 must retain real rows across repeated migrations.
+        # This is a stateful idempotency smoke, NOT an historical upgrade claim.
+        if (target / "apps" / "tasks" / "models.py").exists():
+            run(
+                "uv",
+                "run",
+                "python",
+                "manage.py",
+                "shell",
+                "--settings=config.settings.postgres_test",
+                "-c",
+                "from apps.tasks.models import BackgroundJob; "
+                "BackgroundJob.objects.create("
+                "namespace='primarykit-upgrade-smoke', code='preserve.row', "
+                "payload={'probe': True}, max_attempts=1)",
+            )
+            run(
+                "uv",
+                "run",
+                "python",
+                "manage.py",
+                "migrate",
+                "--noinput",
+                "--settings=config.settings.postgres_test",
+            )
+            run(
+                "uv",
+                "run",
+                "python",
+                "manage.py",
+                "shell",
+                "--settings=config.settings.postgres_test",
+                "-c",
+                "from apps.tasks.models import BackgroundJob; "
+                "assert BackgroundJob.objects.filter("
+                "namespace='primarykit-upgrade-smoke', code='preserve.row', "
+                "payload={'probe': True}).count() == 1",
+            )
+
         run(
             "uv",
             "run",
