@@ -13,7 +13,7 @@
 - [Core CI, успешен](https://github.com/RoshihOPM/primarykit/actions/runs/39726369491) на `df8282a`, 22.10.2026: реальные GitHub-hosted jobs исполняются, включая PostgreSQL matrix. Ранее заблокированный CI ([#99](https://github.com/RoshihOPM/primarykit/issues/99)) восстановлен.
 - [Full History Secrets Audit, успешен](https://github.com/RoshihOPM/primarykit/actions/runs/39726369481) на том же коммите. Gitleaks на доступных fetched refs **не равен** ручному аудиту всех объектов Git и авторских прав.
 - [Ruleset main](https://github.com/RoshihOPM/primarykit/rules/25549376) **Active**, target `refs/heads/main`: обязательный PR (squash), разрешение обсуждений, строгие обязательные проверки `test` и `scan-history`, запрет удаления и force push, bypass отсутствует. [#67](https://github.com/RoshihOPM/primarykit/issues/67) закрыт.
-- Дополняем quality gates: измерение покрытия Orders/Sales/Payments (начальный минимум 40%, не показатель полного покрытия), аудит production-зависимостей по `uv.lock` и высокосигнальные правила Ruff S.
+- Дополняем quality gates: измерение покрытия Orders/Sales/Payments (начальный минимум 75%, не показатель полного покрытия), аудит production-зависимостей по `uv.lock` и высокосигнальные правила Ruff S.
 
 ## Незакрытые ограничения
 
