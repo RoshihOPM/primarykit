@@ -170,6 +170,22 @@ def run_case(case: str) -> None:
                 "status='pending', idempotency_key='migration-commerce-payment').count() == 1",
             )
 
+        # Read-only migration ledger verification in the generated PostgreSQL client.
+        # Detect missing, unexpected, partial or orphaned bundled revisions without
+        # calling Django migrations or modifying any client schema.
+        run(
+            "uv",
+            "run",
+            "python",
+            str(ROOT / "scripts" / "migration_adoption.py"),
+            "--source",
+            str(ROOT),
+            "--project",
+            str(target),
+            "--verify-postgres",
+            "--strict",
+        )
+
         run(
             "uv",
             "run",

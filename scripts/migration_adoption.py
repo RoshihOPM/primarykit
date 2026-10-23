@@ -9,6 +9,7 @@ import argparse
 import ast
 import hashlib
 import json
+import os
 from pathlib import Path
 
 
@@ -67,7 +68,71 @@ def _policy(source: Path) -> str:
     return ast.literal_eval(value) if value is not None else "none"
 
 
-def adoption_plan(*, source: Path, project: Path) -> dict:
+def _read_postgres_migrations() -> set[tuple[str, str]]:
+    """Read only Django's migration ledger from an explicitly selected PostgreSQL DB.
+
+    The URL is supplied by DATABASE_URL, never printed, and session-level
+    default_transaction_read_only prevents any accidental write in this session.
+    No Django setup, migration runner or client imports are used.
+    """
+    database_url = os.environ.get("DATABASE_URL", "")
+    if not database_url.startswith(("postgresql://", "postgres://")):
+        raise ValueError("Set an explicit PostgreSQL DATABASE_URL for --verify-postgres")
+
+    import psycopg
+
+    try:
+        with psycopg.connect(
+            database_url,
+            connect_timeout=5,
+            options="-c default_transaction_read_only=on -c statement_timeout=5000",
+        ) as connection:
+            with connection.cursor() as cursor:
+                cursor.execute("SHOW transaction_read_only")
+                if cursor.fetchone()[0] != "on":
+                    raise ValueError(
+                        "Refusing migration inspection without a read-only transaction"
+                    )
+                cursor.execute("SELECT app, name FROM django_migrations")
+                return {(str(app), str(name)) for app, name in cursor.fetchall()}
+    except psycopg.Error:
+        # Driver exceptions may embed credentials/host details; never print them.
+        raise ValueError(
+            "Cannot read django_migrations from the selected PostgreSQL database"
+        ) from None
+
+
+def _applied_status(
+    *, module: str, client_history: dict[str, str] | None, applied: set[tuple[str, str]]
+) -> dict:
+    """Compare DB ledger entries to client files; do not infer physical schema safety."""
+    recorded = {name for app, name in applied if app == module}
+    expected = {Path(filename).stem for filename in client_history or {}}
+    if client_history is None:
+        state = "not_installed" if not recorded else "orphaned_database_revisions"
+    elif not recorded:
+        state = "not_applied"
+    elif recorded - expected:
+        state = "unexpected_database_revisions"
+    elif expected - recorded:
+        state = "partially_applied"
+    else:
+        state = "all_recorded"
+    return {
+        "applied_status": state,
+        "applied_revisions": sorted(recorded),
+        "missing_revisions": sorted(expected - recorded),
+        "unexpected_revisions": sorted(recorded - expected),
+        "database_review_required": state not in {"not_installed", "all_recorded"},
+    }
+
+
+def adoption_plan(
+    *,
+    source: Path,
+    project: Path,
+    applied_migrations: set[tuple[str, str]] | None = None,
+) -> dict:
     source, project = source.resolve(), project.resolve()
     if source == project:
         raise ValueError("Source and client must differ")
@@ -84,33 +149,42 @@ def adoption_plan(*, source: Path, project: Path) -> dict:
         if not source_history:
             raise ValueError(f"Bundled module {folder.name} has no migration history")
         client_folder = client_apps / folder.name
-        if not client_folder.is_dir():
+        client_history = _history(client_folder / "migrations") if client_folder.is_dir() else None
+        if client_history is None:
             status = "not_installed"
+        elif source_history == client_history:
+            status = "same_file_history"
         else:
-            client_history = _history(client_folder / "migrations")
-            if source_history == client_history:
-                status = "same_file_history"
-            else:
-                status = "manual_adoption_required"
-        items.append(
-            {
-                "module": folder.name,
-                "status": status,
-                "source_revisions": sorted(source_history),
-                "client_revisions": (
-                    sorted(_history(client_folder / "migrations")) if client_folder.is_dir() else []
-                ),
-            }
-        )
+            status = "manual_adoption_required"
+        item = {
+            "module": folder.name,
+            "status": status,
+            "source_revisions": sorted(source_history),
+            "client_revisions": sorted(client_history or {}),
+        }
+        if applied_migrations is not None:
+            item.update(
+                _applied_status(
+                    module=folder.name,
+                    client_history=client_history,
+                    applied=applied_migrations,
+                )
+            )
+        items.append(item)
     return {
         "modules": items,
         "requires_manual_review": any(
-            item["status"] == "manual_adoption_required" for item in items
+            item["status"] == "manual_adoption_required"
+            or item.get("database_review_required", False)
+            for item in items
         ),
+        "postgresql_checked": applied_migrations is not None,
         "limitations": (
             "File identities only. Validate applied django_migrations rows, "
             "real database schema, historical dependencies and data before adoption. "
-            "Never overwrite or fake previously applied migrations."
+            "A matching django_migrations ledger does NOT establish a safe physical schema, "
+            "migration dependency graph, data integrity or correct database identity. "
+            "Review those separately. Never overwrite or fake previously applied migrations."
         ),
     }
 
@@ -119,14 +193,26 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", type=Path, default=Path.cwd())
     parser.add_argument("--project", type=Path, required=True)
-    options = parser.parse_args()
-    print(
-        json.dumps(
-            adoption_plan(source=options.source, project=options.project),
-            indent=2,
-            ensure_ascii=False,
-        )
+    parser.add_argument(
+        "--verify-postgres",
+        action="store_true",
+        help="Opt-in read-only check of django_migrations using DATABASE_URL",
     )
+    parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Exit nonzero if any installed module needs manual review",
+    )
+    options = parser.parse_args()
+    applied = _read_postgres_migrations() if options.verify_postgres else None
+    report = adoption_plan(
+        source=options.source,
+        project=options.project,
+        applied_migrations=applied,
+    )
+    print(json.dumps(report, indent=2, ensure_ascii=False))
+    if options.strict and report["requires_manual_review"]:
+        raise SystemExit(2)
 
 
 if __name__ == "__main__":

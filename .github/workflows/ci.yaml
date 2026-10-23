@@ -91,7 +91,7 @@ jobs:
       # PRIMARYKIT-GENERATOR-SMOKE-START
       - name: Source-specific comparator and smoke configuration tests
         run: |
-          uv run pytest -q scripts/tests/test_contract_check.py scripts/tests/test_generated_client_matrix.py scripts/tests/test_migration_lint.py
+          uv run pytest -q scripts/tests/test_contract_check.py scripts/tests/test_generated_client_matrix.py scripts/tests/test_migration_lint.py scripts/tests/test_migration_adoption.py
           uv run python -m apps.core.cli modules list --json
           uv run python -m apps.core.cli new /tmp/demo-crm --preset crm --dry-run
       # PRIMARYKIT-GENERATOR-SMOKE-END
