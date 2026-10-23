@@ -207,3 +207,36 @@ def test_three_way_plan_reports_unavailable_source_ref_without_modifying_client(
         "missing_immutable_baseline",
     }
     assert target.read_bytes() == before
+
+
+def test_apply_safe_update_rolls_back_all_files_on_provenance_failure(tmp_path, monkeypatch):
+    """A failed commit of origin metadata must not leave half-upgraded modules."""
+    from pathlib import Path
+
+    from scripts import module_upgrade
+
+    source = create_project(tmp_path / "source", name="source-api", optional_apps={"audit"})
+    client = create_project(tmp_path / "client", name="client-api", optional_apps={"audit"})
+    origin = client / "primarykit-origin.json"
+    original_origin = origin.read_bytes()
+    admin = client / "apps" / "audit" / "admin.py"
+    original_admin = admin.read_bytes()
+
+    incoming_admin = source / "apps" / "audit" / "admin.py"
+    incoming_admin.write_bytes(incoming_admin.read_bytes() + b"\n# Upstream update\n")
+    (source / "apps" / "audit" / "helpers.py").write_text("NEW_HELPER = True\n")
+    actual_replace = module_upgrade.os.replace
+
+    def fail_provenance_commit(src, dst):
+        if Path(dst) == origin and Path(src).name == "primarykit-origin.json":
+            raise OSError("provenance commit failed")
+        return actual_replace(src, dst)
+
+    monkeypatch.setattr(module_upgrade.os, "replace", fail_provenance_commit)
+    with pytest.raises(OSError, match="provenance commit failed"):
+        apply_safe_updates(source=source, project=client)
+
+    assert origin.read_bytes() == original_origin
+    assert admin.read_bytes() == original_admin
+    assert not (client / "apps" / "audit" / "helpers.py").exists()
+    assert not list(client.glob(".primarykit-upgrade-*"))
