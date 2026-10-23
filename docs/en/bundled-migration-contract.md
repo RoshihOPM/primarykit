@@ -51,3 +51,20 @@ modify project files or database tables. An identical file history **does not**
 prove the migrations were applied safely: compare the actual
 `django_migrations` table, model state, FK edges and persisted data before
 approving any adoption. Never replace historical client migrations.
+
+## Optional read-only PostgreSQL ledger verification
+
+The source-only audit can **additionally inspect the client's actual `django_migrations` ledger** without invoking Django migrations or modifying any database or application files:
+
+```bash
+# From the trusted PrimaryKit source checkout:
+export DATABASE_URL='postgresql://audit_user:...@db.example/client_db'
+python scripts/migration_adoption.py --source . --project ../customer-backend \
+  --verify-postgres --strict
+```
+
+Use a dedicated database account with `SELECT` access to `django_migrations` only, preferably over a secured connection. `--verify-postgres` is opt-in; without it the report remains completely offline. The command demands a PostgreSQL URL from the environment, opens a session with `default_transaction_read_only=on` and a five-second statement timeout, checks that the session is read-only, and only reads the migration ledger. It **never issues INSERT/UPDATE/DELETE, `migrate`, `--fake`, schema changes or data copies**. Errors omit the connection URI; do not paste real DSNs into issues, PRs or CI logs.
+
+The report distinguishes `all_recorded`, `not_applied`, `partially_applied`, `unexpected_database_revisions` and `orphaned_database_revisions`. `--strict` exits nonzero whenever either the client migration files differ from the shipped bundled history or the database ledger needs manual review. New generated-client PostgreSQL CI now checks the ledger (including the Tasks pilot) after migrations, without changing applied migration histories. Existing clients are **never automatically adopted**.
+
+A clean report certifies **only matching migration filenames and ledger entries in the selected database**. It does **not** verify DB identity, current table definitions, cross-module dependency graph, constraints, indexes, data integrity, or a safe transition of an older client's independently generated migrations. The owner must review those items and a backup/rollback procedure before any real adoption. Issue #88 remains open until historical, stateful version-to-version PostgreSQL upgrades are proven.
