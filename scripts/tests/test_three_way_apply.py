@@ -172,9 +172,11 @@ def test_three_successive_synthetic_source_revisions_preserve_client_edits(tmp_p
     commit(client, "client customization before source updates")
 
     for number, line in enumerate((20, 40, 60), start=2):
-        incoming.write_text(incoming.read_text().replace(
-            f"# original {line}", f"# upstream revision {number} line {line}"
-        ))
+        incoming.write_text(
+            incoming.read_text().replace(
+                f"# original {line}", f"# upstream revision {number} line {line}"
+            )
+        )
         commit(source, f"synthetic upstream revision {number}")
         result = apply_three_way_updates(source=source, project=client)
         assert result["applied"] is True
@@ -185,9 +187,10 @@ def test_three_successive_synthetic_source_revisions_preserve_client_edits(tmp_p
             assert f"# upstream revision {earlier} line {original_line}" in text
         metadata = json.loads((client / "primarykit-origin.json").read_text())
         assert metadata["module_source_refs"]["audit"] == git(source, "rev-parse", "HEAD")
-        assert metadata["module_fingerprints"]["audit"]["helper.py"] == hashlib.sha256(
-            incoming.read_bytes()
-        ).hexdigest()
+        assert (
+            metadata["module_fingerprints"]["audit"]["helper.py"]
+            == hashlib.sha256(incoming.read_bytes()).hexdigest()
+        )
         commit(client, f"reviewed synthetic source update {number}")
 
     assert apply_three_way_updates(source=source, project=client)["applied"] is False
