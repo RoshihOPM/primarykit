@@ -90,7 +90,9 @@ def _read_postgres_migrations() -> set[tuple[str, str]]:
             with connection.cursor() as cursor:
                 cursor.execute("SHOW transaction_read_only")
                 if cursor.fetchone()[0] != "on":
-                    raise ValueError("Refusing migration inspection without a read-only transaction")
+                    raise ValueError(
+                        "Refusing migration inspection without a read-only transaction"
+                    )
                 cursor.execute("SELECT app, name FROM django_migrations")
                 return {(str(app), str(name)) for app, name in cursor.fetchall()}
     except psycopg.Error:
