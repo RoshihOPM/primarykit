@@ -51,6 +51,7 @@ def apply_three_way_updates(*, source: Path, project: Path) -> dict:
     fingerprints = metadata["module_fingerprints"]
     pending = []
     blocked = []
+    verified_ancestry = set()
 
     for module, detail in report["modules"].items():
         directory = source / "apps" / module
@@ -88,6 +89,37 @@ def apply_three_way_updates(*, source: Path, project: Path) -> dict:
             ):
                 blocked.append(f"{module}/{path}: unsafe path")
                 continue
+            # Source-only changes require the same trusted ancestry as three-way
+            # conflicts. Never apply from an unrelated checkout or forged origin.
+            ancestor_ref = refs.get(module)
+            if not isinstance(ancestor_ref, str) or not re.fullmatch(
+                r"[0-9a-f]{40,64}", ancestor_ref
+            ):
+                blocked.append(f"{module}/{path}: missing immutable source ancestry")
+                continue
+            if module not in verified_ancestry:
+                ancestor = subprocess.run(
+                    ["git", "-C", str(source), "merge-base", "--is-ancestor", ancestor_ref, revision],
+                    check=False,
+                    capture_output=True,
+                )
+                if ancestor.returncode != 0:
+                    blocked.append(f"{module}/{path}: source ancestry is not available")
+                    continue
+                verified_ancestry.add(module)
+            baseline_hash = fingerprints[module].get(path)
+            if baseline_hash is not None:
+                baseline_blob = subprocess.run(
+                    ["git", "-C", str(source), "show", f"{ancestor_ref}:apps/{module}/{path}"],
+                    check=False,
+                    capture_output=True,
+                )
+                if (
+                    baseline_blob.returncode != 0
+                    or hashlib.sha256(baseline_blob.stdout).hexdigest() != baseline_hash
+                ):
+                    blocked.append(f"{module}/{path}: historical baseline does not match")
+                    continue
             upstream = incoming.read_bytes()
             merged = upstream
             if kind == "conflict_review":
