@@ -98,9 +98,11 @@ def test_two_concurrent_settlements_of_one_order_allow_only_one_success():
         results = list(executor.map(worker, enumerate(intents)))
 
     assert sorted(results) == ["rejected", "succeeded"]
-    statuses = list(PaymentIntent.objects.filter(pk__in=[p.pk for p in intents]).values_list(
-        "status", flat=True
-    ))
+    statuses = list(
+        PaymentIntent.objects.filter(pk__in=[p.pk for p in intents]).values_list(
+            "status", flat=True
+        )
+    )
     assert sorted(statuses) == ["pending", "succeeded"]
     assert PaymentEvent.objects.filter(intent_id__in=[p.pk for p in intents]).count() == 1
 
