@@ -116,6 +116,62 @@ def run_case(case: str) -> None:
                 "payload={'probe': True}).count() == 1",
             )
 
+        # Preserve linked commerce rows across repeated migrations in detached
+        # PostgreSQL clients. This checks idempotency, not cross-version upgrades.
+        if all(
+            (target / "apps" / name / "models.py").is_file() for name in ("orders", "payments")
+        ):
+            run(
+                "uv",
+                "run",
+                "python",
+                "manage.py",
+                "shell",
+                "--settings=config.settings.postgres_test",
+                "-c",
+                "from apps.users.models import User; "
+                "from apps.orders.services import place_order; "
+                "from apps.payments.services import create_intent; "
+                "owner=User.objects.create_user("
+                "email='migration-commerce@example.test', password='smoke-test-only'); "
+                "order=place_order(actor=owner, currency='USD', "
+                "lines=[{'sku': 'book', 'title': 'Book', "
+                "'quantity': 1, 'unit_price_minor': 235}], "
+                "idempotency_key='migration-commerce-order'); "
+                "create_intent(actor=owner, amount_minor=235, currency='USD', "
+                "source_order_id=order.pk, idempotency_key='migration-commerce-payment')",
+            )
+            run(
+                "uv",
+                "run",
+                "python",
+                "manage.py",
+                "migrate",
+                "--noinput",
+                "--settings=config.settings.postgres_test",
+            )
+            run(
+                "uv",
+                "run",
+                "python",
+                "manage.py",
+                "shell",
+                "--settings=config.settings.postgres_test",
+                "-c",
+                "from apps.users.models import User; "
+                "from apps.orders.models import Order, OrderItem; "
+                "from apps.payments.models import PaymentIntent; "
+                "owner=User.objects.get(email='migration-commerce@example.test'); "
+                "order=Order.objects.get(owner=owner, "
+                "idempotency_key='migration-commerce-order'); "
+                "assert order.total_minor == 235 and order.status == 'placed'; "
+                "assert OrderItem.objects.filter("
+                "order=order, sku='BOOK', line_total_minor=235).count() == 1; "
+                "assert PaymentIntent.objects.filter("
+                "owner=owner, source_order_id=order.pk, amount_minor=235, "
+                "status='pending', idempotency_key='migration-commerce-payment').count() == 1",
+            )
+
         run(
             "uv",
             "run",
