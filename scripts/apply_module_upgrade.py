@@ -99,7 +99,15 @@ def apply_three_way_updates(*, source: Path, project: Path) -> dict:
                 continue
             if module not in verified_ancestry:
                 ancestor = subprocess.run(
-                    ["git", "-C", str(source), "merge-base", "--is-ancestor", ancestor_ref, revision],
+                    [
+                        "git",
+                        "-C",
+                        str(source),
+                        "merge-base",
+                        "--is-ancestor",
+                        ancestor_ref,
+                        revision,
+                    ],
                     check=False,
                     capture_output=True,
                 )
