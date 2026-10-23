@@ -90,6 +90,6 @@ def test_simultaneous_reuse_with_different_payload_rejects_one_writer():
     order = Order.objects.get(owner=owner, idempotency_key="conflicting-concurrent-order")
     assert order.pk == winner[1]
     assert order.total_minor == 2 * winner[2]
-    assert list(OrderItem.objects.filter(order=order).values_list("unit_price_minor", flat=True)) == [
-        winner[2]
-    ]
+    assert list(
+        OrderItem.objects.filter(order=order).values_list("unit_price_minor", flat=True)
+    ) == [winner[2]]
