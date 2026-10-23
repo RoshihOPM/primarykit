@@ -261,7 +261,9 @@ def test_bundled_migration_folders_preserved_only_when_declared(monkeypatch):
     )
 
 
-def test_generator_racing_creator_does_not_delete_unowned_destination(tmp_path, monkeypatch):
+def test_generator_racing_creator_does_not_delete_unowned_destination(
+    tmp_path, monkeypatch
+):
     """The destination must be claimed exclusively before cleanup is allowed."""
     destination = tmp_path / "raced-backend"
     original_mkdir = Path.mkdir
@@ -277,7 +279,10 @@ def test_generator_racing_creator_does_not_delete_unowned_destination(tmp_path, 
     with pytest.raises(FileExistsError, match="another process"):
         create_project(destination, name="raced-backend")
 
-    assert (destination / "belongs-to-other-process.txt").read_text(encoding="utf-8") == "keep me"
+    assert (
+        (destination / "belongs-to-other-process.txt").read_text(encoding="utf-8")
+        == "keep me"
+    )
 
 
 def test_generator_failed_copy_removes_only_claimed_destination(tmp_path, monkeypatch):
