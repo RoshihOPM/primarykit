@@ -118,9 +118,7 @@ def run_case(case: str) -> None:
 
         # Preserve linked commerce rows across repeated migrations in detached
         # PostgreSQL clients. This checks idempotency, not cross-version upgrades.
-        if all(
-            (target / "apps" / name / "models.py").is_file() for name in ("orders", "payments")
-        ):
+        if all((target / "apps" / name / "models.py").is_file() for name in ("orders", "payments")):
             run(
                 "uv",
                 "run",
