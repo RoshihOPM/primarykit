@@ -209,7 +209,9 @@ def test_three_way_plan_reports_unavailable_source_ref_without_modifying_client(
     assert target.read_bytes() == before
 
 
-def test_apply_safe_update_rolls_back_all_files_on_provenance_failure(tmp_path, monkeypatch):
+def test_apply_safe_update_rolls_back_all_files_on_provenance_failure(
+    tmp_path, monkeypatch
+):
     """A failed commit of origin metadata must not leave half-upgraded modules."""
     from pathlib import Path
 
