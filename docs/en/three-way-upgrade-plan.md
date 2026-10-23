@@ -15,9 +15,12 @@ git -C ../client diff
 ```
 
 The opt-in apply refuses dirty client or source trees, the default branch, missing
-immutable Git ancestry, ambiguous conflict merges, changed schema contracts,
-source deletions, unreviewed module migration histories, unsafe symlink paths
-and invalid Python. Clients' independent local changes are preserved.
+or unrelated immutable Git ancestry, historical blob hashes that differ from
+recorded provenance (including source-only changes), ambiguous conflict merges,
+changed schema contracts, source deletions, unreviewed module migration histories,
+unsafe symlink paths and invalid Python. Keep the original source Git commits
+locally available, including history older than the current checkout. Clients'
+independent local changes are preserved.
 Client hashes and module ancestry advance to the incoming source version only
 after all staged replacements succeed; otherwise changes are rolled back.
 
