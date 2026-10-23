@@ -1,5 +1,6 @@
 import json
 import tomllib
+from pathlib import Path
 
 import pytest
 
@@ -258,3 +259,44 @@ def test_bundled_migration_folders_preserved_only_when_declared(monkeypatch):
     assert "migrations" in new_project._ignore_excluded(
         "/root/apps/fake_unversioned", ["migrations"]
     )
+
+
+def test_generator_racing_creator_does_not_delete_unowned_destination(tmp_path, monkeypatch):
+    """The destination must be claimed exclusively before cleanup is allowed."""
+    destination = tmp_path / "raced-backend"
+    original_mkdir = Path.mkdir
+
+    def competing_creator(path, *args, **kwargs):
+        if path == destination:
+            original_mkdir(path, *args, **kwargs)
+            (path / "belongs-to-other-process.txt").write_text("keep me", encoding="utf-8")
+            raise FileExistsError("another process claimed the destination")
+        return original_mkdir(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "mkdir", competing_creator)
+    with pytest.raises(FileExistsError, match="another process"):
+        create_project(destination, name="raced-backend")
+
+    assert (destination / "belongs-to-other-process.txt").read_text(encoding="utf-8") == "keep me"
+
+
+def test_generator_failed_copy_removes_only_claimed_destination(tmp_path, monkeypatch):
+    from scripts import new_project
+
+    destination = tmp_path / "failed-backend"
+    neighbor = tmp_path / "existing-neighbor"
+    neighbor.mkdir()
+    (neighbor / "keep.txt").write_text("keep me", encoding="utf-8")
+
+    def fail_partway(_source, target, **kwargs):
+        assert kwargs["dirs_exist_ok"] is True
+        assert target.is_dir()
+        (target / "partial.txt").write_text("incomplete", encoding="utf-8")
+        raise OSError("simulated partial copy failure")
+
+    monkeypatch.setattr(new_project.shutil, "copytree", fail_partway)
+    with pytest.raises(OSError, match="partial copy"):
+        create_project(destination, name="failed-backend")
+
+    assert not destination.exists()
+    assert (neighbor / "keep.txt").read_text(encoding="utf-8") == "keep me"

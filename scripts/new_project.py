@@ -143,8 +143,12 @@ def create_project(
 
     selected = set(plan["included_apps"])
     target.parent.mkdir(parents=True, exist_ok=True)
+    # Claim the destination exclusively before entering the cleanup scope.
+    # If another process creates it after the exists() check, never delete
+    # that process's files on our failure path.
+    target.mkdir()
     try:
-        shutil.copytree(root, target, ignore=_ignore_excluded)
+        shutil.copytree(root, target, ignore=_ignore_excluded, dirs_exist_ok=True)
         # Verify that versioned owners really ship immutable baseline migrations.
         # A typo must never silently regenerate their schema under another history.
         for module_name in selected:
