@@ -300,3 +300,26 @@ def test_generator_failed_copy_removes_only_claimed_destination(tmp_path, monkey
 
     assert not destination.exists()
     assert (neighbor / "keep.txt").read_text(encoding="utf-8") == "keep me"
+
+
+@pytest.mark.parametrize("kind", ["file", "directory"])
+def test_generator_rejects_source_symlinks_before_creating_destination(tmp_path, monkeypatch, kind):
+    from scripts import new_project
+
+    source = create_project(tmp_path / "source", name="source-api", optional_apps={"audit"})
+    external = tmp_path / "outside"
+    external.mkdir()
+    if kind == "file":
+        secret = external / "private.py"
+        secret.write_text("PRIVATE = True\n")
+        (source / "apps" / "audit" / "external.py").symlink_to(secret)
+    else:
+        (source / "apps" / "audit" / "external").symlink_to(
+            external, target_is_directory=True
+        )
+
+    monkeypatch.setattr(new_project, "SOURCE_ROOT", source)
+    destination = tmp_path / "client"
+    with pytest.raises(ValueError, match="symlinked source path"):
+        new_project.create_project(destination, name="client-api", optional_apps={"audit"})
+    assert not destination.exists()
