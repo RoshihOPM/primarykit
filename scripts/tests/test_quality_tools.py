@@ -2,7 +2,6 @@
 
 import re
 import subprocess
-from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
