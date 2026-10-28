@@ -300,3 +300,11 @@ def test_generator_failed_copy_removes_only_claimed_destination(tmp_path, monkey
 
     assert not destination.exists()
     assert (neighbor / "keep.txt").read_text(encoding="utf-8") == "keep me"
+
+
+def test_generated_project_includes_ub_mode(tmp_path):
+    target = create_project(tmp_path / "client-api", name="client-api")
+    skill = target / ".agents" / "skills" / "ub-mode" / "SKILL.md"
+    assert skill.is_file()
+    assert "original PrimaryKit adaptation" in skill.read_text(encoding="utf-8")
+    assert ".agents/skills/ub-mode/SKILL.md" in (target / "AGENTS.md").read_text(encoding="utf-8")
