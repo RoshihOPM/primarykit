@@ -236,6 +236,7 @@ def test_generated_client_keeps_license_not_upstream_governance(tmp_path):
         "CODE_OF_CONDUCT.md",
         ".github/CODEOWNERS",
         ".github/dependabot.yml",
+        ".github/workflows/quality-tools.yml",
         ".github/PULL_REQUEST_TEMPLATE.md",
         ".github/ISSUE_TEMPLATE",
         "docs/maintainer-playbook.md",
@@ -308,3 +309,15 @@ def test_generated_project_includes_ub_mode(tmp_path):
     assert skill.is_file()
     assert "original PrimaryKit adaptation" in skill.read_text(encoding="utf-8")
     assert ".agents/skills/ub-mode/SKILL.md" in (target / "AGENTS.md").read_text(encoding="utf-8")
+
+
+
+@pytest.mark.parametrize("ignored_name", [".quality-tools", ".metrics", "target"])
+def test_generated_client_excludes_optional_quality_artifacts(tmp_path, ignored_name):
+    from scripts import new_project
+
+    assert ignored_name in new_project._ignore_excluded(
+        "/path/to/source", [ignored_name]
+    )
+    project = create_project(tmp_path / "client", name="client-api")
+    assert not (project / ignored_name).exists()
