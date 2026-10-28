@@ -76,7 +76,11 @@ introduced.
 
 ## Developer verification
 
-The standard CI runs offline tests for the pinned installer, refusal of
-tampered checkouts and CLI behavior. It intentionally does not clone or execute
-third-party projects in mandatory pull-request jobs. Actual third-party
-installation is an opt-in developer action, not an automatic CI dependency.
+Core CI runs offline tests for the pinned installer, refusal of
+tampered checkouts and CLI behavior. An **isolated** GitHub Actions workflow,
+`.github/workflows/quality-tools.yml`, installs the pinned upstream tools and
+runs read-only Crapper/Dryer reports and a Mutator site scan only when the
+integration files change or when manually dispatched. This verifies that
+installation actually works, without adding a runtime dependency or executing
+full mutation tests. External code is never run by the general Core CI job.
+The optional workflow has read-only repository permissions and no secrets.
