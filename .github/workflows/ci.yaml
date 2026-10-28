@@ -94,6 +94,7 @@ jobs:
           uv run pytest -q \
             scripts/tests/test_contract_check.py \
             scripts/tests/test_generated_client_matrix.py \
+            scripts/tests/test_generator_fingerprints.py \
             scripts/tests/test_migration_lint.py \
             scripts/tests/test_migration_adoption.py \
             scripts/tests/test_three_way_apply.py \
