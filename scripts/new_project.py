@@ -45,6 +45,9 @@ def _ignore_excluded(directory, names):
         if name in {
             ".git",
             ".venv",
+            ".quality-tools",
+            ".metrics",
+            "target",
             "__pycache__",
             ".pytest_cache",
             ".ruff_cache",
@@ -62,8 +65,9 @@ def _ignore_excluded(directory, names):
     return ignored
 
 
+
 def _reject_source_symlinks(root: Path) -> None:
-    """Fail before copying: copytree normally follows links to external paths."""
+    """Fail closed on copied symlinks, skipping paths excluded from the template."""
     for current, directories, files in os.walk(root, followlinks=False):
         ignored = _ignore_excluded(current, directories + files)
         for name in (*directories, *files):
@@ -163,7 +167,12 @@ def create_project(
     # that process's files on our failure path.
     target.mkdir()
     try:
-        shutil.copytree(root, target, ignore=_ignore_excluded, dirs_exist_ok=True)
+        # Never dereference a link introduced after the preflight during copy.
+        shutil.copytree(
+            root, target, ignore=_ignore_excluded, dirs_exist_ok=True, symlinks=True
+        )
+        # Fail before any read/write transform touches a newly copied link.
+        _reject_source_symlinks(target)
         # Verify that versioned owners really ship immutable baseline migrations.
         # A typo must never silently regenerate their schema under another history.
         for module_name in selected:
@@ -179,6 +188,7 @@ def create_project(
             "CODE_OF_CONDUCT.md",
             ".github/CODEOWNERS",
             ".github/dependabot.yml",
+            ".github/workflows/quality-tools.yml",
             ".github/PULL_REQUEST_TEMPLATE.md",
             "docs/maintainer-playbook.md",
             "CHANGELOG.md",
