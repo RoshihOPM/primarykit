@@ -307,6 +307,4 @@ def test_generated_project_includes_ub_mode(tmp_path):
     skill = target / ".agents" / "skills" / "ub-mode" / "SKILL.md"
     assert skill.is_file()
     assert "original PrimaryKit adaptation" in skill.read_text(encoding="utf-8")
-    assert ".agents/skills/ub-mode/SKILL.md" in (target / "AGENTS.md").read_text(
-        encoding="utf-8"
-    )
+    assert ".agents/skills/ub-mode/SKILL.md" in (target / "AGENTS.md").read_text(encoding="utf-8")
