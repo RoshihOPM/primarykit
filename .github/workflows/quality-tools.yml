@@ -1,0 +1,33 @@
+name: Optional code-quality tools smoke
+
+on:
+  pull_request:
+    paths:
+      - scripts/quality_tools.py
+      - docs/code-quality-tools.md
+      - .github/workflows/quality-tools.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quality-tools:
+    name: Pinned tool install + analysis smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.13"
+      - name: Install pinned tools in isolated environment
+        run: |
+          uv run python scripts/quality_tools.py install
+          uv run python scripts/quality_tools.py verify
+      - name: CRAP complexity analysis (without test execution)
+        run: uv run python scripts/quality_tools.py crapper --no-coverage scripts/module_upgrade.py
+      - name: Structural duplication report
+        run: uv run python scripts/quality_tools.py dryer scripts/module_upgrade.py
+      - name: Mutation-site scan (no mutation execution)
+        run: uv run python scripts/quality_tools.py mutator --scan scripts/module_upgrade.py
