@@ -54,8 +54,7 @@ def _hashes(folder: Path) -> dict[str, str]:
     return {
         file.relative_to(folder).as_posix(): hashlib.sha256(file.read_bytes()).hexdigest()
         for file in sorted(files)
-        if not {"migrations", "tests", "__pycache__"}
-        & set(file.relative_to(folder).parts)
+        if not {"migrations", "tests", "__pycache__"} & set(file.relative_to(folder).parts)
     }
 
 
