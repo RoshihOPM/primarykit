@@ -44,6 +44,9 @@ def _ignore_excluded(directory, names):
         if name in {
             ".git",
             ".venv",
+            ".quality-tools",
+            ".metrics",
+            "target",
             "__pycache__",
             ".pytest_cache",
             ".ruff_cache",
@@ -164,6 +167,7 @@ def create_project(
             "CODE_OF_CONDUCT.md",
             ".github/CODEOWNERS",
             ".github/dependabot.yml",
+            ".github/workflows/quality-tools.yml",
             ".github/PULL_REQUEST_TEMPLATE.md",
             "docs/maintainer-playbook.md",
             "CHANGELOG.md",

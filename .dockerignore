@@ -13,3 +13,8 @@ media
 
 # Private listing image blobs must stay out of Docker build contexts.
 privatefiles/
+
+# Never package optional local quality-tool checkouts or metrics.
+.quality-tools/
+.metrics/
+target/
