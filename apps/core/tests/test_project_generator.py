@@ -321,9 +321,7 @@ def test_generated_client_excludes_optional_quality_artifacts(tmp_path, ignored_
 
 
 @pytest.mark.parametrize("kind", ["file", "directory"])
-def test_generator_rejects_source_symlinks_before_creating_destination(
-    tmp_path, monkeypatch, kind
-):
+def test_generator_rejects_source_symlinks_before_creating_destination(tmp_path, monkeypatch, kind):
     from scripts import new_project
 
     source = create_project(tmp_path / "source", name="source-api", optional_apps={"audit"})
