@@ -17,3 +17,8 @@ media/
 
 # Listing media must never be committed.
 /privatefiles/
+
+# Optional local source-quality tooling and generated reports.
+.quality-tools/
+.metrics/
+target/
