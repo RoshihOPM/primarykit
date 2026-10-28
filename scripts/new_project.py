@@ -4,6 +4,7 @@
 import argparse
 import hashlib
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -59,6 +60,19 @@ def _ignore_excluded(directory, names):
         if name.endswith(".sqlite3") or name.endswith(".pyc"):
             ignored.add(name)
     return ignored
+
+
+def _reject_source_symlinks(root: Path) -> None:
+    """Fail before copying: copytree normally follows links to external paths."""
+    for current, directories, files in os.walk(root, followlinks=False):
+        ignored = _ignore_excluded(current, directories + files)
+        for name in (*directories, *files):
+            entry = Path(current) / name
+            if name not in ignored and entry.is_symlink():
+                raise ValueError(
+                    f"Refusing symlinked source path: {entry.relative_to(root).as_posix()}"
+                )
+        directories[:] = [name for name in directories if name not in ignored]
 
 
 def _replace_one(path: Path, old: str, new: str):
@@ -142,6 +156,7 @@ def create_project(
         raise FileExistsError(f"Destination already exists: {target}")
 
     selected = set(plan["included_apps"])
+    _reject_source_symlinks(root)
     target.parent.mkdir(parents=True, exist_ok=True)
     # Claim the destination exclusively before entering the cleanup scope.
     # If another process creates it after the exists() check, never delete
