@@ -311,13 +311,10 @@ def test_generated_project_includes_ub_mode(tmp_path):
     assert ".agents/skills/ub-mode/SKILL.md" in (target / "AGENTS.md").read_text(encoding="utf-8")
 
 
-
 @pytest.mark.parametrize("ignored_name", [".quality-tools", ".metrics", "target"])
 def test_generated_client_excludes_optional_quality_artifacts(tmp_path, ignored_name):
     from scripts import new_project
 
-    assert ignored_name in new_project._ignore_excluded(
-        "/path/to/source", [ignored_name]
-    )
+    assert ignored_name in new_project._ignore_excluded("/path/to/source", [ignored_name])
     project = create_project(tmp_path / "client", name="client-api")
     assert not (project / ignored_name).exists()
