@@ -44,6 +44,9 @@ def _ignore_excluded(directory, names):
         if name in {
             ".git",
             ".venv",
+            ".quality-tools",
+            ".metrics",
+            "target",
             "__pycache__",
             ".pytest_cache",
             ".ruff_cache",
