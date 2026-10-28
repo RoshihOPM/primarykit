@@ -64,6 +64,7 @@ def _ignore_excluded(directory, names):
             ignored.add(name)
     return ignored
 
+
 def _reject_source_symlinks(root: Path) -> None:
     """Fail closed on copied symlinks, skipping paths excluded from the template."""
     for current, directories, files in os.walk(root, followlinks=False):
