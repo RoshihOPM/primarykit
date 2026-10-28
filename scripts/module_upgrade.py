@@ -35,12 +35,27 @@ CONTRACT_PREFIXES = ("migrations/",)
 
 
 def _hashes(folder: Path) -> dict[str, str]:
+    """Hash only regular module files; never follow module symlinks.
+
+    A catalog or client checkout is not trusted merely because its provenance
+    exists. Symlinks must not allow the planner to read arbitrary local files.
+    """
+    if folder.is_symlink():
+        raise ValueError("Symlinked module directory is unsafe")
     if not folder.is_dir():
         return {}
+
+    files = []
+    for entry in folder.rglob("*"):
+        if entry.is_symlink():
+            raise ValueError(f"Symlinked module entry is unsafe: {entry.relative_to(folder)}")
+        if entry.is_file() and entry.suffix == ".py":
+            files.append(entry)
     return {
         file.relative_to(folder).as_posix(): hashlib.sha256(file.read_bytes()).hexdigest()
-        for file in sorted(folder.rglob("*.py"))
-        if not {"migrations", "tests", "__pycache__"} & set(file.parts)
+        for file in sorted(files)
+        if not {"migrations", "tests", "__pycache__"}
+        & set(file.relative_to(folder).parts)
     }
 
 
@@ -52,6 +67,8 @@ def compare_modules(*, source: Path, project: Path) -> dict:
         raise ValueError("Source and target must be distinct repositories")
     if not (source / "apps" / "core" / "manifest.py").is_file():
         raise ValueError("Source is missing a PrimaryKit module catalog")
+    if (source / "apps").is_symlink() or (project / "apps").is_symlink():
+        raise ValueError("Symlinked apps directory is unsafe")
     origin = project / "primarykit-origin.json"
     if not origin.is_file():
         raise ValueError("Client provenance is missing; use manual Git diff review")
