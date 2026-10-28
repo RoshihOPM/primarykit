@@ -242,7 +242,6 @@ def test_apply_safe_update_rolls_back_all_files_on_provenance_failure(tmp_path, 
     assert not list(client.glob(".primarykit-upgrade-*"))
 
 
-
 @pytest.mark.parametrize("side", ["source", "client"])
 @pytest.mark.parametrize("entry_kind", ["file", "directory", "module"])
 def test_upgrade_report_rejects_symlinked_module_paths(tmp_path, side, entry_kind):
