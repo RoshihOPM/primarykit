@@ -11,6 +11,7 @@ SKILLS = [
     "database-architect",
     "feature-delivery",
     "security-review",
+    "ub-mode",
 ]
 
 
@@ -29,3 +30,15 @@ def test_skill_frontmatter_and_content(name):
     assert 1 <= len(name) <= 64
     assert 10 <= len(metadata["description"]) <= 1024
     assert len(body.strip()) >= 100
+
+
+def test_primarykit_agents_reference_ub_mode():
+    instructions = (SKILLS_DIR.parent.parent / "AGENTS.md").read_text(encoding="utf-8")
+    assert ".agents/skills/ub-mode/SKILL.md" in instructions
+
+
+def test_ub_mode_is_original_adaptation_not_vendor_copy():
+    content = (SKILLS_DIR / "ub-mode" / "SKILL.md").read_text(encoding="utf-8")
+    assert "unclebob/ub-mode" in content
+    assert "original PrimaryKit adaptation" in content
+    assert "Do not install or execute external tools automatically." in content
