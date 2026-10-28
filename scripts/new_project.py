@@ -99,7 +99,7 @@ def _module_fingerprints(root: Path, selected: set[str]) -> dict[str, dict[str, 
         result[name] = {
             file.relative_to(folder).as_posix(): hashlib.sha256(file.read_bytes()).hexdigest()
             for file in sorted(folder.rglob("*.py"))
-            if not {"migrations", "tests", "__pycache__"} & set(file.parts)
+            if not {"migrations", "tests", "__pycache__"} & set(file.relative_to(folder).parts)
         }
     return result
 
