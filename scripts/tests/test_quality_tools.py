@@ -99,7 +99,10 @@ def test_quality_tool_verify_detects_dirty_source(tmp_path, monkeypatch):
     for name in quality_tools.TOOL_REVISIONS:
         (store / name).mkdir()
     monkeypatch.setattr(quality_tools, "STORE", store)
-    monkeypatch.setattr(quality_tools, "_git_revision", lambda folder: quality_tools.TOOL_REVISIONS[folder.name])
+    monkeypatch.setattr(
+        quality_tools, "_git_revision", lambda folder: quality_tools.TOOL_REVISIONS[folder.name]
+    )
+
     def fake_run(command, **kwargs):
         return SimpleNamespace(stdout="?? unexpectedly-modified.py\n")
     monkeypatch.setattr(quality_tools.subprocess, "run", fake_run)
