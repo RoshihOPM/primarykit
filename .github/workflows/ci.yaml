@@ -47,7 +47,7 @@ jobs:
             --cov-report=xml:coverage-all.xml
       - name: Upload Django source coverage
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: django-source-coverage
           path: coverage-all.xml
@@ -82,7 +82,7 @@ jobs:
             --cov-report=xml:coverage-listing-media.xml
       - name: Upload isolated listing media coverage
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: django-listing-media-coverage
           path: coverage-listing-media.xml
@@ -133,7 +133,7 @@ jobs:
           curl --fail --retry 12 --retry-connrefused --retry-delay 2 http://127.0.0.1:8000/health/ready/
       - name: Upload PostgreSQL Django coverage
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: django-postgres-coverage
           path: coverage-postgres.xml
@@ -141,7 +141,7 @@ jobs:
           retention-days: 14
       - name: Upload PostgreSQL listing media coverage
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: django-listing-media-postgres-coverage
           path: coverage-listing-media-postgres.xml
