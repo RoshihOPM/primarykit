@@ -240,3 +240,43 @@ def test_apply_safe_update_rolls_back_all_files_on_provenance_failure(tmp_path, 
     assert admin.read_bytes() == original_admin
     assert not (client / "apps" / "audit" / "helpers.py").exists()
     assert not list(client.glob(".primarykit-upgrade-*"))
+
+
+@pytest.mark.parametrize("side", ["source", "client"])
+@pytest.mark.parametrize("entry_kind", ["file", "directory", "module"])
+def test_upgrade_report_rejects_symlinked_module_paths(tmp_path, side, entry_kind):
+    source = create_project(tmp_path / "source", name="source-api", optional_apps={"audit"})
+    client = create_project(tmp_path / "client", name="client-api", optional_apps={"audit"})
+    root = source if side == "source" else client
+    external = tmp_path / "external"
+    external.mkdir()
+
+    if entry_kind == "module":
+        module = root / "apps" / "audit"
+        replacement = external / "audit"
+        replacement.mkdir()
+        module.rename(root / "apps" / "old_audit")
+        module.symlink_to(replacement, target_is_directory=True)
+    elif entry_kind == "directory":
+        (root / "apps" / "audit" / "linked_dir").symlink_to(external, target_is_directory=True)
+    else:
+        sensitive = external / "secret.py"
+        sensitive.write_text("SECRET_VALUE = 'must not be read'\n")
+        (root / "apps" / "audit" / "linked.py").symlink_to(sensitive)
+
+    with pytest.raises(ValueError, match="[Ss]ymlink"):
+        compare_modules(source=source, project=client)
+
+
+@pytest.mark.parametrize("side", ["source", "client"])
+def test_upgrade_report_rejects_symlinked_apps_root(tmp_path, side):
+    source = create_project(tmp_path / "source", name="source-api", optional_apps={"audit"})
+    client = create_project(tmp_path / "client", name="client-api", optional_apps={"audit"})
+    root = source if side == "source" else client
+    apps = root / "apps"
+    moved = root / "actual_apps"
+    apps.rename(moved)
+    apps.symlink_to(moved, target_is_directory=True)
+
+    with pytest.raises(ValueError, match="Symlinked apps"):
+        compare_modules(source=source, project=client)

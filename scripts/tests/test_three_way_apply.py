@@ -168,13 +168,13 @@ def test_three_successive_synthetic_source_revisions_preserve_client_edits(tmp_p
     incoming = source / "apps" / "audit" / "helper.py"
     target = client / "apps" / "audit" / "helper.py"
 
-    target.write_text(target.read_text().replace("# original 2", "# client customization 2"))
+    target.write_text(target.read_text().replace("# original 2\n", "# client customization 2\n"))
     commit(client, "client customization before source updates")
 
     for number, line in enumerate((20, 40, 60), start=2):
         incoming.write_text(
             incoming.read_text().replace(
-                f"# original {line}", f"# upstream revision {number} line {line}"
+                f"# original {line}\n", f"# upstream revision {number} line {line}\n"
             )
         )
         commit(source, f"synthetic upstream revision {number}")
