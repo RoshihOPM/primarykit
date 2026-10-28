@@ -15,6 +15,7 @@ PrimaryKit is a copy-based Django starter, not a separately deployed shared back
 
 ## Applicable skills
 
+- Any code change, refactoring or defect fix: `.agents/skills/ub-mode/SKILL.md` (PrimaryKit-specific, original adaptation; see upstream attribution and licensing note in the skill).
 - Architecture, system boundaries or API design: `.agents/skills/system-architect/SKILL.md`
 - Models, SQL, indexes, transactions, schema changes: `.agents/skills/database-architect/SKILL.md`
 - Any non-trivial feature implementation: `.agents/skills/feature-delivery/SKILL.md`
