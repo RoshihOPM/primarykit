@@ -167,6 +167,7 @@ def create_project(
             "CODE_OF_CONDUCT.md",
             ".github/CODEOWNERS",
             ".github/dependabot.yml",
+            ".github/workflows/quality-tools.yml",
             ".github/PULL_REQUEST_TEMPLATE.md",
             "docs/maintainer-playbook.md",
             "CHANGELOG.md",
