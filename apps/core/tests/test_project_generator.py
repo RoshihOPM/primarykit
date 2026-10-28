@@ -318,3 +318,69 @@ def test_generated_client_excludes_optional_quality_artifacts(tmp_path, ignored_
     assert ignored_name in new_project._ignore_excluded("/path/to/source", [ignored_name])
     project = create_project(tmp_path / "client", name="client-api")
     assert not (project / ignored_name).exists()
+
+
+@pytest.mark.parametrize("kind", ["file", "directory"])
+def test_generator_rejects_source_symlinks_before_creating_destination(tmp_path, monkeypatch, kind):
+    from scripts import new_project
+
+    source = create_project(tmp_path / "source", name="source-api", optional_apps={"audit"})
+    external = tmp_path / "outside"
+    external.mkdir()
+    if kind == "file":
+        secret = external / "private.py"
+        secret.write_text("PRIVATE = True\n", encoding="utf-8")
+        (source / "apps" / "audit" / "external.py").symlink_to(secret)
+    else:
+        (source / "apps" / "audit" / "external").symlink_to(external, target_is_directory=True)
+
+    monkeypatch.setattr(new_project, "SOURCE_ROOT", source)
+    destination = tmp_path / "client"
+    with pytest.raises(ValueError, match="symlinked source path"):
+        new_project.create_project(destination, name="client-api", optional_apps={"audit"})
+    assert not destination.exists()
+
+
+def test_generator_refuses_symlink_added_during_copy_and_preserves_external_file(
+    tmp_path, monkeypatch
+):
+    from scripts import new_project
+
+    destination = tmp_path / "client"
+    external = tmp_path / "unrelated.py"
+    external.write_text("DO_NOT_TOUCH = True\n", encoding="utf-8")
+    original_copytree = new_project.shutil.copytree
+
+    def inject_during_copy(source, target, **kwargs):
+        assert kwargs["symlinks"] is True
+        # Restore stdlib copytree so its recursive calls do not hit this hook.
+        monkeypatch.setattr(new_project.shutil, "copytree", original_copytree)
+        result = original_copytree(source, target, **kwargs)
+        replaced = target / "config" / "settings" / "base.py"
+        replaced.unlink()
+        replaced.symlink_to(external)
+        return result
+
+    monkeypatch.setattr(new_project.shutil, "copytree", inject_during_copy)
+    with pytest.raises(ValueError, match="symlinked source path"):
+        new_project.create_project(destination, name="client-api")
+    assert not destination.exists()
+    assert external.read_text(encoding="utf-8") == "DO_NOT_TOUCH = True\n"
+
+
+def test_generator_excludes_untrusted_symlinks_in_ignored_source_dirs(tmp_path):
+    import shutil
+
+    from scripts import new_project
+
+    source = tmp_path / "source"
+    source.mkdir()
+    (source / "safe.py").write_text("SAFE = True\n", encoding="utf-8")
+    external = tmp_path / "outside"
+    external.mkdir()
+    (source / ".git").symlink_to(external, target_is_directory=True)
+
+    new_project._reject_source_symlinks(source)
+    target = shutil.copytree(source, tmp_path / "client", ignore=new_project._ignore_excluded)
+    assert (target / "safe.py").read_text(encoding="utf-8") == "SAFE = True\n"
+    assert not (target / ".git").exists()
