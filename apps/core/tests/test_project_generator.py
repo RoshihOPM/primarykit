@@ -314,9 +314,7 @@ def test_generator_rejects_source_symlinks_before_creating_destination(tmp_path,
         secret.write_text("PRIVATE = True\n")
         (source / "apps" / "audit" / "external.py").symlink_to(secret)
     else:
-        (source / "apps" / "audit" / "external").symlink_to(
-            external, target_is_directory=True
-        )
+        (source / "apps" / "audit" / "external").symlink_to(external, target_is_directory=True)
 
     monkeypatch.setattr(new_project, "SOURCE_ROOT", source)
     destination = tmp_path / "client"
