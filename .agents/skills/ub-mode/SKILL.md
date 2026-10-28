@@ -51,6 +51,11 @@ ownership, and branch protection requirements.
   critical paths. CRAP-score, similarity and mutation thresholds from the
   upstream project are *review signals*, not enforced PrimaryKit CI policy.
   Do not install or execute external tools automatically.
+  In the PrimaryKit source checkout, approved local runs are available via
+  `scripts/quality_tools.py` (see `docs/code-quality-tools.md`); the installer
+  clones **pinned 0BSD-licensed source revisions** only when invoked explicitly.
+  Crapper, Dryer and Mutator are optional development tools, not runtime
+  requirements. The skill also runs in generated clients without them.
 
 ## 3. Prove and communicate the change
 
