@@ -259,9 +259,7 @@ def test_upgrade_report_rejects_symlinked_module_paths(tmp_path, side, entry_kin
         module.rename(root / "apps" / "old_audit")
         module.symlink_to(replacement, target_is_directory=True)
     elif entry_kind == "directory":
-        (root / "apps" / "audit" / "linked_dir").symlink_to(
-            external, target_is_directory=True
-        )
+        (root / "apps" / "audit" / "linked_dir").symlink_to(external, target_is_directory=True)
     else:
         sensitive = external / "secret.py"
         sensitive.write_text("SECRET_VALUE = 'must not be read'\n")
