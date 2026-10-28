@@ -11,10 +11,7 @@ from scripts import quality_tools
 
 def test_all_quality_tools_are_pinned_to_full_commits():
     assert set(quality_tools.TOOL_REVISIONS) == {"crapper", "dryer", "mutator"}
-    assert all(
-        re.fullmatch(r"[0-9a-f]{40}", sha)
-        for sha in quality_tools.TOOL_REVISIONS.values()
-    )
+    assert all(re.fullmatch(r"[0-9a-f]{40}", sha) for sha in quality_tools.TOOL_REVISIONS.values())
 
 
 def test_quality_tool_verify_refuses_symlinked_install_root(tmp_path, monkeypatch):
@@ -104,6 +101,7 @@ def test_quality_tool_verify_detects_dirty_source(tmp_path, monkeypatch):
 
     def fake_run(command, **kwargs):
         return SimpleNamespace(stdout="?? unexpectedly-modified.py\n")
+
     monkeypatch.setattr(quality_tools.subprocess, "run", fake_run)
     with pytest.raises(ValueError, match="uncommitted"):
         quality_tools._verify_sources()
