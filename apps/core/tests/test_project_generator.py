@@ -353,6 +353,8 @@ def test_generator_refuses_symlink_added_during_copy_and_preserves_external_file
 
     def inject_during_copy(source, target, **kwargs):
         assert kwargs["symlinks"] is True
+        # Restore stdlib copytree so its recursive calls do not hit this hook.
+        monkeypatch.setattr(new_project.shutil, "copytree", original_copytree)
         result = original_copytree(source, target, **kwargs)
         replaced = target / "config" / "settings" / "base.py"
         replaced.unlink()
@@ -366,14 +368,19 @@ def test_generator_refuses_symlink_added_during_copy_and_preserves_external_file
     assert external.read_text(encoding="utf-8") == "DO_NOT_TOUCH = True\n"
 
 
-def test_generator_excludes_untrusted_symlinks_in_ignored_source_dirs(tmp_path, monkeypatch):
+def test_generator_excludes_untrusted_symlinks_in_ignored_source_dirs(tmp_path):
+    import shutil
+
     from scripts import new_project
 
-    source = create_project(tmp_path / "source", name="source-api")
+    source = tmp_path / "source"
+    source.mkdir()
+    (source / "safe.py").write_text("SAFE = True\n", encoding="utf-8")
     external = tmp_path / "outside"
     external.mkdir()
     (source / ".git").symlink_to(external, target_is_directory=True)
-    monkeypatch.setattr(new_project, "SOURCE_ROOT", source)
-    target = new_project.create_project(tmp_path / "client", name="client-api")
-    assert target.exists()
+
+    new_project._reject_source_symlinks(source)
+    target = shutil.copytree(source, tmp_path / "client", ignore=new_project._ignore_excluded)
+    assert (target / "safe.py").read_text(encoding="utf-8") == "SAFE = True\n"
     assert not (target / ".git").exists()
