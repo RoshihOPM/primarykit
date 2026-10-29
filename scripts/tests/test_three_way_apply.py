@@ -222,3 +222,83 @@ def test_three_way_apply_restores_all_files_if_provenance_write_fails(tmp_path, 
 
     assert (admin.read_bytes(), helper.read_bytes(), origin.read_bytes()) == original
     assert not list(client.glob(".primarykit-apply-*"))
+
+
+def test_converged_file_ancestry_advances_with_related_upstream_change(tmp_path):
+    """Already-accepted client bytes must not retain stale hashes after apply."""
+    source, client = fixtures(tmp_path)
+    upstream_helper = source / "apps" / "audit" / "helper.py"
+    upstream_admin = source / "apps" / "audit" / "admin.py"
+    client_admin = client / "apps" / "audit" / "admin.py"
+
+    upstream_helper.write_text(upstream_helper.read_text() + "# upstream helper fix\n")
+    upstream_admin.write_text(upstream_admin.read_text() + "\n# manually adopted revision one\n")
+    commit(source, "two independent upstream edits")
+
+    # The client independently accepted only admin.py, before invoking upgrade.
+    client_admin.write_bytes(upstream_admin.read_bytes())
+    commit(client, "manually accepted upstream admin change")
+    first = apply_three_way_updates(source=source, project=client)
+    assert first["updated"] == ["audit/helper.py"]
+
+    origin = client / "primarykit-origin.json"
+    metadata = json.loads(origin.read_text())
+    assert (
+        metadata["module_fingerprints"]["audit"]["admin.py"]
+        == hashlib.sha256(upstream_admin.read_bytes()).hexdigest()
+    )
+    assert metadata["module_source_refs"]["audit"] == git(source, "rev-parse", "HEAD")
+    commit(client, "reviewed first source update")
+
+    # If admin.py retained the *old* fingerprint, this previously failed with
+    # "historical baseline does not match" despite a genuine source ancestry.
+    upstream_admin.write_text(upstream_admin.read_text() + "# upstream admin revision two\n")
+    commit(source, "next admin revision")
+    second = apply_three_way_updates(source=source, project=client)
+    assert second["updated"] == ["audit/admin.py"]
+    assert "# upstream admin revision two" in client_admin.read_text()
+
+
+def test_converged_contract_changes_block_related_upgrade(tmp_path):
+    """A byte-identical client contract is still a schema/behavior review."""
+    source, client = fixtures(tmp_path)
+    upstream_helper = source / "apps" / "audit" / "helper.py"
+    upstream_contract = source / "apps" / "audit" / "services.py"
+    client_contract = client / "apps" / "audit" / "services.py"
+
+    upstream_helper.write_text(upstream_helper.read_text() + "# unrelated upstream helper\n")
+    upstream_contract.write_text(upstream_contract.read_text() + "\n# changed contract\n")
+    commit(source, "upstream helper and contract changed")
+    client_contract.write_bytes(upstream_contract.read_bytes())
+    commit(client, "manually copied new contract")
+    origin = client / "primarykit-origin.json"
+    previous = origin.read_bytes()
+
+    with pytest.raises(ValueError, match="converged contract needs review"):
+        apply_three_way_updates(source=source, project=client)
+    assert origin.read_bytes() == previous
+    assert "# unrelated upstream helper" not in (
+        client / "apps" / "audit" / "helper.py"
+    ).read_text()
+
+
+def test_converged_file_rejects_forged_history(tmp_path):
+    source, client = fixtures(tmp_path)
+    upstream_helper = source / "apps" / "audit" / "helper.py"
+    upstream_admin = source / "apps" / "audit" / "admin.py"
+    client_admin = client / "apps" / "audit" / "admin.py"
+
+    upstream_helper.write_text(upstream_helper.read_text() + "# upstream edit\n")
+    upstream_admin.write_text(upstream_admin.read_text() + "\n# accepted edit\n")
+    commit(source, "upstream revision")
+    client_admin.write_bytes(upstream_admin.read_bytes())
+    origin = client / "primarykit-origin.json"
+    metadata = json.loads(origin.read_text())
+    metadata["module_fingerprints"]["audit"]["admin.py"] = "0" * 64
+    origin.write_text(json.dumps(metadata))
+    commit(client, "manually accepted change with bad provenance")
+    before = origin.read_bytes()
+
+    with pytest.raises(ValueError, match="converged baseline mismatch"):
+        apply_three_way_updates(source=source, project=client)
+    assert origin.read_bytes() == before
