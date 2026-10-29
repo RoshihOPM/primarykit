@@ -277,9 +277,9 @@ def test_converged_contract_changes_block_related_upgrade(tmp_path):
     with pytest.raises(ValueError, match="converged contract needs review"):
         apply_three_way_updates(source=source, project=client)
     assert origin.read_bytes() == previous
-    assert "# unrelated upstream helper" not in (
-        client / "apps" / "audit" / "helper.py"
-    ).read_text()
+    assert (
+        "# unrelated upstream helper" not in (client / "apps" / "audit" / "helper.py").read_text()
+    )
 
 
 def test_converged_file_rejects_forged_history(tmp_path):
