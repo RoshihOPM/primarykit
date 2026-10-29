@@ -14,7 +14,7 @@ import subprocess
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from scripts.module_upgrade import compare_modules, three_way_plan
+from scripts.module_upgrade import CONTRACT_FILES, _hashes, compare_modules, three_way_plan
 
 
 def _git(root: Path, *args: str) -> str:
@@ -169,6 +169,44 @@ def apply_three_way_updates(*, source: Path, project: Path) -> dict:
                 continue
             pending.append((module, path, target, merged, upstream))
 
+    # Files already manually accepted by the client are absent from the diff
+    # when local bytes match incoming bytes. If another file in this module is
+    # being upgraded, preserve ancestry for those converged files as well.
+    # Otherwise a later upgrade sees a new source commit but stale base hashes.
+    converged = []
+    for module in sorted({name for name, *_ in pending}):
+        incoming_hashes = _hashes(source / "apps" / module)
+        client_hashes = _hashes(project / "apps" / module)
+        ancestor_ref = refs[module]
+        baseline = fingerprints[module]
+        for path in sorted(set(incoming_hashes) | set(baseline)):
+            current_hash = incoming_hashes.get(path)
+            original_hash = baseline.get(path)
+            if current_hash == original_hash or client_hashes.get(path) != current_hash:
+                continue
+            if current_hash is None:
+                blocked.append(f"{module}/{path}: converged deletion needs review")
+                continue
+            if path in CONTRACT_FILES:
+                blocked.append(f"{module}/{path}: converged contract needs review")
+                continue
+            history = subprocess.run(
+                ["git", "-C", str(source), "show", f"{ancestor_ref}:apps/{module}/{path}"],
+                check=False,
+                capture_output=True,
+            )
+            if original_hash is None:
+                valid_history = history.returncode != 0
+            else:
+                valid_history = (
+                    history.returncode == 0
+                    and hashlib.sha256(history.stdout).hexdigest() == original_hash
+                )
+            if not valid_history:
+                blocked.append(f"{module}/{path}: converged baseline mismatch")
+                continue
+            converged.append((module, path, current_hash))
+
     if blocked:
         raise ValueError("Review required; no changes applied: " + "; ".join(sorted(blocked)))
     if not pending:
@@ -190,6 +228,8 @@ def apply_three_way_updates(*, source: Path, project: Path) -> dict:
         for module, path, _, _, _, upstream in prepared:
             fingerprints[module][path] = hashlib.sha256(upstream).hexdigest()
             refs[module] = revision
+        for module, path, digest in converged:
+            fingerprints[module][path] = digest
         new_origin = stage / "primarykit-origin.json"
         new_origin.write_text(
             json.dumps(metadata, indent=2, ensure_ascii=False) + "\n",
