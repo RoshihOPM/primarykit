@@ -30,6 +30,57 @@ AVAILABLE_MODULES = discover_modules()
 OPTIONAL_APPS = frozenset(AVAILABLE_MODULES) - REQUIRED_APPS
 MIGRATION_APPS = migration_apps(AVAILABLE_MODULES)
 
+# A copied client must never inherit unrelated checkout files (backups,
+# downloaded artifacts, maintainer workflows, or unpublished source scripts).
+# Keep this explicit: new root assets need a reviewed generator change.
+COPYABLE_ROOT_ENTRIES = frozenset(
+    {
+        ".agents",
+        ".dockerignore",
+        ".env.example",
+        ".github",
+        ".gitignore",
+        ".python-version",
+        "AGENTS.md",
+        "LICENSE",
+        "README.md",
+        "README.ru.md",
+        "apps",
+        "compose.yaml",
+        "compose.prod.yaml",
+        "compose.redis.yaml",
+        "compose.celery.yaml",
+        "compose.celery.prod.yaml",
+        "compose.seaweedfs.yaml",
+        "config",
+        "deploy",
+        "docker",
+        "docs",
+        "manage.py",
+        "pyproject.toml",
+        "uv.lock",
+    }
+)
+
+
+def _selected_copy_ignore(root: Path, selected: set[str]):
+    """Restrict source copies before walking or reading non-client files."""
+
+    def ignore(directory, names):
+        ignored = _ignore_excluded(directory, names)
+        relative = Path(directory).relative_to(root).parts
+        if not relative:
+            ignored.update(set(names) - COPYABLE_ROOT_ENTRIES)
+        elif relative == ("apps",):
+            ignored.update(set(names) - (selected | {"__init__.py"}))
+        elif relative == (".github",):
+            ignored.update(set(names) - {"workflows"})
+        elif relative == (".github", "workflows"):
+            ignored.update(set(names) - {"ci.yaml"})
+        return ignored
+
+    return ignore
+
 
 def _ignore_excluded(directory, names):
     ignored = set()
@@ -65,10 +116,11 @@ def _ignore_excluded(directory, names):
     return ignored
 
 
-def _reject_source_symlinks(root: Path) -> None:
-    """Fail closed on copied symlinks, skipping paths excluded from the template."""
+def _reject_source_symlinks(root: Path, *, ignore=None) -> None:
+    """Fail closed on selected symlinks, skipping paths excluded from the template."""
+    ignore = ignore or _ignore_excluded
     for current, directories, files in os.walk(root, followlinks=False):
-        ignored = _ignore_excluded(current, directories + files)
+        ignored = ignore(current, directories + files)
         for name in (*directories, *files):
             entry = Path(current) / name
             if name not in ignored and entry.is_symlink():
@@ -159,7 +211,8 @@ def create_project(
         raise FileExistsError(f"Destination already exists: {target}")
 
     selected = set(plan["included_apps"])
-    _reject_source_symlinks(root)
+    copy_ignore = _selected_copy_ignore(root, selected)
+    _reject_source_symlinks(root, ignore=copy_ignore)
     target.parent.mkdir(parents=True, exist_ok=True)
     # Claim the destination exclusively before entering the cleanup scope.
     # If another process creates it after the exists() check, never delete
@@ -167,7 +220,7 @@ def create_project(
     target.mkdir()
     try:
         # Never dereference a link introduced after the preflight during copy.
-        shutil.copytree(root, target, ignore=_ignore_excluded, dirs_exist_ok=True, symlinks=True)
+        shutil.copytree(root, target, ignore=copy_ignore, dirs_exist_ok=True, symlinks=True)
         # Fail before any read/write transform touches a newly copied link.
         _reject_source_symlinks(target)
         # Verify that versioned owners really ship immutable baseline migrations.
@@ -192,8 +245,6 @@ def create_project(
         ):
             (target / source_only).unlink(missing_ok=True)
         shutil.rmtree(target / ".github" / "ISSUE_TEMPLATE", ignore_errors=True)
-        for module in OPTIONAL_APPS - selected:
-            shutil.rmtree(target / "apps" / module)
         if "storage" not in selected:
             (target / "compose.seaweedfs.yaml").unlink()
         if not {"cache", "celery_tasks"} & selected:
@@ -202,8 +253,7 @@ def create_project(
             (target / "compose.celery.yaml").unlink()
             (target / "compose.celery.prod.yaml").unlink()
 
-        # Generator remains with the source catalog only, not in client projects.
-        shutil.rmtree(target / "scripts")
+        # Source-only scripts and maintainer workflows are excluded before copying.
         (target / "apps" / "core" / "tests" / "test_project_generator.py").unlink()
         (target / "apps" / "core" / "tests" / "test_doctor.py").unlink()
         (target / "apps" / "core" / "tests" / "test_module_upgrade.py").unlink()
