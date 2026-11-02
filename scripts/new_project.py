@@ -171,23 +171,43 @@ def _module_fingerprints(root: Path, selected: set[str]) -> dict[str, dict[str, 
 
 
 def _source_git_revision(root: Path) -> str | None:
-    """Record an immutable source commit when generation runs from a Git checkout."""
+    """Record a Git commit only when module source bytes have a trusted ancestor.
+
+    Uncommitted module changes do not correspond to a historical Git blob.
+    Never advertise an immutable module baseline for dirty source files.
+    """
     try:
-        completed = subprocess.run(
+        top = subprocess.run(
+            ["git", "-C", str(root), "rev-parse", "--show-toplevel"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        head = subprocess.run(
             ["git", "-C", str(root), "rev-parse", "--verify", "HEAD"],
             capture_output=True,
             text=True,
             check=False,
         )
+        dirty = subprocess.run(
+            ["git", "-C", str(root), "status", "--porcelain=v1", "--untracked-files=all", "--", "apps"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
     except OSError:
-        # Production and minimal Docker images need not contain Git.
+        # Exported archives and minimal images may lack Git.
         return None
-    revision = completed.stdout.strip()
-    return (
-        revision
-        if completed.returncode == 0 and re.fullmatch(r"[0-9a-f]{40,64}", revision)
-        else None
-    )
+    if (
+        top.returncode != 0
+        or Path(top.stdout.strip()).resolve() != root.resolve()
+        or head.returncode != 0
+        or dirty.returncode != 0
+        or dirty.stdout.strip()
+    ):
+        return None
+    revision = head.stdout.strip()
+    return revision if re.fullmatch(r"[0-9a-f]{40,64}", revision) else None
 
 
 def create_project(
