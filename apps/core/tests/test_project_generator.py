@@ -385,6 +385,7 @@ def test_generator_excludes_untrusted_symlinks_in_ignored_source_dirs(tmp_path):
     assert (target / "safe.py").read_text(encoding="utf-8") == "SAFE = True\n"
     assert not (target / ".git").exists()
 
+
 def test_generator_copy_allowlist_rejects_unknown_root_and_maintainer_assets(tmp_path):
     import shutil
 
