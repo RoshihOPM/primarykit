@@ -28,6 +28,8 @@ def _git(root: Path, *args: str) -> str:
 
 def apply_three_way_updates(*, source: Path, project: Path) -> dict:
     source, project = source.resolve(), project.resolve()
+    if _git(source, "rev-parse", "--show-toplevel") != str(source):
+        raise ValueError("Expected source Git worktree root")
     if _git(project, "rev-parse", "--show-toplevel") != str(project):
         raise ValueError("Expected client Git worktree root")
     branch = _git(project, "branch", "--show-current")
@@ -116,18 +118,23 @@ def apply_three_way_updates(*, source: Path, project: Path) -> dict:
                     continue
                 verified_ancestry.add(module)
             baseline_hash = fingerprints[module].get(path)
-            if baseline_hash is not None:
-                baseline_blob = subprocess.run(
-                    ["git", "-C", str(source), "show", f"{ancestor_ref}:apps/{module}/{path}"],
-                    check=False,
-                    capture_output=True,
-                )
-                if (
-                    baseline_blob.returncode != 0
-                    or hashlib.sha256(baseline_blob.stdout).hexdigest() != baseline_hash
-                ):
-                    blocked.append(f"{module}/{path}: historical baseline does not match")
+            baseline_blob = subprocess.run(
+                ["git", "-C", str(source), "show", f"{ancestor_ref}:apps/{module}/{path}"],
+                check=False,
+                capture_output=True,
+            )
+            if baseline_hash is None:
+                # An untracked fingerprint does not make an old source file new.
+                # The path must genuinely be absent from the immutable ancestor.
+                if baseline_blob.returncode == 0:
+                    blocked.append(f"{module}/{path}: omitted historical source fingerprint")
                     continue
+            elif (
+                baseline_blob.returncode != 0
+                or hashlib.sha256(baseline_blob.stdout).hexdigest() != baseline_hash
+            ):
+                blocked.append(f"{module}/{path}: historical baseline does not match")
+                continue
             upstream = incoming.read_bytes()
             merged = upstream
             if kind == "conflict_review":
