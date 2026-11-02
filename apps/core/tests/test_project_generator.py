@@ -384,3 +384,57 @@ def test_generator_excludes_untrusted_symlinks_in_ignored_source_dirs(tmp_path):
     target = shutil.copytree(source, tmp_path / "client", ignore=new_project._ignore_excluded)
     assert (target / "safe.py").read_text(encoding="utf-8") == "SAFE = True\n"
     assert not (target / ".git").exists()
+
+def test_generator_copy_allowlist_rejects_unknown_root_and_maintainer_assets(tmp_path):
+    import shutil
+
+    from scripts import new_project
+
+    source = tmp_path / "source"
+    shutil.copytree(
+        new_project.SOURCE_ROOT,
+        source,
+        ignore=new_project._selected_copy_ignore(
+            new_project.SOURCE_ROOT, set(new_project.AVAILABLE_MODULES)
+        ),
+    )
+    # Files may be accidentally added to an otherwise trusted checkout.
+    (source / "database-backup.sql").write_text("PRIVATE CLIENT DATA\n", encoding="utf-8")
+    (source / "local-artifacts").mkdir()
+    (source / "local-artifacts" / "credentials.txt").write_text(
+        "PRIVATE CLIENT DATA\n", encoding="utf-8"
+    )
+    (source / ".github" / "workflows" / "maintainer-only.yml").write_text(
+        "name: private\n", encoding="utf-8"
+    )
+
+    ignored_module = source / "apps" / "audit"
+    external = tmp_path / "external"
+    external.write_text("PRIVATE CLIENT DATA\n", encoding="utf-8")
+    (ignored_module / "private.py").symlink_to(external)
+
+    root_filter = new_project._selected_copy_ignore(source, {"core", "users", "notifications"})
+    assert "database-backup.sql" in root_filter(str(source), ["database-backup.sql"])
+    assert "audit" in root_filter(str(source / "apps"), ["audit"])
+    assert "maintainer-only.yml" in root_filter(
+        str(source / ".github" / "workflows"), ["maintainer-only.yml"]
+    )
+
+    # An unsafe link in an unselected app must not be read or copied.
+    from scripts import new_project as generator
+
+    previous_source = generator.SOURCE_ROOT
+    try:
+        generator.SOURCE_ROOT = source
+        client = generator.create_project(tmp_path / "client", name="client-api")
+    finally:
+        generator.SOURCE_ROOT = previous_source
+
+    assert not (client / "database-backup.sql").exists()
+    assert not (client / "local-artifacts").exists()
+    assert not (client / "apps" / "audit").exists()
+    assert not (client / ".github" / "workflows" / "maintainer-only.yml").exists()
+    assert not (client / ".github" / "workflows" / "history-security-audit.yml").exists()
+    assert not (client / "scripts").exists()
+    assert (client / ".github" / "workflows" / "ci.yaml").is_file()
+    assert (client / "apps" / "core" / "manifest.py").is_file()
