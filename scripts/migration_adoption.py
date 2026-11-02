@@ -15,6 +15,8 @@ from pathlib import Path
 
 def _schema_modes(root: Path) -> dict:
     origin = root / "primarykit-origin.json"
+    if origin.is_symlink():
+        raise ValueError("Symlinked client provenance is unsafe")
     if not origin.is_file():
         raise ValueError("Missing client provenance: manual schema adoption required")
     data = json.loads(origin.read_text(encoding="utf-8"))
@@ -22,6 +24,10 @@ def _schema_modes(root: Path) -> dict:
     if not isinstance(modes, dict):
         raise ValueError("Invalid pinned schema modes")
     settings_file = root / "config" / "settings" / "base.py"
+    if settings_file.is_symlink() or any(
+        parent.is_symlink() for parent in (settings_file.parent, settings_file.parent.parent)
+    ):
+        raise ValueError("Symlinked client settings are unsafe")
     settings_tree = ast.parse(settings_file.read_text(encoding="utf-8"))
     for name, expected in modes.items():
         if name not in {"catalog", "inventory"} or expected not in {"tenant", "standalone"}:
@@ -39,6 +45,8 @@ def _schema_modes(root: Path) -> dict:
 
 
 def _history(folder: Path) -> dict[str, str]:
+    if folder.is_symlink():
+        raise ValueError("Symlinked migration history is unsafe")
     if not folder.is_dir():
         return {}
     result = {}
@@ -54,6 +62,8 @@ def _history(folder: Path) -> dict[str, str]:
 
 
 def _policy(source: Path) -> str:
+    if source.is_symlink():
+        raise ValueError("Symlinked module manifest is unsafe")
     tree = ast.parse(source.read_text(encoding="utf-8"))
     assignments = [
         item.value
@@ -138,10 +148,14 @@ def adoption_plan(
         raise ValueError("Source and client must differ")
     _schema_modes(project)
     source_apps, client_apps = source / "apps", project / "apps"
+    if source_apps.is_symlink() or client_apps.is_symlink():
+        raise ValueError("Symlinked apps root is unsafe")
     if not source_apps.is_dir() or not client_apps.is_dir():
         raise ValueError("Expected source and client apps directories")
     items = []
     for folder in sorted(source_apps.iterdir()):
+        if folder.is_symlink():
+            raise ValueError("Symlinked source module is unsafe")
         manifest = folder / "manifest.py"
         if not manifest.is_file() or _policy(manifest) != "bundled":
             continue
@@ -149,6 +163,8 @@ def adoption_plan(
         if not source_history:
             raise ValueError(f"Bundled module {folder.name} has no migration history")
         client_folder = client_apps / folder.name
+        if client_folder.is_symlink():
+            raise ValueError("Symlinked client module is unsafe")
         client_history = _history(client_folder / "migrations") if client_folder.is_dir() else None
         if client_history is None:
             status = "not_installed"
