@@ -280,3 +280,25 @@ def test_upgrade_report_rejects_symlinked_apps_root(tmp_path, side):
 
     with pytest.raises(ValueError, match="Symlinked apps"):
         compare_modules(source=source, project=client)
+
+
+@pytest.mark.parametrize("contract", ["models.py", "services.py", "permissions.py", "views.py"])
+def test_upgrade_nested_contract_files_require_review(tmp_path, contract):
+    source = create_project(tmp_path / "source", name="source-api", optional_apps={"audit"})
+    client = create_project(tmp_path / "client", name="client-api", optional_apps={"audit"})
+    nested = source / "apps" / "audit" / "internal"
+    nested.mkdir()
+    (nested / contract).write_text("# sensitive nested contract\n", encoding="utf-8")
+    safe = source / "apps" / "audit" / "helper.py"
+    safe.write_text("# safe helper\n", encoding="utf-8")
+
+    report = compare_modules(source=source, project=client)
+    changes = {item["path"]: item for item in report["modules"]["audit"]["changes"]}
+    assert changes[f"internal/{contract}"]["change"] == "source_update"
+    assert changes[f"internal/{contract}"]["contract_review"] is True
+    assert changes["helper.py"]["contract_review"] is False
+
+    with pytest.raises(ValueError, match="Manual review required"):
+        apply_safe_updates(source=source, project=client)
+    assert not (client / "apps" / "audit" / "internal" / contract).exists()
+    assert not (client / "apps" / "audit" / "helper.py").exists()

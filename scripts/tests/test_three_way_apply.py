@@ -358,3 +358,50 @@ def test_three_way_apply_rejects_source_nested_in_other_git_worktree(tmp_path):
 
     with pytest.raises(ValueError, match="source Git worktree root"):
         apply_three_way_updates(source=nested, project=client)
+
+
+@pytest.mark.parametrize("filename", ["models.py", "services.py", "permissions.py"])
+def test_three_way_refuses_nested_contract_and_safe_helper_in_same_batch(tmp_path, filename):
+    source, client = fixtures(tmp_path)
+    nested = source / "apps" / "audit" / "internal"
+    nested.mkdir()
+    (nested / filename).write_text("# upstream contract\n", encoding="utf-8")
+    upstream_helper = source / "apps" / "audit" / "helper.py"
+    upstream_helper.write_text(upstream_helper.read_text() + "# safe upstream edit\n")
+    commit(source, "nested contract and safe helper")
+
+    origin = client / "primarykit-origin.json"
+    previous = origin.read_bytes()
+    client_helper = client / "apps" / "audit" / "helper.py"
+    original_helper = client_helper.read_bytes()
+    with pytest.raises(ValueError, match="contract/deletion review required"):
+        apply_three_way_updates(source=source, project=client)
+    assert origin.read_bytes() == previous
+    assert client_helper.read_bytes() == original_helper
+    assert not (client / "apps" / "audit" / "internal" / filename).exists()
+
+
+def test_three_way_refuses_manually_converged_nested_contract(tmp_path):
+    source, client = fixtures(tmp_path)
+    nested = source / "apps" / "audit" / "internal"
+    nested.mkdir()
+    upstream_contract = nested / "permissions.py"
+    upstream_contract.write_text("# manually accepted sensitive rule\n", encoding="utf-8")
+    upstream_helper = source / "apps" / "audit" / "helper.py"
+    upstream_helper.write_text(upstream_helper.read_text() + "# upstream helper\n")
+    commit(source, "nested contract and helper changes")
+
+    client_nested = client / "apps" / "audit" / "internal"
+    client_nested.mkdir()
+    (client_nested / "permissions.py").write_bytes(upstream_contract.read_bytes())
+    commit(client, "manually copied sensitive contract")
+
+    origin = client / "primarykit-origin.json"
+    prior_origin = origin.read_bytes()
+    client_helper = client / "apps" / "audit" / "helper.py"
+    prior_helper = client_helper.read_bytes()
+
+    with pytest.raises(ValueError, match="converged contract needs review"):
+        apply_three_way_updates(source=source, project=client)
+    assert origin.read_bytes() == prior_origin
+    assert client_helper.read_bytes() == prior_helper

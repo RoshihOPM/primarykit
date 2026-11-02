@@ -34,6 +34,11 @@ CONTRACT_FILES = frozenset(
 CONTRACT_PREFIXES = ("migrations/",)
 
 
+def is_contract_path(path: str) -> bool:
+    """Protect contract filenames even when modules use nested Python packages."""
+    return path.rsplit("/", 1)[-1] in CONTRACT_FILES or path.startswith(CONTRACT_PREFIXES)
+
+
 def _hashes(folder: Path) -> dict[str, str]:
     """Hash only regular module files; never follow module symlinks.
 
@@ -118,7 +123,7 @@ def compare_modules(*, source: Path, project: Path) -> dict:
                 classification = "client_modified"
             else:
                 classification = "source_update"
-            sensitive = path in CONTRACT_FILES or path.startswith(CONTRACT_PREFIXES)
+            sensitive = is_contract_path(path)
             changes.append(
                 {
                     "path": path,
