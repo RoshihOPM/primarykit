@@ -190,7 +190,16 @@ def _source_git_revision(root: Path) -> str | None:
             check=False,
         )
         dirty = subprocess.run(
-            ["git", "-C", str(root), "status", "--porcelain=v1", "--untracked-files=all", "--", "apps"],
+            [
+                "git",
+                "-C",
+                str(root),
+                "status",
+                "--porcelain=v1",
+                "--untracked-files=all",
+                "--",
+                "apps",
+            ],
             capture_output=True,
             text=True,
             check=False,
