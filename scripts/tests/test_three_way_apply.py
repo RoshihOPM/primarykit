@@ -302,3 +302,59 @@ def test_converged_file_rejects_forged_history(tmp_path):
     with pytest.raises(ValueError, match="converged baseline mismatch"):
         apply_three_way_updates(source=source, project=client)
     assert origin.read_bytes() == before
+
+
+def test_source_only_apply_rejects_omitted_historical_file_fingerprint(tmp_path):
+    """A removed origin entry must not convert an old file into an added file."""
+    source, client = fixtures(tmp_path)
+    incoming_helper = source / "apps" / "audit" / "helper.py"
+    incoming_helper.write_text(incoming_helper.read_text() + "# upstream change\n")
+    commit(source, "new upstream revision")
+
+    origin = client / "primarykit-origin.json"
+    metadata = json.loads(origin.read_text())
+    metadata["module_fingerprints"]["audit"].pop("admin.py")
+    origin.write_text(json.dumps(metadata))
+    missing = client / "apps" / "audit" / "admin.py"
+    missing.unlink()
+    commit(client, "simulate missing origin fingerprint and client file")
+
+    before_origin = origin.read_bytes()
+    before_helper = (client / "apps" / "audit" / "helper.py").read_bytes()
+    with pytest.raises(ValueError, match="omitted historical source fingerprint"):
+        apply_three_way_updates(source=source, project=client)
+
+    assert not missing.exists()
+    assert origin.read_bytes() == before_origin
+    assert (client / "apps" / "audit" / "helper.py").read_bytes() == before_helper
+
+
+def test_source_only_apply_allows_genuinely_new_upstream_file(tmp_path):
+    source, client = fixtures(tmp_path)
+    incoming = source / "apps" / "audit" / "new_helper.py"
+    incoming.write_text("NEW_HELPER = True\n", encoding="utf-8")
+    commit(source, "add genuinely new module helper")
+
+    result = apply_three_way_updates(source=source, project=client)
+    installed = client / "apps" / "audit" / "new_helper.py"
+    assert result["updated"] == ["audit/new_helper.py"]
+    assert installed.read_bytes() == incoming.read_bytes()
+    metadata = json.loads((client / "primarykit-origin.json").read_text())
+    assert (
+        metadata["module_fingerprints"]["audit"]["new_helper.py"]
+        == hashlib.sha256(incoming.read_bytes()).hexdigest()
+    )
+
+
+def test_three_way_apply_rejects_source_nested_in_other_git_worktree(tmp_path):
+    import shutil
+
+    source, client = fixtures(tmp_path)
+    parent = tmp_path / "outer"
+    parent.mkdir()
+    nested = parent / "source"
+    shutil.copytree(source, nested, ignore=shutil.ignore_patterns(".git"))
+    git(parent, "init", "-q")
+
+    with pytest.raises(ValueError, match="source Git worktree root"):
+        apply_three_way_updates(source=nested, project=client)
