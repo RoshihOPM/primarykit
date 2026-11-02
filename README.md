@@ -8,7 +8,7 @@
 
 > **Status:** source version `0.1.0`, actively developed and publicly accessible. This repository is not a SaaS, a hosted backend, a microservices framework, or a shared runtime library. Modules are reusable starting points, not certified production-ready business solutions.
 >
-> **Public repository security status (2026-10-22):** `main` has an active, non-bypassable PR ruleset requiring `test` and `scan-history`; both checks passed on `df8282a`. The full manual history/IP rights review is **not signed off** ([#68](https://github.com/RoshihOPM/primarykit/issues/68)). See [project status](docs/en/project-status.md).
+> **Security status (verified 2026-11-02):** protected `main` requires PR review and passing `test` / `scan-history`; [the latest verified main CI](https://github.com/RoshihOPM/primarykit/actions/runs/40822782027) passed on `39f743f`. The full independent history/IP rights audit is **not signed off** ([#68](https://github.com/RoshihOPM/primarykit/issues/68)). See [project status](docs/en/project-status.md).
 
 ## Why PrimaryKit?
 
