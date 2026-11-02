@@ -1,35 +1,52 @@
-# Module schema ownership and upgrade roadmap
+# Ownership and lifecycle of module migrations
 
-PrimaryKit is a **copy-based** generator. Existing clients own migrations and data.
-This document describes the current behavior, **not bundled migrations**.
+PrimaryKit copies modules into independent Django projects. Existing clients
+own their applied migration graphs and data; no source upgrade may silently
+rewrite or fake their applied revisions.
 
-## Current manifest contract
+## Manifest contract
 
-Each module declares `migration_policy` in its `manifest.py`:
+Each `apps/<module>/manifest.py` declares `migration_policy`:
 
-- `none` (default): the module has no client-owned database schema.
-- `client`: a generated client creates and commits its own migrations.
+- `none`: no module-owned schema (default).
+- `client`: the generated client creates, reviews and commits its migrations.
+- `bundled`: the source ships a reviewed, committed migration history for **new**
+  clients, which the generator preserves without regenerating that baseline.
 
-The generator and generated CI now derive migration labels from the installed
-manifests. Run `python -m apps.core.migration_plan` to inspect the list.
+The source currently pilots `bundled` with `tasks/0001_initial.py`.
+This does **not** imply that an older client with independently generated
+Tasks migrations can safely adopt the new source history.
 
-## Compatibility boundary
+## Compatibility boundaries
 
-The source catalog **does not yet ship reusable migration histories**. Never
-remove, rename or overwrite existing client migration histories during an update.
-Catalog and Inventory support different standalone and tenant schemas selected
-before the initial migration. A single bundled migration graph is not safe
-without resolving these mode-dependent schemas first.
+Catalog and Inventory each support standalone and tenant model families. The
+selected profile is pinned at generation. Do not change profiles or copy a
+tenant migration into an existing standalone database. A fresh schema and a
+historical migrated client are distinct upgrade cases.
 
-## Milestones for versioned migrations
+The generated PostgreSQL CI matrix tests fresh schema creation, repeat migrate
+and persisted sample records for selected modules. It does **not** demonstrate
+safe upgrades from historical published versions.
 
-1. Freeze base schemas, document foreign-key dependencies, and establish
-   a standalone/tenant schema policy.
-2. Add reproducible catalog-owned initial and incremental migration histories.
-3. Exercise clean generation plus upgrades from migrated projects with real
-   persisted data, and run `makemigrations --check --dry-run` in CI.
-4. Add PostgreSQL migration safety lint and review online data migrations.
-5. Keep existing client-generated histories on a documented manual migration
-   review path until adoption is proven safe.
+## Safe assessment workflow
 
-Never automatically apply schema-changing module upgrades without review.
+```bash
+python -m apps.core.migration_plan
+python scripts/migration_adoption.py --source . --project ../client-api
+# Optional, explicit DB ledger inspection; run with a read-only DB user.
+DATABASE_URL=postgresql://... python scripts/migration_adoption.py \
+  --source . --project ../client-api --verify-postgres --strict
+```
+
+The adoption inventory is read-only: it compares file hashes, pinned schema
+profiles and optionally the PostgreSQL `django_migrations` ledger. Even a
+matching ledger does not certify physical table structure or data safety.
+
+For #88, remaining work includes versioned, separately reviewed migration
+histories, dependency-graph review, data-preserving historical PostgreSQL
+upgrade tests and `makemigrations --check --dry-run`. Squawk SQL lint is already
+run in CI, but manual review of data changes and table locks remains mandatory.
+
+Never overwrite applied client migration files or use `--fake` to bypass
+unverified schema differences. See [bundled migration contract](bundled-migration-contract.md)
+and [issue #88](https://github.com/RoshihOPM/primarykit/issues/88).
