@@ -183,3 +183,46 @@ def test_postgres_inventory_fails_if_transaction_is_writable(monkeypatch):
     monkeypatch.setattr(psycopg, "connect", lambda *args, **kwargs: Connection())
     with pytest.raises(ValueError, match="read-only"):
         _read_postgres_migrations()
+
+
+@pytest.mark.parametrize(
+    "location",
+    [
+        "source_apps",
+        "client_apps",
+        "source_module",
+        "source_manifest",
+        "source_migrations",
+        "client_module",
+        "client_migrations",
+        "client_provenance",
+        "client_settings",
+    ],
+)
+def test_adoption_inventory_refuses_symlinked_paths_without_following_them(tmp_path, location):
+    source = create_project(tmp_path / "source", name="source-api", optional_apps={"tasks"})
+    client = create_project(tmp_path / "client", name="client-api", optional_apps={"tasks"})
+    external = tmp_path / "external"
+    external.mkdir()
+    (external / "sensitive.txt").write_text("DO NOT READ OR CHANGE\n", encoding="utf-8")
+
+    paths = {
+        "source_apps": source / "apps",
+        "client_apps": client / "apps",
+        "source_module": source / "apps" / "tasks",
+        "source_manifest": source / "apps" / "tasks" / "manifest.py",
+        "source_migrations": source / "apps" / "tasks" / "migrations",
+        "client_module": client / "apps" / "tasks",
+        "client_migrations": client / "apps" / "tasks" / "migrations",
+        "client_provenance": client / "primarykit-origin.json",
+        "client_settings": client / "config" / "settings" / "base.py",
+    }
+    victim = paths[location]
+    original = victim.with_name(victim.name + "-backup")
+    victim.rename(original)
+    victim.symlink_to(original, target_is_directory=original.is_dir())
+
+    with pytest.raises(ValueError, match="[Ss]ymlink"):
+        adoption_plan(source=source, project=client)
+    assert (external / "sensitive.txt").read_text(encoding="utf-8") == ("DO NOT READ OR CHANGE\n")
+    assert original.exists()
