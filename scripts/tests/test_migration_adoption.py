@@ -199,9 +199,7 @@ def test_postgres_inventory_fails_if_transaction_is_writable(monkeypatch):
         "client_settings",
     ],
 )
-def test_adoption_inventory_refuses_symlinked_paths_without_following_them(
-    tmp_path, location
-):
+def test_adoption_inventory_refuses_symlinked_paths_without_following_them(tmp_path, location):
     source = create_project(tmp_path / "source", name="source-api", optional_apps={"tasks"})
     client = create_project(tmp_path / "client", name="client-api", optional_apps={"tasks"})
     external = tmp_path / "external"
@@ -226,7 +224,5 @@ def test_adoption_inventory_refuses_symlinked_paths_without_following_them(
 
     with pytest.raises(ValueError, match="[Ss]ymlink"):
         adoption_plan(source=source, project=client)
-    assert (external / "sensitive.txt").read_text(encoding="utf-8") == (
-        "DO NOT READ OR CHANGE\n"
-    )
+    assert (external / "sensitive.txt").read_text(encoding="utf-8") == ("DO NOT READ OR CHANGE\n")
     assert original.exists()
