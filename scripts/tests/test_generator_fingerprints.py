@@ -56,9 +56,13 @@ def test_git_provenance_requires_clean_module_tree(tmp_path):
     _git(source, "add", ".")
     _git(
         source,
-        "-c", "user.name=PrimaryKit",
-        "-c", "user.email=tests@example.test",
-        "commit", "-m", "baseline",
+        "-c",
+        "user.name=PrimaryKit",
+        "-c",
+        "user.email=tests@example.test",
+        "commit",
+        "-m",
+        "baseline",
     )
     revision = _git(source, "rev-parse", "HEAD")
     assert _source_git_revision(source) == revision
@@ -89,8 +93,12 @@ def test_git_provenance_rejects_parent_checkout_falsely_claimed_as_source(tmp_pa
     _git(parent, "add", ".")
     _git(
         parent,
-        "-c", "user.name=PrimaryKit",
-        "-c", "user.email=tests@example.test",
-        "commit", "-m", "workspace",
+        "-c",
+        "user.name=PrimaryKit",
+        "-c",
+        "user.email=tests@example.test",
+        "commit",
+        "-m",
+        "workspace",
     )
     assert _source_git_revision(source) is None
