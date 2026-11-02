@@ -14,7 +14,7 @@ import subprocess
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from scripts.module_upgrade import CONTRACT_FILES, _hashes, compare_modules, three_way_plan
+from scripts.module_upgrade import _hashes, compare_modules, is_contract_path, three_way_plan
 
 
 def _git(root: Path, *args: str) -> str:
@@ -194,7 +194,7 @@ def apply_three_way_updates(*, source: Path, project: Path) -> dict:
             if current_hash is None:
                 blocked.append(f"{module}/{path}: converged deletion needs review")
                 continue
-            if path in CONTRACT_FILES:
+            if is_contract_path(path):
                 blocked.append(f"{module}/{path}: converged contract needs review")
                 continue
             history = subprocess.run(
