@@ -1,6 +1,6 @@
 [project]
 name = "primarykit"
-version = "0.1.0"
+version = "0.1.0a1"
 description = "Reusable Django starter and application catalog"
 readme = "README.md"
 requires-python = ">=3.13,<3.15"

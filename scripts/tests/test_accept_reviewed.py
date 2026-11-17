@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -11,6 +12,11 @@ from scripts.apply_module_upgrade import apply_three_way_updates
 from scripts.module_upgrade import compare_modules
 from scripts.new_project import create_project
 from scripts.tests.test_three_way_apply import commit, fixtures, git
+
+KIT_VERSION = tomllib.loads(
+    (Path(__file__).resolve().parents[2] / "pyproject.toml").read_text(encoding="utf-8")
+)["project"]["version"]
+VERSION_LINE = f'version = "{KIT_VERSION}"'
 
 
 def sha(path: Path) -> str:
@@ -71,7 +77,7 @@ def test_accept_reviewed_records_converged_contract_and_applies_helper(tmp_path)
     helper.write_text(helper.read_text() + "# unrelated upstream helper\n")
     contract = change_contract(source)
     pyproject = source / "pyproject.toml"
-    pyproject.write_text(pyproject.read_text().replace('version = "0.1.0"', 'version = "9.9.9"', 1))
+    pyproject.write_text(pyproject.read_text().replace(VERSION_LINE, 'version = "9.9.9"', 1))
     commit(source, "upstream helper and contract changed")
     client_contract = client / "apps" / "audit" / "services.py"
     client_contract.write_bytes(contract.read_bytes())
@@ -851,7 +857,7 @@ def test_recorded_version_comes_from_committed_source_pyproject(tmp_path):
     source, client = fixtures(tmp_path)
     contract = change_contract(source)
     pyproject = source / "pyproject.toml"
-    pyproject.write_text(pyproject.read_text().replace('version = "0.1.0"', 'version = "2.0.0"', 1))
+    pyproject.write_text(pyproject.read_text().replace(VERSION_LINE, 'version = "2.0.0"', 1))
     commit(source, "release 2.0.0")
     pyproject.write_text(pyproject.read_text().replace('version = "2.0.0"', 'version = "66.6"', 1))
     assert git(source, "status", "--porcelain").split() == ["M", "pyproject.toml"]
@@ -868,7 +874,7 @@ def test_plain_three_way_update_also_records_committed_version(tmp_path):
     helper = source / "apps" / "audit" / "helper.py"
     helper.write_text(helper.read_text() + "# upstream helper\n")
     pyproject = source / "pyproject.toml"
-    pyproject.write_text(pyproject.read_text().replace('version = "0.1.0"', 'version = "2.0.0"', 1))
+    pyproject.write_text(pyproject.read_text().replace(VERSION_LINE, 'version = "2.0.0"', 1))
     commit(source, "release 2.0.0")
     pyproject.write_text(pyproject.read_text().replace('version = "2.0.0"', 'version = "66.6"', 1))
 
@@ -876,7 +882,7 @@ def test_plain_three_way_update_also_records_committed_version(tmp_path):
 
     versions = read_origin(client)["module_versions"]
     assert versions["audit"] == "2.0.0"
-    assert versions["users"] == "0.1.0"
+    assert versions["users"] == KIT_VERSION
 
 
 @pytest.mark.parametrize("broken", ["missing-version", "invalid-toml", "empty-version", "deleted"])
@@ -885,9 +891,9 @@ def test_acceptance_refused_when_source_version_is_unreadable(tmp_path, broken):
     contract = change_contract(source)
     pyproject = source / "pyproject.toml"
     if broken == "missing-version":
-        pyproject.write_text(pyproject.read_text().replace('version = "0.1.0"\n', "", 1))
+        pyproject.write_text(pyproject.read_text().replace(VERSION_LINE + "\n", "", 1))
     elif broken == "empty-version":
-        pyproject.write_text(pyproject.read_text().replace('version = "0.1.0"', 'version = ""', 1))
+        pyproject.write_text(pyproject.read_text().replace(VERSION_LINE, 'version = ""', 1))
     elif broken == "invalid-toml":
         pyproject.write_text("[project\n")
     else:

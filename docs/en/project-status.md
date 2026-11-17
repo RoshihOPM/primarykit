@@ -35,4 +35,16 @@ Later than the `main` checkpoint above. The [pull request CI run](https://github
 
 Limits: the scenario's reviewer is scripted; baselines are commits, not published releases; modules are `tasks`, `kanban`, `deals`, `inventory` (standalone), `orders`, `payments`; history has no schema-changing upgrade. #88 and #89 stay open: published tagged releases, human-run upgrades of real clients, data-migration upgrades, more bundled modules, tenant-mode graphs and rollback verification are missing. #68 is untouched. See [updating copied modules](module-updates.md).
 
+## Merged 2026-11-17 ([#147](https://github.com/RoshihOPM/primarykit/pull/147), `33a1fd4`) and `v0.1.0-alpha.1` preparation
+
+The [pull request CI run](https://github.com/RoshihOPM/primarykit/pull/147/checks) passed all 14 checks.
+
+- Account throttles no longer trust client-supplied `X-Forwarded-For`; `DJANGO_NUM_PROXIES` (default `0`) sets the trusted proxy hop count. Deployments behind the example nginx must set `DJANGO_NUM_PROXIES=1`.
+- Inbound webhooks process identical signed bytes at most once.
+- `install_kit_module` follows the generator's copy rules; generated clients get a dedicated CI workflow.
+- Module upgrade apply modes verify source module bytes against committed `HEAD` blobs.
+- PostgreSQL concurrency tests for standalone Inventory.
+
+The source version is `0.1.0a1`; the `[0.1.0-alpha.1]` CHANGELOG section is prepared. The maintainer creates the tag and GitHub prerelease after signing off [#68](https://github.com/RoshihOPM/primarykit/issues/68). After tagging, the released commit is appended to `scripts/release_baselines.json`.
+
 This checkpoint describes the latest verified protected `main`; changes in newer PRs require their own CI evidence.
