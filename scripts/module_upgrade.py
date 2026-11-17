@@ -63,6 +63,49 @@ def _hashes(folder: Path) -> dict[str, str]:
     }
 
 
+def source_differs_from_commit(source: Path, modules) -> list[str]:
+    """List module files whose working-tree bytes are not the committed HEAD blobs.
+
+    ``git status`` hides ignored files and applies end-of-line filters, so a
+    "clean" checkout can still hold bytes that no immutable commit contains.
+    Such files must never be copied or fingerprinted as a historical baseline.
+    """
+    skipped = {"migrations", "tests", "__pycache__"}
+    problems = []
+    for module in sorted(modules):
+        prefix = f"apps/{module}/"
+        listing = subprocess.run(
+            ["git", "-C", str(source), "ls-tree", "-r", "-z", "HEAD", "--", prefix],
+            check=True,
+            capture_output=True,
+        ).stdout.decode("utf-8")
+        committed = {}
+        for entry in filter(None, listing.split("\0")):
+            details, path = entry.split("\t", 1)
+            relative = path[len(prefix) :]
+            if path.endswith(".py") and not skipped & set(relative.split("/")):
+                committed[relative] = details.split()[2]
+        working = sorted(_hashes(source / "apps" / module))
+        problems += [f"{module}/{path}: not committed" for path in working if path not in committed]
+        problems += [f"{module}/{path}: missing" for path in committed if path not in working]
+        tracked = [path for path in working if path in committed]
+        if not tracked:
+            continue
+        raw = subprocess.run(
+            ["git", "-C", str(source), "hash-object", "--no-filters", "--stdin-paths"],
+            input="".join(f"{prefix}{path}\n" for path in tracked),
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.split()
+        problems += [
+            f"{module}/{path}: differs from the committed blob"
+            for path, digest in zip(tracked, raw, strict=True)
+            if digest != committed[path]
+        ]
+    return problems
+
+
 def compare_modules(*, source: Path, project: Path) -> dict:
     """Never mutate either checkout, load arbitrary Python, or print file contents."""
     source = source.expanduser().resolve()
@@ -246,6 +289,7 @@ def apply_safe_updates(*, source: Path, project: Path) -> dict:
                 and dirty.returncode == 0
                 and not dirty.stdout.strip()
                 and re.fullmatch(r"[0-9a-f]{40,64}", revision)
+                and not source_differs_from_commit(source, {m for m, *_ in prepared})
             ):
                 for module, *_ in prepared:
                     refs[module] = revision

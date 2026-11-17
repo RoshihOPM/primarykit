@@ -24,13 +24,13 @@
 
 Подробнее: [плейбук сопровождающего](maintainer-playbook.md), [чек-лист аудита](pre-public-audit.md), [политика безопасности](../SECURITY.md). Успешный CI не означает, что весь код готов к production.
 
-## Невлитая ветка, 17 ноября 2026 г.
+## Влито 17 ноября 2026 г. ([#146](https://github.com/RoshihOPM/primarykit/pull/146), `3f24534`)
 
-Не входит в снимок `main` выше; на GitHub Actions **не запускалось**.
+Изменения новее снимка `main` выше. [CI пул-реквеста](https://github.com/RoshihOPM/primarykit/actions/runs/44029812171) прошёл все 14 проверок, включая три задания `release-upgrades` на PostgreSQL 17.
 
 - Принятие проверенных контрактных изменений: `--apply-three-way --accept-reviewed` ([#89](https://github.com/RoshihOPM/primarykit/issues/89)). Контрактные файлы инструмент по-прежнему не записывает; человек размещает их в ветке клиента, инструмент фиксирует решение в `primarykit-origin.json`.
 - Решение об истории миграций при принятии, `--keep-client-migrations` ([#88](https://github.com/RoshihOPM/primarykit/issues/88)); статус `client_owned_history` в `scripts/migration_adoption.py`.
-- `scripts/ci_release_upgrade.py` и `scripts/release_baselines.json`: обновление PostgreSQL-клиентов с данными от трёх исторических коммитов `main` до текущего каталога. Все три сценария прошли **локально** на PostgreSQL 16; CI-задание `release-upgrades` (PostgreSQL 17) добавляется в этой ветке и ещё не выполнялось.
+- `scripts/ci_release_upgrade.py` и `scripts/release_baselines.json`: обновление PostgreSQL-клиентов с данными от трёх исторических коммитов `main` до текущего каталога. Все три сценария проходят в CI-матрице `release-upgrades` (PostgreSQL 17).
 - Зависимости: Django 6.1.3 (исправления безопасности), pytest 9.2.0, ruff 0.17.5.
 
 Ограничения: «ревьюер» в сценарии — скрипт; базовые точки — коммиты, а не опубликованные релизы; модули `tasks`, `kanban`, `deals`, `inventory` (standalone), `orders`, `payments`; обновлений, меняющих схему, в истории нет. #88 и #89 остаются открытыми: нужны опубликованные версии с тегами, обновления реальных клиентов человеком, обновления с миграцией данных, другие `bundled`-модули, tenant-графы и проверка отката. #68 не затронут. Подробнее: [обновление модулей](module-updates.md).

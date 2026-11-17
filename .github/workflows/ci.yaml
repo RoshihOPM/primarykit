@@ -99,6 +99,7 @@ jobs:
             scripts/tests/test_migration_adoption.py \
             scripts/tests/test_three_way_apply.py \
             scripts/tests/test_accept_reviewed.py \
+            scripts/tests/test_source_immutability.py \
             scripts/tests/test_release_baselines.py \
             scripts/tests/test_quality_tools.py
           uv run python -m apps.core.cli modules list --json
