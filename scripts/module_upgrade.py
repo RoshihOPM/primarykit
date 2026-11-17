@@ -63,8 +63,119 @@ def _hashes(folder: Path) -> dict[str, str]:
     }
 
 
-def compare_modules(*, source: Path, project: Path) -> dict:
-    """Never mutate either checkout, load arbitrary Python, or print file contents."""
+_UNHASHED_PARTS = frozenset({"migrations", "tests", "__pycache__"})
+_REVISION = re.compile(r"[0-9a-f]{40,64}")
+
+
+def _committed_blobs(source: Path, revision: str, module: str) -> dict[str, str]:
+    """Map module-relative paths to blob ids recorded in an immutable commit."""
+    root = f"apps/{module}"
+    listing = subprocess.run(
+        ["git", "-C", str(source), "ls-tree", "-r", "-z", "--full-tree", revision, "--", root],
+        capture_output=True,
+        check=False,
+    )
+    if listing.returncode != 0:
+        raise ValueError("Source commit is not available")
+    blobs = {}
+    for record in filter(None, listing.stdout.split(b"\0")):
+        meta, _, raw_name = record.partition(b"\t")
+        mode, kind, object_id = meta.decode("ascii").split()
+        name = raw_name.decode("utf-8", "surrogateescape")
+        if name != root and not name.startswith(f"{root}/"):
+            continue
+        if mode == "120000":
+            raise ValueError(f"Symlinked module entry is unsafe: {name[len(root) + 1 :] or module}")
+        if kind == "blob":
+            blobs[name[len(root) + 1 :]] = object_id
+    return blobs
+
+
+def _committed_files(source: Path, revision: str, module: str) -> dict[str, bytes]:
+    """Read the hashable module files of a commit as raw, unfiltered blob bytes.
+
+    Working-tree bytes are not evidence of what a commit contains: ignored
+    files are invisible to ``git status`` and eol/smudge filters rewrite
+    content. Apply modes that record ``revision`` as ancestry must copy and
+    fingerprint exactly what later ``git show <revision>:path`` returns.
+    """
+    wanted = [
+        (path, object_id)
+        for path, object_id in sorted(_committed_blobs(source, revision, module).items())
+        if path.endswith(".py") and not _UNHASHED_PARTS & set(path.split("/"))
+    ]
+    if not wanted:
+        return {}
+    batch = subprocess.run(
+        ["git", "-C", str(source), "cat-file", "--batch"],
+        input="".join(f"{object_id}\n" for _, object_id in wanted).encode("ascii"),
+        capture_output=True,
+        check=False,
+    )
+    output, position, files = batch.stdout, 0, {}
+    for path, object_id in wanted:
+        end = output.find(b"\n", position)
+        header = output[position:end].split() if end != -1 else []
+        if batch.returncode != 0 or len(header) != 3 or header[:2] != [object_id.encode(), b"blob"]:
+            raise ValueError("Source commit is not available")
+        size = int(header[2])
+        files[path] = output[end + 1 : end + 1 + size]
+        position = end + 1 + size + 1
+    return files
+
+
+def _committed_schema_migrations(source: Path, revision: str, module: str) -> bool:
+    return any(
+        path.startswith("migrations/")
+        and path.count("/") == 1
+        and path.endswith(".py")
+        and path != "migrations/__init__.py"
+        for path in _committed_blobs(source, revision, module)
+    )
+
+
+def _incoming_hashes(source: Path, module: str, revision: str | None) -> dict[str, str]:
+    if revision is None:
+        return _hashes(source / "apps" / module)
+    return {
+        path: hashlib.sha256(data).hexdigest()
+        for path, data in _committed_files(source, revision, module).items()
+    }
+
+
+def _clean_source_revision(source: Path) -> str | None:
+    """Return HEAD only for a worktree root whose tracked module files are clean."""
+    try:
+        results = [
+            subprocess.run(
+                ["git", "-C", str(source), *args], capture_output=True, text=True, check=False
+            )
+            for args in (
+                ("rev-parse", "--show-toplevel"),
+                ("rev-parse", "--verify", "HEAD"),
+                ("status", "--porcelain", "--", "apps"),
+            )
+        ]
+    except OSError:
+        return None
+    top, head, dirty = results
+    revision = head.stdout.strip()
+    if (
+        any(result.returncode != 0 for result in results)
+        or top.stdout.strip() != str(source)
+        or dirty.stdout.strip()
+        or not _REVISION.fullmatch(revision)
+    ):
+        return None
+    return revision
+
+
+def compare_modules(*, source: Path, project: Path, source_revision: str | None = None) -> dict:
+    """Never mutate either checkout, load arbitrary Python, or print file contents.
+
+    With ``source_revision`` the incoming side is read from that commit instead
+    of the source working tree.
+    """
     source = source.expanduser().resolve()
     project = project.expanduser().resolve()
     if source == project:
@@ -107,7 +218,7 @@ def compare_modules(*, source: Path, project: Path) -> dict:
             continue
         before = baseline[name]
         current = _hashes(project / "apps" / name)
-        incoming = _hashes(source / "apps" / name)
+        incoming = _incoming_hashes(source, name, source_revision)
         changes = []
         for path in sorted(set(before) | set(current) | set(incoming)):
             if not isinstance(path, str) or not isinstance(before.get(path, ""), str):
@@ -151,8 +262,17 @@ def apply_safe_updates(*, source: Path, project: Path) -> dict:
     Fails closed if *any* installed module requires review. This is not a
     schema migration, a dependency updater, or a three-way merge.
     """
-    report = compare_modules(source=source, project=project)
     source, project = source.expanduser().resolve(), project.expanduser().resolve()
+    # A clean Git source is applied from the commit itself, so that ignored
+    # files and eol filters cannot diverge from the recorded ancestry. Any other
+    # source keeps the working-tree copy but never gains an immutable base.
+    revision = _clean_source_revision(source)
+    report = compare_modules(source=source, project=project, source_revision=revision)
+    committed = {
+        module: _committed_files(source, revision, module)
+        for module, info in report["modules"].items()
+        if revision is not None and info["changes"]
+    }
     operations = []
     blocked = []
     for module, info in report["modules"].items():
@@ -169,13 +289,19 @@ def apply_safe_updates(*, source: Path, project: Path) -> dict:
             target_file = project / "apps" / module / path
             source_root = (source / "apps" / module).resolve()
             target_root = (project / "apps" / module).resolve()
+            if revision is not None:
+                unsafe_source = path not in committed[module]
+            else:
+                unsafe_source = (
+                    source_file.is_symlink()
+                    or not source_file.resolve().is_relative_to(source_root)
+                    or not source_file.is_file()
+                )
             if (
                 not path.endswith(".py")
-                or source_file.is_symlink()
+                or unsafe_source
                 or target_file.is_symlink()
-                or not source_file.resolve().is_relative_to(source_root)
                 or not target_file.resolve().is_relative_to(target_root)
-                or not source_file.is_file()
             ):
                 blocked.append(f"{module}/{path}: unsafe path")
                 continue
@@ -184,9 +310,12 @@ def apply_safe_updates(*, source: Path, project: Path) -> dict:
     # advance code while ignoring a newly introduced catalog schema history.
     for module in report["modules"]:
         migration_dir = source / "apps" / module / "migrations"
-        if migration_dir.is_dir() and any(
-            file.is_file() and file.name != "__init__.py" for file in migration_dir.glob("*.py")
-        ):
+        if (
+            migration_dir.is_dir()
+            and any(
+                file.is_file() and file.name != "__init__.py" for file in migration_dir.glob("*.py")
+            )
+        ) or (revision is not None and _committed_schema_migrations(source, revision, module)):
             blocked.append(f"{module}/migrations: manual schema review required")
     if blocked:
         raise ValueError("Manual review required; no files changed: " + "; ".join(blocked))
@@ -212,7 +341,10 @@ def apply_safe_updates(*, source: Path, project: Path) -> dict:
         for module, path, source_file, target_file in operations:
             staged_file = stage / "incoming" / module / path
             staged_file.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(source_file, staged_file, follow_symlinks=False)
+            if revision is not None:
+                staged_file.write_bytes(committed[module][path])
+            else:
+                shutil.copy2(source_file, staged_file, follow_symlinks=False)
             data_hash = hashlib.sha256(staged_file.read_bytes()).hexdigest()
             backup = stage / "backup" / module / path
             if target_file.is_file():
@@ -220,35 +352,12 @@ def apply_safe_updates(*, source: Path, project: Path) -> dict:
                 shutil.copy2(target_file, backup, follow_symlinks=False)
             prepared.append((module, path, staged_file, target_file, backup, data_hash))
 
-        # Re-anchor module ancestry only when source files exactly match a
-        # committed Git snapshot; an uncommitted source checkout has no immutable base.
+        # Re-anchor module ancestry only when the staged bytes came from an
+        # immutable commit; an uncommitted source checkout has no immutable base.
         refs = metadata.get("module_source_refs")
-        if isinstance(refs, dict):
-            try:
-                head = subprocess.run(
-                    ["git", "-C", str(source), "rev-parse", "--verify", "HEAD"],
-                    capture_output=True,
-                    text=True,
-                    check=False,
-                )
-                dirty = subprocess.run(
-                    ["git", "-C", str(source), "status", "--porcelain", "--", "apps"],
-                    capture_output=True,
-                    text=True,
-                    check=False,
-                )
-                revision = head.stdout.strip()
-            except OSError:
-                revision = None
-            if (
-                revision is not None
-                and head.returncode == 0
-                and dirty.returncode == 0
-                and not dirty.stdout.strip()
-                and re.fullmatch(r"[0-9a-f]{40,64}", revision)
-            ):
-                for module, *_ in prepared:
-                    refs[module] = revision
+        if isinstance(refs, dict) and revision is not None:
+            for module, *_ in prepared:
+                refs[module] = revision
         # Update provenance only after every file has been staged successfully.
         for module, path, _, _, _, data_hash in prepared:
             fingerprints[module][path] = data_hash
@@ -342,9 +451,9 @@ def main(argv: list[str] | None = None) -> int:
     return 0  # Report mode remains advisory; apply-safe is explicitly opt-in.
 
 
-def three_way_plan(*, source: Path, project: Path) -> dict:
+def three_way_plan(*, source: Path, project: Path, source_revision: str | None = None) -> dict:
     """Assess mergeability using immutable Git blobs; never write client files."""
-    report = compare_modules(source=source, project=project)
+    report = compare_modules(source=source, project=project, source_revision=source_revision)
     source = source.expanduser().resolve()
     project = project.expanduser().resolve()
     meta = json.loads((project / "primarykit-origin.json").read_text(encoding="utf-8"))
@@ -388,7 +497,11 @@ def three_way_plan(*, source: Path, project: Path) -> dict:
                 theirs = folder / "theirs.py"
                 mine.write_bytes((project / "apps" / module / path).read_bytes())
                 ancestor.write_bytes(original.stdout)
-                theirs.write_bytes((source / "apps" / module / path).read_bytes())
+                theirs.write_bytes(
+                    (source / "apps" / module / path).read_bytes()
+                    if source_revision is None
+                    else _committed_files(source, source_revision, module)[path]
+                )
                 merged = subprocess.run(
                     ["git", "merge-file", "--stdout", str(mine), str(ancestor), str(theirs)],
                     capture_output=True,

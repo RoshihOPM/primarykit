@@ -14,7 +14,14 @@ import subprocess
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from scripts.module_upgrade import _hashes, compare_modules, is_contract_path, three_way_plan
+from scripts.module_upgrade import (
+    _committed_files,
+    _committed_schema_migrations,
+    _hashes,
+    compare_modules,
+    is_contract_path,
+    three_way_plan,
+)
 
 
 def _git(root: Path, *args: str) -> str:
@@ -42,8 +49,10 @@ def apply_three_way_updates(*, source: Path, project: Path) -> dict:
     revision = _git(source, "rev-parse", "--verify", "HEAD")
     if not re.fullmatch(r"[0-9a-f]{40,64}", revision):
         raise ValueError("Missing immutable source SHA")
-    report = compare_modules(source=source, project=project)
-    plan = three_way_plan(source=source, project=project)
+    # `git status` does not list ignored files and filters may rewrite checked
+    # out bytes, so the incoming side is the commit itself, never the worktree.
+    report = compare_modules(source=source, project=project, source_revision=revision)
+    plan = three_way_plan(source=source, project=project, source_revision=revision)
     candidates = {(r["module"], r["path"]): r for r in plan["candidates"]}
     origin = project / "primarykit-origin.json"
     metadata = json.loads(origin.read_text(encoding="utf-8"))
@@ -54,17 +63,20 @@ def apply_three_way_updates(*, source: Path, project: Path) -> dict:
     pending = []
     blocked = []
     verified_ancestry = set()
+    committed = {}
 
     for module, detail in report["modules"].items():
         directory = source / "apps" / module
+        if not detail["changes"]:
+            continue
+        committed[module] = _committed_files(source, revision, module)
         if (
-            detail["changes"]
-            and (directory / "migrations").is_dir()
+            (directory / "migrations").is_dir()
             and any(
                 f.is_file() and f.name != "__init__.py"
                 for f in (directory / "migrations").glob("*.py")
             )
-        ):
+        ) or _committed_schema_migrations(source, revision, module):
             blocked.append(f"{module}: reviewed schema adoption required")
         for change in detail["changes"]:
             path = change["path"]
@@ -80,13 +92,11 @@ def apply_three_way_updates(*, source: Path, project: Path) -> dict:
             ):
                 blocked.append(f"{module}/{path}: contract/deletion review required")
                 continue
-            incoming = directory / path
+            upstream = committed[module].get(path)
             target = project / "apps" / module / path
             if (
-                incoming.is_symlink()
+                upstream is None
                 or target.is_symlink()
-                or not incoming.is_file()
-                or not incoming.resolve().is_relative_to(directory)
                 or not target.resolve().is_relative_to(project / "apps" / module)
             ):
                 blocked.append(f"{module}/{path}: unsafe path")
@@ -135,7 +145,6 @@ def apply_three_way_updates(*, source: Path, project: Path) -> dict:
             ):
                 blocked.append(f"{module}/{path}: historical baseline does not match")
                 continue
-            upstream = incoming.read_bytes()
             merged = upstream
             if kind == "conflict_review":
                 candidate = candidates.get((module, path))
@@ -182,7 +191,9 @@ def apply_three_way_updates(*, source: Path, project: Path) -> dict:
     # Otherwise a later upgrade sees a new source commit but stale base hashes.
     converged = []
     for module in sorted({name for name, *_ in pending}):
-        incoming_hashes = _hashes(source / "apps" / module)
+        incoming_hashes = {
+            path: hashlib.sha256(data).hexdigest() for path, data in committed[module].items()
+        }
         client_hashes = _hashes(project / "apps" / module)
         ancestor_ref = refs[module]
         baseline = fingerprints[module]
