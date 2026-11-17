@@ -376,7 +376,7 @@ def create_project(
             "preset": preset,
             "included_apps": sorted(selected),
             "module_fingerprints": _module_fingerprints(target, selected),
-            "migration_policy": "Generate once and commit all client migrations",
+            "migration_policy": "Commit client-owned migrations; never regenerate bundled histories",
             "module_migration_policies": {
                 name: AVAILABLE_MODULES[name].migration_policy for name in sorted(selected)
             },
