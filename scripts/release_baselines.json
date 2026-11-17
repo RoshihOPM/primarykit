@@ -1,0 +1,21 @@
+{
+  "note": "Immutable source baselines that CI upgrades to the current catalog. Pinned by full commit SHA on protected main because a tag name alone can move. No Git tag or GitHub release has been published yet; when one is, append its commit here and keep at least three entries.",
+  "apps": ["tasks", "kanban", "deals", "inventory", "orders", "payments"],
+  "baselines": [
+    {
+      "id": "2026-10-21-provenance",
+      "commit": "a908d630b3a7a66071ebafe5f6bbb97215dd32a5",
+      "summary": "First catalog revision recording per-module Git provenance; Tasks still had client-owned migrations."
+    },
+    {
+      "id": "2026-10-21-three-way",
+      "commit": "be683ecbc4a9fbba186e3492182b4197c78a07f0",
+      "summary": "Opt-in three-way apply; bundled Tasks baseline and CRM pipeline adapter already present."
+    },
+    {
+      "id": "2026-10-22-cli-sdk",
+      "commit": "20e1844decc9594977782d30fca7bd47b60d1b99",
+      "summary": "Portable CLI and TypeScript SDK; predates deterministic Inventory pagination."
+    }
+  ]
+}
