@@ -183,13 +183,19 @@ def test_source_modules_own_their_job_handlers():
     from django.conf import settings
     from django.utils.module_loading import import_string
 
+    # Copied clients run this test too; only installed modules contribute handlers.
+    installed = discover_modules()
     expected = {
-        "outbox.dispatch": "apps.outbox.services.dispatch",
-        "privacy.execute": "apps.privacy.services.process_retention_job",
+        code: path
+        for module, code, path in (
+            ("outbox", "outbox.dispatch", "apps.outbox.services.dispatch"),
+            ("privacy", "privacy.execute", "apps.privacy.services.process_retention_job"),
+        )
+        if module in installed
     }
     declared = module_job_handlers()
     assert expected.items() <= declared.items()
-    assert expected.items() <= settings.BACKGROUND_JOB_HANDLERS.items()
+    assert declared.items() <= settings.BACKGROUND_JOB_HANDLERS.items()
     for path in declared.values():
         assert callable(import_string(path))
     # Each call returns a fresh dict, so client settings cannot mutate registry state.
