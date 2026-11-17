@@ -24,8 +24,11 @@ copies only clean source-only non-contract Python files and updates their
 recorded hashes. It refuses all contracts, migrations, deletions, conflicts and
 client-modified files (see [limitations](en/module-updates.md)). Neither mode
 imports Django, accesses the network, or runs migrations. A `conflict_review` entry requires a manual
-three-way merge; `source_update` is only a proposed update, never automatically
-safe. Review permissions, ORM indexes, migrations, standalone/tenant modes and
+three-way merge, or the separate opt-in `--apply-three-way` for non-contract
+Python; `source_update` is only a proposed update, never automatically
+safe. Contract files are never written by any mode: a human places them in a
+client branch and records the decision with `--apply-three-way
+--accept-reviewed MODULE` ([workflow and limits](en/module-updates.md#accepting-reviewed-contract-changes)). Review permissions, ORM indexes, migrations, standalone/tenant modes and
 OpenAPI before applying the change. Installing a new trusted module with `install_kit_module` now adds its copied-file
 SHA-256 snapshot and updates `included_apps` atomically. The installer must be
 updated manually in clients generated from older kit versions. Existing clients
