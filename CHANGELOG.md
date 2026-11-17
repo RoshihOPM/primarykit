@@ -4,6 +4,12 @@ All notable PrimaryKit source changes are described here. Generated clients have
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.1.0-alpha.1] — 2026-11-17
+
+First tagged prerelease (`v0.1.0-alpha.1`, Python package version `0.1.0a1`). Not production-certified; #88 and #89 remain open and are known limitations of this prerelease.
+
 ### Added
 - Reviewed acceptance for module upgrades (#89): `scripts/module_upgrade.py --apply-three-way --accept-reviewed MODULE... [--merged-path MODULE/PATH]... [--keep-client-migrations MODULE...]`. Contract files are still never written by the tool; a human places them in a client branch and the tool records the decision in `primarykit-origin.json`. Behaviour without the flags is unchanged.
 - Migration history decision at acceptance (#88): a differing `bundled` history is refused unless the client keeps its applied history explicitly (`--keep-client-migrations` or an earlier `client` pin). `scripts/migration_adoption.py` reports `client_owned_history` for such a module.
@@ -29,10 +35,16 @@ All notable PrimaryKit source changes are described here. Generated clients have
 - Generator guards against copying upstream maintainer identity/community templates into independent client repositories, while keeping MIT LICENSE.
 
 ### Notes
-- Source project version remains `0.1.0`; this is **not** a published GitHub release.
+- Source project version is `0.1.0a1`. Everything listed above accumulated before the first tag; there is no earlier published release to upgrade from.
 - `main` ruleset is active (GitHub configuration); repository vulnerability-reporting settings and full history/IP audit still need independent verification.
 
 ## [Не выпущено]
+
+Пока ничего.
+
+## [0.1.0-alpha.1] — 17.11.2026
+
+Первый пре-релиз с тегом (`v0.1.0-alpha.1`, версия пакета `0.1.0a1`). Не сертифицирован для production; #88 и #89 открыты и являются известными ограничениями.
 
 - Принятие проверенных контрактных изменений при обновлении модулей (#89): `--apply-three-way --accept-reviewed`, `--merged-path`, `--keep-client-migrations`. Контрактные файлы инструмент по-прежнему не записывает; без флагов поведение прежнее.
 - Решение об истории миграций при принятии (#88); статус `client_owned_history` в `scripts/migration_adoption.py`.
