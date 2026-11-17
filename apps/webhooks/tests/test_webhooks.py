@@ -42,15 +42,25 @@ def test_inbound_receipt_idempotency_and_rollback():
     assert accept(**kwargs, processor=seen.append)
     assert not accept(**kwargs, processor=seen.append)
     assert seen == [BODY]
-    assert InboundReceipt.objects.count() == 1
-    assert "evt-123" not in InboundReceipt.objects.first().delivery_hash
+    # One receipt for the delivery ID and one for the verified signed bytes.
+    assert InboundReceipt.objects.count() == 2
+    assert not InboundReceipt.objects.filter(delivery_hash__contains="evt-123").exists()
+    assert not InboundReceipt.objects.filter(delivery_hash=signature).exists()
 
     def fail(body):
         raise RuntimeError("business failed")
 
     with pytest.raises(RuntimeError, match="business failed"):
-        accept(**{**kwargs, "delivery_id": "new-event"}, processor=fail)
-    assert InboundReceipt.objects.count() == 1
+        accept(
+            **{
+                **kwargs,
+                "delivery_id": "new-event",
+                "timestamp": "1001",
+                "signature": sign(secret=SECRET, body=BODY, timestamp=1001),
+            },
+            processor=fail,
+        )
+    assert InboundReceipt.objects.count() == 2
 
 
 class FakeResponse:

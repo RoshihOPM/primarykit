@@ -86,4 +86,5 @@ def test_same_delivery_id_in_different_providers_is_independent():
             now=1000,
         )
     assert seen == [body, body]
-    assert InboundReceipt.objects.count() == 2
+    # One delivery-ID receipt and one signed-bytes receipt per provider.
+    assert InboundReceipt.objects.count() == 4
