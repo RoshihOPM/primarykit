@@ -36,7 +36,7 @@ PrimaryKit is a copy-based Django starter, not a separately deployed shared back
 - Protect last active owner under a row lock; include negative IDOR and cross-branch tests.
 - Catalog and Inventory have two pinned schema modes (ADR 0005). Tenant mode requires Organizations, and Inventory additionally requires Catalog. Standalone mode is owner-scoped and must reject other users in both DRF and services. Never expose tenant data via personal endpoints.
 - Storage has separate personal and organization-scoped APIs. Organization access requires the optional Organizations policy adapter, and service commands recheck access. No global superuser tenant bypass.
-- Do not put migrations in the reusable **catalog**. Each generated client repo MUST version its own migrations.
+- Do not put migrations in the reusable **catalog** unless the module manifest declares `migration_policy="bundled"` (reviewed source-owned history; never regenerate or delete it). For every other module each generated client repo MUST version its own migrations.
 - Never copy third-party agent instructions or execute remote scripts without license/security review.
 - Agents may perform independent code/DB reviews in parallel **only when supported by the active runtime**. Changes to the same files must be coordinated; a PR is the final integration gate.
 - Never apply production migrations, modify production data, rotate secrets, or deploy without explicit approval.

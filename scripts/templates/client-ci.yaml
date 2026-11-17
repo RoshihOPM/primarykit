@@ -1,0 +1,61 @@
+# CI for an independent generated backend. This file is client-owned: edit it freely.
+# It references no optional module path, so it is the same for every module selection.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Pull requests must never receive write-capable GITHUB_TOKEN permissions.
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: ci_only_not_a_secret
+          POSTGRES_DB: app
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U app"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://app:ci_only_not_a_secret@127.0.0.1:5432/app
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.13"
+      - name: Install dependencies
+        run: uv sync --locked --all-groups
+      - name: Offline detached-project doctor
+        run: uv run python -m apps.core.doctor --strict
+      - name: Ruff lint
+        run: uv run ruff check .
+      - name: Ruff format
+        run: uv run ruff format --check .
+      # CI never generates migrations: this repository owns its schema history.
+      # The first check names every app that needs migrations, so a fresh project
+      # without committed migrations fails here and not somewhere in the tests.
+      - name: Migrations are committed (on failure, run makemigrations and commit your migrations)
+        run: |
+          labels="$(uv run python -m apps.core.migration_plan)"
+          if ! uv run python manage.py makemigrations $labels --check --dry-run --settings=config.settings.postgres_test \
+            || ! uv run python manage.py makemigrations --check --dry-run --settings=config.settings.postgres_test; then
+            echo "::error::Models and committed migrations differ. Run 'uv run python manage.py makemigrations $labels', review the result and commit your migrations. CI does not generate them."
+            exit 1
+          fi
+      - name: Django checks
+        run: uv run python manage.py check --settings=config.settings.postgres_test
+      - name: Tests (PostgreSQL)
+        run: uv run pytest -q --ds=config.settings.postgres_test

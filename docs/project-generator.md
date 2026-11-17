@@ -33,7 +33,10 @@ Always copied: `core`, `users`, `notifications`. Optional: см. [полный �
 
 - Copies the source template excluding `.git`, `.env`, caches, local media, venv, generated migrations and the generator itself.
 - Prunes omitted optional App directories, their `INSTALLED_APPS` entries and URL routes.
-- Adapts GitHub Actions migration setup, generated README and project name in both `pyproject.toml` and `uv.lock`.
+- Writes the generated README and the project name in both `pyproject.toml` and `uv.lock`.
+- Writes the client's `.github/workflows/ci.yaml` from the dedicated template `scripts/templates/client-ci.yaml` (not from the source workflow): `uv sync --locked --all-groups`, `python -m apps.core.doctor --strict`, Ruff lint/format, then on a PostgreSQL 17 service `makemigrations --check --dry-run`, `manage.py check` and `pytest --ds=config.settings.postgres_test`, with `permissions: contents: read`. The file names no optional module, so it is identical for every selection and is client-owned afterwards.
+- Client CI never generates migrations. Until the client commits its own migrations, the "Migrations are committed" step fails and prints the `makemigrations` command to run; this is intended.
+- Source-only files stay upstream: nothing else from `.github/`, no `README.ru.md`, policies or maintainer playbook. Relative Markdown links to files that were not copied are reduced to their link text, so the copied docs contain no broken relative links.
 - Writes `primarykit-origin.json` with copied modules and source version.
 - `--git-init` initializes local Git history on main; no GitHub remote is created and no push is performed.
 
@@ -102,6 +105,15 @@ python manage.py migrate
 ```
 
 Modules are detected by the presence of `apps/<name>/manifest.py`. No `INSTALLED_APPS` or `config/urls.py` edits are necessary. Source checkout must be trusted; never copy unreviewed code into a production server. The installer is an explicit filesystem operation; it does **not** perform migrations, deploy, install external pip dependencies or overwrite an existing module. Restart running Django processes after copying.
+
+Before anything is copied, the installer checks every selected module the way the generator does, and installs nothing if a check fails:
+
+- each `manifest.py` is validated statically by **this project's own** `apps/core`; a manifest using fields your `apps/core` does not know is refused — upgrade `apps/core` first;
+- symlinks inside the selected module folders are refused, never followed;
+- `migrations/` is copied only for `migration_policy="bundled"` modules (a bundled module without migration files is refused). For `client` modules the source migrations are skipped: run `makemigrations` and commit the result. The final message lists which modules need `makemigrations` and which ship their history;
+- `primarykit-origin.json`, when present, records the module's migration policy, and its source commit only if the source is a clean Git root whose committed files equal the copied bytes. A dirty or non-Git source still installs, but without a source ref, so later three-way upgrades of that module need manual review.
+
+Clients generated from an older kit keep their old installer: copy `apps/core/management/commands/install_kit_module.py` (and a matching `apps/core/doctor.py`) by hand to get these checks.
 
 **Schema boundary:** standalone Inventory and Catalog now have their own models and require no other business modules. The original tenant implementation still requires Catalog and Organizations when enabled; installing another app later does not silently flip the persisted model mode. See ADR 0005.
 

@@ -10,6 +10,14 @@ All notable PrimaryKit source changes are described here. Generated clients have
 - `scripts/release_baselines.json` and `scripts/ci_release_upgrade.py --baseline ID`: PostgreSQL upgrade scenario from three commit-pinned historical baselines, plus a `release-upgrades` CI matrix job. Scripted reviewer, six modules, no schema-changing upgrade; #88 and #89 remain open.
 - Manifest `job_handlers`: modules declare their own background job handlers.
 
+### Fixed
+- Account throttles no longer trust client-supplied `X-Forwarded-For`. New `DJANGO_NUM_PROXIES` (default `0` = `REMOTE_ADDR` only) sets the trusted proxy hop count for both the local and the shared Redis throttle. **Deployments behind the example nginx must set `DJANGO_NUM_PROXIES=1`**, otherwise all anonymous callers share one bucket; throttle counters reset once on upgrade.
+- Inbound webhooks: identical signed bytes are processed at most once even under a different, unauthenticated `X-Webhook-Delivery` id (two receipt rows per delivery, no migration). Non-ASCII signatures are rejected as invalid.
+- `install_kit_module` now follows the generator's copy rules: validates manifests against the client's own `apps/core` before copying, refuses symlinks, copies only `bundled` migration histories, records a source ref only for committed bytes, and records `module_migration_policies`.
+- Generated clients get a dedicated CI workflow (`scripts/templates/client-ci.yaml`) instead of a trimmed copy of the source workflow that could not pass; they no longer receive `README.ru.md` or dangling documentation links.
+- PostgreSQL concurrency tests for standalone Inventory.
+- Module upgrade apply modes verify source module bytes against the committed `HEAD` blobs: git-ignored or end-of-line-filtered files in the source checkout are refused instead of being copied and fingerprinted.
+
 ### Changed
 - Django 6.1.3 (security fixes), pytest 9.2.0, ruff 0.17.5.
 
@@ -30,6 +38,11 @@ All notable PrimaryKit source changes are described here. Generated clients have
 - Решение об истории миграций при принятии (#88); статус `client_owned_history` в `scripts/migration_adoption.py`.
 - `scripts/release_baselines.json` и `scripts/ci_release_upgrade.py`: сценарий обновления PostgreSQL-клиентов от трёх исторических коммитов и CI-задание `release-upgrades`. «Ревьюер» — скрипт, шесть модулей, обновлений с изменением схемы нет; #88 и #89 остаются открытыми.
 - Поле manifest `job_handlers`: модуль сам объявляет обработчики фоновых заданий.
+- Исправлено: режимы применения обновлений сверяют байты исходных модулей с закоммиченными объектами `HEAD`; игнорируемые Git файлы и файлы с изменёнными переводами строк отклоняются.
+- Исправлено: лимиты аккаунта не доверяют клиентскому `X-Forwarded-For`; число доверенных прокси задаётся `DJANGO_NUM_PROXIES` (по умолчанию `0`). **За nginx из примера нужно `DJANGO_NUM_PROXIES=1`.**
+- Исправлено: входящие вебхуки обрабатывают одинаковые подписанные байты не более одного раза, даже с другим `X-Webhook-Delivery`.
+- Исправлено: `install_kit_module` следует правилам генератора (проверка манифестов ядром клиента, отказ от symlink, только `bundled`-миграции, `module_migration_policies`).
+- Исправлено: сгенерированные клиенты получают собственный CI-workflow вместо урезанной копии исходного; добавлены PostgreSQL-тесты конкурентности standalone Inventory.
 - Django 6.1.3 (исправления безопасности), pytest 9.2.0, ruff 0.17.5.
 - Лицензия MIT, двуязычные SECURITY/CONTRIBUTING/Code of Conduct.
 - GitHub-шаблоны, CODEOWNERS и Dependabot.

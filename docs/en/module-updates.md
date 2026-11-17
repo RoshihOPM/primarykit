@@ -47,6 +47,9 @@ manual review; the tool never writes such files (see
 [accepting reviewed contract changes](#accepting-reviewed-contract-changes)).
 Git merge success does not imply semantic compatibility.
 
+Apply modes compare source module bytes with the committed `HEAD` blobs:
+git-ignored files and files altered by end-of-line filters are refused.
+
 A manifest that uses a newer `Module` field (for example `job_handlers`)
 requires the same or a newer `apps/core`: with an older core,
 `Module(...)` raises `TypeError` at startup and the doctor reports

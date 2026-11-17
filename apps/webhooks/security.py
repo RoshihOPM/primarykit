@@ -35,7 +35,8 @@ def verify(*, secret: str, body: bytes, timestamp: str, signature: str, now=None
     current = int(time.time()) if now is None else int(now)
     if abs(current - value) > MAX_SKEW_SECONDS:
         raise InvalidWebhookSignature("Webhook timestamp outside allowed window")
-    if not isinstance(signature, str) or len(signature) != 64:
+    # compare_digest raises TypeError on non-ASCII text; reject it as invalid instead.
+    if not isinstance(signature, str) or len(signature) != 64 or not signature.isascii():
         raise InvalidWebhookSignature("Missing webhook signature")
     expected = sign(secret=secret, body=body, timestamp=value)
     if not hmac.compare_digest(expected, signature):

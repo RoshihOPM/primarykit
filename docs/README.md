@@ -7,7 +7,7 @@
 ## Быстрый маршрут
 
 1. [Установка и первый запуск](getting-started.md)
-2. [Каталог 31 модуля, зависимости, API](modules.md)
+2. [Каталог 38 модулей, зависимости, API](modules.md)
 3. [Архитектура](architecture.md) · [Независимость проектов](independent-projects.md)
 4. [Генератор и пресеты](project-generator.md) · [Добавление модулей](module-development.md) · [Scaffold и граф зависимостей](module-scaffold.md)
 5. [Проверка проекта (Doctor)](doctor.md) · [Совместимость модулей](module-compatibility.md) · [Проверка обновлений](module-upgrades.md) · [OpenAPI diff](api-compatibility.md)

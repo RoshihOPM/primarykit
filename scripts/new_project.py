@@ -2,6 +2,7 @@
 """Copy a standalone PrimaryKit Django backend with selected optional apps."""
 
 import argparse
+import functools
 import hashlib
 import json
 import os
@@ -38,13 +39,11 @@ COPYABLE_ROOT_ENTRIES = frozenset(
         ".agents",
         ".dockerignore",
         ".env.example",
-        ".github",
         ".gitignore",
         ".python-version",
         "AGENTS.md",
         "LICENSE",
         "README.md",
-        "README.ru.md",
         "apps",
         "compose.yaml",
         "compose.prod.yaml",
@@ -61,6 +60,11 @@ COPYABLE_ROOT_ENTRIES = frozenset(
         "uv.lock",
     }
 )
+# The client workflow is a dedicated reviewed file, never the source workflow
+# with parts removed: a client has no scripts/, no fixed module set and no
+# optional infrastructure. It belongs to the generator, not to the copied tree.
+CLIENT_WORKFLOW_TEMPLATE = Path(__file__).resolve().parent / "templates" / "client-ci.yaml"
+_MARKDOWN_LINK = re.compile(r"(?<!!)\[([^\]\n]*)\]\(([^()\s]+)\)")
 
 
 def _selected_copy_ignore(root: Path, selected: set[str]):
@@ -73,10 +77,9 @@ def _selected_copy_ignore(root: Path, selected: set[str]):
             ignored.update(set(names) - COPYABLE_ROOT_ENTRIES)
         elif relative == ("apps",):
             ignored.update(set(names) - (selected | {"__init__.py"}))
-        elif relative == (".github",):
-            ignored.update(set(names) - {"workflows"})
-        elif relative == (".github", "workflows"):
-            ignored.update(set(names) - {"ci.yaml"})
+        elif relative[0] == ".github":
+            # Source workflows and community files are never client material.
+            ignored.update(names)
         return ignored
 
     return ignore
@@ -135,6 +138,36 @@ def _replace_one(path: Path, old: str, new: str):
     if source.count(old) != 1:
         raise RuntimeError(f"Template drift in {path}: expected one match for {old!r}")
     path.write_text(source.replace(old, new), encoding="utf-8")
+
+
+def _unlink_missing_markdown_targets(project: Path) -> None:
+    """Keep the text of relative links whose target was not copied to the client.
+
+    Source-only policies and maintainer documents stay upstream. Their link text
+    remains readable; fenced and inline code is never rewritten.
+    """
+
+    def plain_text(folder: Path, match: re.Match) -> str:
+        path = match.group(2).split("#", 1)[0].split("?", 1)[0]
+        if not path or path.startswith("/") or re.match(r"[A-Za-z][A-Za-z0-9+.-]*:", path):
+            return match.group(0)
+        return match.group(0) if (folder / path).exists() else match.group(1)
+
+    for document in sorted(project.rglob("*.md")):
+        fenced = False
+        replace = functools.partial(plain_text, document.parent)
+        original = document.read_text(encoding="utf-8")
+        lines = original.splitlines(keepends=True)
+        for index, line in enumerate(lines):
+            if line.lstrip().startswith(("```", "~~~")):
+                fenced = not fenced
+            elif not fenced:
+                # Odd segments of a backtick split are inline code.
+                parts = line.split("`")
+                parts[::2] = [_MARKDOWN_LINK.sub(replace, part) for part in parts[::2]]
+                lines[index] = "`".join(parts)
+        if "".join(lines) != original:
+            document.write_text("".join(lines), encoding="utf-8")
 
 
 def project_plan(*, requested_apps: set[str], preset: str | None = None) -> dict:
@@ -241,6 +274,8 @@ def create_project(
 
     selected = set(plan["included_apps"])
     copy_ignore = _selected_copy_ignore(root, selected)
+    if CLIENT_WORKFLOW_TEMPLATE.is_symlink() or not CLIENT_WORKFLOW_TEMPLATE.is_file():
+        raise RuntimeError(f"Client CI workflow template missing: {CLIENT_WORKFLOW_TEMPLATE}")
     _reject_source_symlinks(root, ignore=copy_ignore)
     target.parent.mkdir(parents=True, exist_ok=True)
     # Claim the destination exclusively before entering the cleanup scope.
@@ -265,15 +300,10 @@ def create_project(
             "CONTRIBUTING.md",
             "SECURITY.md",
             "CODE_OF_CONDUCT.md",
-            ".github/CODEOWNERS",
-            ".github/dependabot.yml",
-            ".github/workflows/quality-tools.yml",
-            ".github/PULL_REQUEST_TEMPLATE.md",
             "docs/maintainer-playbook.md",
             "CHANGELOG.md",
         ):
             (target / source_only).unlink(missing_ok=True)
-        shutil.rmtree(target / ".github" / "ISSUE_TEMPLATE", ignore_errors=True)
         if "storage" not in selected:
             (target / "compose.seaweedfs.yaml").unlink()
         if not {"cache", "celery_tasks"} & selected:
@@ -291,30 +321,8 @@ def create_project(
 
         migrations = " ".join(a for a in MIGRATION_APPS if a in selected)
         workflow = target / ".github" / "workflows" / "ci.yaml"
-        raw = workflow.read_text(encoding="utf-8")
-        start_marker = "      # PRIMARYKIT-GENERATOR-SMOKE-START\n"
-        end_marker = "      # PRIMARYKIT-GENERATOR-SMOKE-END\n"
-        if raw.count(start_marker) != 1 or raw.count(end_marker) != 1:
-            raise RuntimeError("Missing generator CI smoke test markers")
-        start = raw.index(start_marker)
-        end = raw.index(end_marker, start) + len(end_marker)
-        raw = raw[:start] + raw[end:]
-        # Matrix jobs belong only to the catalog, never to generated clients.
-        matrix_start = "  # PRIMARYKIT-MATRIX-JOB-START\n"
-        matrix_end = "  # PRIMARYKIT-MATRIX-JOB-END\n"
-        if raw.count(matrix_start) != 1 or raw.count(matrix_end) != 1:
-            raise RuntimeError("Missing source-only CI matrix job markers")
-        matrix_begin = raw.index(matrix_start)
-        matrix_finish = raw.index(matrix_end, matrix_begin) + len(matrix_end)
-        raw = raw[:matrix_begin] + raw[matrix_finish:]
-        lint_start = "      # PRIMARYKIT-MIGRATION-LINT-START\n"
-        lint_end = "      # PRIMARYKIT-MIGRATION-LINT-END\n"
-        if raw.count(lint_start) != 1 or raw.count(lint_end) != 1:
-            raise RuntimeError("Missing source-only migration SQL lint markers")
-        lint_begin = raw.index(lint_start)
-        lint_finish = raw.index(lint_end, lint_begin) + len(lint_end)
-        raw = raw[:lint_begin] + raw[lint_finish:]
-        workflow.write_text(raw, encoding="utf-8")
+        workflow.parent.mkdir(parents=True)
+        workflow.write_bytes(CLIENT_WORKFLOW_TEMPLATE.read_bytes())
 
         # Pin app schemas before the first migration; later module copies cannot
         # implicitly switch personal data into tenant-owned tables.
@@ -368,7 +376,7 @@ def create_project(
             "preset": preset,
             "included_apps": sorted(selected),
             "module_fingerprints": _module_fingerprints(target, selected),
-            "migration_policy": "Generate once and commit all client migrations",
+            "migration_policy": "Commit client-owned migrations; never regenerate bundled histories",
             "module_migration_policies": {
                 name: AVAILABLE_MODULES[name].migration_policy for name in sorted(selected)
             },
@@ -395,6 +403,8 @@ def create_project(
             "docker compose exec api python manage.py migrate\n"
             "```\n\n"
             "Commit the generated migrations to **this project's Git repository**.\n"
+            "`.github/workflows/ci.yaml` never generates migrations and fails until "
+            "they are committed.\n"
             "Run `python -m apps.core.agent_context --format markdown` to brief AI agents "
             "about the selected modules and safe implementation boundaries.\n"
             "Run `python -m apps.core.doctor --strict` to validate copied modules "
@@ -452,6 +462,8 @@ def create_project(
             + "See docs/architecture.md and AGENTS.md for conventions.\n",
             encoding="utf-8",
         )
+
+        _unlink_missing_markdown_targets(target)
 
         # Fail during generation when copied modules or dependencies violate
         # the offline portability contract. No DB or Django startup is needed.

@@ -20,7 +20,13 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from scripts.migration_adoption import _history, _policy
-from scripts.module_upgrade import _hashes, compare_modules, is_contract_path, three_way_plan
+from scripts.module_upgrade import (
+    _hashes,
+    compare_modules,
+    is_contract_path,
+    source_differs_from_commit,
+    three_way_plan,
+)
 
 
 def _git(root: Path, *args: str) -> str:
@@ -129,6 +135,11 @@ def apply_three_way_updates(
     if not re.fullmatch(r"[0-9a-f]{40,64}", revision):
         raise ValueError("Missing immutable source SHA")
     report = compare_modules(source=source, project=project)
+    foreign = source_differs_from_commit(
+        source, [name for name in report["modules"] if (source / "apps" / name).is_dir()]
+    )
+    if foreign:
+        raise ValueError("Source modules are not an immutable checkout: " + "; ".join(foreign))
     unknown = accepted - set(report["modules"])
     if unknown:
         raise ValueError(
