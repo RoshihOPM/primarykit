@@ -167,7 +167,13 @@ REST_FRAMEWORK = {
     "PAGE_SIZE": 20,
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "EXCEPTION_HANDLER": "apps.core.exceptions.api_exception_handler",
+    # Trusted reverse-proxy hops that append the peer address to X-Forwarded-For.
+    # 0 ignores the header (REMOTE_ADDR only). Never leave this unset: DRF reads
+    # a missing value as "trust the whole client-supplied header".
+    "NUM_PROXIES": env.int("DJANGO_NUM_PROXIES", default=0),
 }
+if REST_FRAMEWORK["NUM_PROXIES"] < 0:
+    raise ImproperlyConfigured("DJANGO_NUM_PROXIES must be 0 or a positive number of proxy hops")
 ALLOW_PUBLIC_REGISTRATION = env.bool("ALLOW_PUBLIC_REGISTRATION", default=False)
 AUTH_EMAIL_FLOWS_ENABLED = env.bool("AUTH_EMAIL_FLOWS_ENABLED", default=False)
 AUTH_REQUIRE_EMAIL_VERIFICATION = True

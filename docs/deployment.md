@@ -13,7 +13,7 @@ PrimaryKit — шаблон. Деплоится **сгенерированный
 3. Задайте сильный `DJANGO_SECRET_KEY`, реальные `DJANGO_ALLOWED_HOSTS`, `DJANGO_CSRF_TRUSTED_ORIGINS`, `DATABASE_URL`, `DJANGO_TIME_ZONE`, настройки email/registration и S3 при использовании Storage. Не используйте тестовые секреты в `.env.example`.
 4. Отключите `DEBUG`, используйте `config.settings.production`, проверьте `python manage.py check --deploy`.
 5. Соберите production Docker image (`docker build --target production -f docker/Dockerfile .`) либо используйте Compose production override. Контейнер Django доступен Nginx только по локальному/внутреннему адресу.
-6. Проведите TLS/HTTPS через nginx/Caddy/доверенный reverse proxy. Только если прокси очищает входящий `X-Forwarded-Proto`, включайте `DJANGO_TRUST_PROXY_SSL_HEADER=true`.
+6. Проведите TLS/HTTPS через nginx/Caddy/доверенный reverse proxy. Только если прокси очищает входящий `X-Forwarded-Proto`, включайте `DJANGO_TRUST_PROXY_SSL_HEADER=true`. Задайте `DJANGO_NUM_PROXIES` равным числу доверенных прокси, которые перезаписывают/дополняют `X-Forwarded-For` (`1` для примера `deploy/nginx`); по умолчанию `0` — заголовок игнорируется и анонимные лимиты считаются по `REMOTE_ADDR`, то есть за прокси все клиенты делят один счётчик. См. [rate-limiting](rate-limiting.md).
 7. `python manage.py migrate` и `collectstatic` выполняйте контролируемым deploy job. Учтите зависимости пользовательской модели и порядок миграций.
 8. Добавьте мониторинг `/health/live/`, `/health/ready/`, ошибки приложений и БД; ограничение входящего трафика и brute-force логинов.
 9. Для S3/SeaweedFS: приватный bucket, доступ только из backend, ротация ключей, backups и периодическое тестирование upload/download.

@@ -89,3 +89,51 @@ def test_account_endpoint_delegates_to_shared_redis(monkeypatch):
     assert throttle.wait() == 11
     assert calls[0]["identity"] == "ip:192.0.2.42"
     assert calls[0]["window_seconds"] == 60
+
+
+def _shared_identity(monkeypatch, meta):
+    from types import SimpleNamespace
+
+    from django.contrib.auth.models import AnonymousUser
+
+    from apps.users.throttles import AccountRateThrottle
+
+    calls = []
+
+    def record(**kwargs):
+        calls.append(kwargs)
+        return True, None
+
+    monkeypatch.setattr("apps.rate_limit.services.check_limit", record)
+    request = SimpleNamespace(META=meta, user=AnonymousUser())
+    AccountRateThrottle().allow_request(request, SimpleNamespace(throttle_scope="account_login"))
+    return calls[0]["identity"]
+
+
+def _hops(count):
+    from django.conf import settings
+
+    return override_settings(
+        SHARED_ACCOUNT_THROTTLE_ENABLED=True,
+        REST_FRAMEWORK={**settings.REST_FRAMEWORK, "NUM_PROXIES": count},
+    )
+
+
+def test_shared_identity_ignores_forwarded_header_without_trusted_hops(monkeypatch):
+    meta = {"REMOTE_ADDR": "192.0.2.42", "HTTP_X_FORWARDED_FOR": "203.0.113.9"}
+    with _hops(0):
+        assert _shared_identity(monkeypatch, meta) == "ip:192.0.2.42"
+
+
+def test_shared_identity_uses_address_appended_by_trusted_proxy(monkeypatch):
+    # Behind nginx every caller has the proxy's REMOTE_ADDR; one shared bucket
+    # would let a single client lock everybody out.
+    meta = {"REMOTE_ADDR": "127.0.0.1", "HTTP_X_FORWARDED_FOR": "10.9.9.9, 203.0.113.9"}
+    with _hops(1):
+        assert _shared_identity(monkeypatch, meta) == "ip:203.0.113.9"
+
+
+def test_shared_identity_fails_closed_on_short_forwarded_chain(monkeypatch):
+    meta = {"REMOTE_ADDR": "127.0.0.1", "HTTP_X_FORWARDED_FOR": "203.0.113.9"}
+    with _hops(2):
+        assert _shared_identity(monkeypatch, meta) == "ip:127.0.0.1"
