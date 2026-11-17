@@ -88,3 +88,16 @@ def test_same_delivery_id_in_different_providers_is_independent():
     assert seen == [body, body]
     # One delivery-ID receipt and one signed-bytes receipt per provider.
     assert InboundReceipt.objects.count() == 4
+
+
+def test_non_ascii_signature_is_rejected_as_invalid_not_as_a_server_error():
+    from apps.webhooks.security import verify
+
+    with pytest.raises(InvalidWebhookSignature):
+        verify(
+            secret="s" * 32,
+            body=b"{}",
+            timestamp="1700000000",
+            signature="é" * 64,
+            now=1700000000,
+        )
