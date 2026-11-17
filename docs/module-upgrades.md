@@ -30,7 +30,11 @@ safe. Contract files are never written by any mode: a human places them in a
 client branch and records the decision with `--apply-three-way
 --accept-reviewed MODULE` ([workflow and limits](en/module-updates.md#accepting-reviewed-contract-changes)). Review permissions, ORM indexes, migrations, standalone/tenant modes and
 OpenAPI before applying the change. Installing a new trusted module with `install_kit_module` now adds its copied-file
-SHA-256 snapshot and updates `included_apps` atomically. The installer must be
+SHA-256 snapshot, its migration policy and — only for a clean Git source whose
+committed files equal the copied bytes — its source commit, and updates
+`included_apps` atomically. It validates manifests against the client's own
+`apps/core`, refuses symlinks and copies `migrations/` only for `bundled`
+modules ([details](en/getting-started.md)). The installer must be
 updated manually in clients generated from older kit versions. Existing clients
 with a missing per-module snapshot receive a `baseline_unknown` report entry
 requiring human review. Do not create a guessed baseline from modified client

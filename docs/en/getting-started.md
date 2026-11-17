@@ -78,6 +78,15 @@ python manage.py migrate
 
 This command copies the required module closure from **trusted** source and does not overwrite an existing module. For generated clients with provenance metadata, it atomically records initial SHA-256 file snapshots for each newly installed module. Recheck the schema, routes, access policies and tests before deploying. **Add any new migration-owning app to the client's CI `makemigrations` steps and commit the generated migrations.** Installing into arbitrary third-party Django projects is not a supported promise.
 
+Before anything is copied, the installer checks every selected module the way the generator does, and installs nothing if a check fails:
+
+- each `manifest.py` is validated statically by **this project's own** `apps/core`; a manifest using fields your `apps/core` does not know is refused — upgrade `apps/core` first;
+- symlinks inside the selected module folders are refused, never followed;
+- `migrations/` is copied only for `migration_policy="bundled"` modules (a bundled module without migration files is refused). For `client` modules the source migrations are skipped: run `makemigrations` and commit the result. The final message lists which modules need `makemigrations` and which ship their history;
+- `primarykit-origin.json`, when present, records the module's migration policy, and its source commit only if the source is a clean Git root whose committed files equal the copied bytes. A dirty or non-Git source still installs, but without a source ref, so later three-way upgrades of that module need manual review.
+
+Clients generated from an older kit keep their old installer: copy `apps/core/management/commands/install_kit_module.py` (and a matching `apps/core/doctor.py`) by hand to get these checks.
+
 For upstream changes use the **read-only** module upgrade checker and review modifications and migration diffs in each generated client. No automatic update or production migration is provided.
 
 ## 5. Validate the generated backend

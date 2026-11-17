@@ -3,7 +3,11 @@
 Usage in a generated project:
     python manage.py install_kit_module storage --source ../primarykit
     python manage.py install_kit_module inventory --source ../primarykit
-Restart Django and generate/commit migrations afterwards.
+Restart Django afterwards. Generate and commit migrations for modules whose
+manifest declares ``migration_policy="client"``; ``bundled`` modules ship theirs.
+
+Self-contained on purpose: this file is copied into clients, so it never imports
+``scripts.*`` or any Python from the source checkout. Manifests are read statically.
 """
 
 import ast
@@ -20,7 +24,10 @@ from tempfile import TemporaryDirectory
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
+from apps.core.doctor import _manifest as _validate_manifest
+
 MODULE_NAME = re.compile(r"^[a-z][a-z0-9_]*$")
+NEVER_COPIED = ("__pycache__", "*.pyc", ".pytest_cache")
 
 
 def _declared_dependencies(source: Path, name: str) -> tuple[str, ...]:
@@ -78,6 +85,121 @@ def install_order(*, source: Path, existing: set[str], requested: str) -> list[s
     return ordered
 
 
+def _copy_ignore(module: Path, policy: str):
+    """Skip caches and, unless the history is bundled, the module's migrations."""
+    caches = shutil.ignore_patterns(*NEVER_COPIED)
+
+    def ignore(directory, names):
+        ignored = set(caches(directory, names))
+        if policy != "bundled" and Path(directory) == module:
+            ignored.add("migrations")
+        return ignored
+
+    return ignore
+
+
+def _inspect_modules(apps: Path, order: list[str]) -> dict[str, str]:
+    """Check module trees under ``apps`` and return each migration policy.
+
+    Runs on the source before anything is written and again on the staged copy,
+    so the bytes that get installed are the bytes that were validated. Manifests
+    are parsed by this project's own static validator and never executed.
+    """
+    policies = {}
+    for name in order:
+        module = apps / name
+        manifest = module / "manifest.py"
+        if module.is_symlink() or manifest.is_symlink():
+            raise CommandError(f"Refusing symlinked source path: apps/{name}")
+        try:
+            _validate_manifest(manifest, name)
+            declaration = next(
+                node.value
+                for node in ast.parse(manifest.read_text(encoding="utf-8")).body
+                if isinstance(node, ast.Assign)
+                and any(isinstance(t, ast.Name) and t.id == "MODULE" for t in node.targets)
+            )
+            policy = next(
+                (
+                    ast.literal_eval(keyword.value)
+                    for keyword in declaration.keywords
+                    if keyword.arg == "migration_policy"
+                ),
+                "none",
+            )
+        except (OSError, SyntaxError, ValueError, KeyError, TypeError) as exc:
+            raise CommandError(
+                f"apps/{name}/manifest.py is not supported by this project's module "
+                f"registry ({exc}). Upgrade this project's apps/core first; "
+                "no modules installed."
+            ) from exc
+        ignore = _copy_ignore(module, policy)
+        for current, directories, files in os.walk(module, followlinks=False):
+            ignored = ignore(current, directories + files)
+            for entry in (*directories, *files):
+                if entry not in ignored and (Path(current) / entry).is_symlink():
+                    relative = (Path(current) / entry).relative_to(apps).as_posix()
+                    raise CommandError(f"Refusing symlinked source path: apps/{relative}")
+            directories[:] = [entry for entry in directories if entry not in ignored]
+        # A bundled owner without history must never get a regenerated schema.
+        if policy == "bundled" and not any((module / "migrations").glob("[0-9]*.py")):
+            raise CommandError(f"Bundled migrations missing for {name}")
+        policies[name] = policy
+    return policies
+
+
+def _git(source: Path, *arguments: str) -> str | None:
+    try:
+        done = subprocess.run(
+            ["git", "-C", str(source), *arguments], capture_output=True, text=True, check=False
+        )
+    except OSError:  # Exported archives and minimal images may lack Git.
+        return None
+    return done.stdout if done.returncode == 0 else None
+
+
+def _trusted_source_ref(source: Path, name: str, staged: Path) -> str | None:
+    """Return HEAD only when it really is the ancestor of the installed bytes.
+
+    Mirrors the generator's clean-Git-root rule for this one module, and also
+    requires every installed file to equal its committed blob, which catches
+    ignored files and index flags that ``git status`` does not report.
+    """
+    top = _git(source, "rev-parse", "--show-toplevel")
+    head = (_git(source, "rev-parse", "--verify", "HEAD") or "").strip()
+    if not top or Path(top.strip()).resolve() != source:
+        return None
+    if not re.fullmatch(r"[0-9a-f]{40,64}", head):
+        return None
+    prefix = f"apps/{name}/"
+    dirty = _git(source, "status", "--porcelain=v1", "--untracked-files=all", "--", prefix)
+    listing = _git(source, "ls-tree", "-r", "-z", "--full-tree", head, "--", prefix)
+    if dirty is None or dirty.strip() or listing is None:
+        return None
+    committed = {}
+    for record in filter(None, listing.split("\0")):
+        details, path = record.split("\t", 1)
+        mode, kind, blob = details.split()
+        if kind != "blob" or mode not in {"100644", "100755"}:
+            return None  # Committed symlinks or submodules are not plain source.
+        committed[path.removeprefix(prefix)] = blob
+    algorithm = "sha1" if len(head) == 40 else "sha256"
+    for path in staged.rglob("*"):
+        if not path.is_file():
+            continue
+        data = path.read_bytes()
+        digest = hashlib.new(algorithm, b"blob %d\0" % len(data) + data).hexdigest()
+        if committed.get(path.relative_to(staged).as_posix()) != digest:
+            return None
+    # A deleted runtime file would make the recorded snapshot differ from HEAD.
+    runtime = {
+        path
+        for path in committed
+        if path.endswith(".py") and not {"migrations", "tests"} & set(Path(path).parts)
+    }
+    return head if runtime == set(_module_fingerprint(staged)) else None
+
+
 def _module_fingerprint(folder: Path) -> dict[str, str]:
     """Snapshot copied runtime Python files, matching the project generator."""
     return {
@@ -87,7 +209,9 @@ def _module_fingerprint(folder: Path) -> dict[str, str]:
     }
 
 
-def _updated_origin(origin: Path, order: list[str], stage: Path, source: Path) -> str | None:
+def _updated_origin(
+    origin: Path, order: list[str], stage: Path, source: Path, policies: dict[str, str]
+) -> str | None:
     """Prepare provenance before moving any module into the running project."""
     if not origin.is_file():
         return None  # Provenance is optional for existing client projects.
@@ -105,24 +229,18 @@ def _updated_origin(origin: Path, order: list[str], stage: Path, source: Path) -
         or not isinstance(fingerprints, dict)
     ):
         raise CommandError("Invalid client provenance metadata; no modules installed.")
-    if set(order) & (set(included) | set(fingerprints)):
+    # Older provenance has no per-module policies; start recording from now on.
+    pinned = data.setdefault("module_migration_policies", {})
+    if not isinstance(pinned, dict):
+        raise CommandError("Invalid provenance migration policies; no modules installed.")
+    # A leftover pin is a recorded history decision: never overwrite it silently.
+    if set(order) & (set(included) | set(fingerprints) | set(pinned)):
         raise CommandError("Client provenance already names a module missing on disk.")
+    pinned.update({name: policies[name] for name in order})
 
     for name in order:
         fingerprints[name] = _module_fingerprint(stage / name)
     data["included_apps"] = sorted(set(included) | set(order))
-    try:
-        revision = subprocess.run(
-            ["git", "-C", str(source), "rev-parse", "--verify", "HEAD"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        source_ref = revision.stdout.strip()
-    except OSError:
-        source_ref = None
-    if not source_ref or not re.fullmatch(r"[0-9a-f]{40,64}", source_ref):
-        source_ref = None
     module_refs = data.setdefault("module_source_refs", {})
     module_versions = data.setdefault("module_versions", {})
     if not isinstance(module_refs, dict) or not isinstance(module_versions, dict):
@@ -131,6 +249,8 @@ def _updated_origin(origin: Path, order: list[str], stage: Path, source: Path) -
         "project"
     ]["version"]
     for name in order:
+        # Dirty or non-Git sources still install, but claim no immutable ancestor.
+        source_ref = _trusted_source_ref(source, name, stage / name)
         if source_ref:
             module_refs[name] = source_ref
         module_versions[name] = source_version
@@ -188,6 +308,10 @@ class Command(BaseCommand):
         if not order:
             self.stdout.write("Module and all dependencies are already present.")
             return
+        if (source / "apps").is_symlink():
+            raise CommandError("Refusing symlinked source path: apps")
+        # Read-only preflight, so --dry-run reports the same refusals.
+        policies = _inspect_modules(source / "apps", order)
         self.stdout.write("Will install: " + ", ".join(order))
         if options["dry_run"]:
             return
@@ -198,19 +322,24 @@ class Command(BaseCommand):
             with TemporaryDirectory(prefix=".primarykit-install-", dir=destination) as temp:
                 stage = Path(temp)
                 for name in order:
+                    module = source / "apps" / name
+                    # Never dereference a link that appears after the preflight.
                     shutil.copytree(
-                        source / "apps" / name,
+                        module,
                         stage / name,
-                        ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".pytest_cache"),
-                        symlinks=False,
+                        ignore=_copy_ignore(module, policies[name]),
+                        symlinks=True,
                     )
+                # Validate the staged bytes themselves before anything is moved.
+                if _inspect_modules(stage, order) != policies:
+                    raise CommandError("Source manifests changed during installation.")
                 final = existing | set(order)
                 if "storage" in order and "organizations" not in final:
                     # Tenant test modules require optional Organizations models.
                     for name in ("test_storage.py", "test_seaweedfs_integration.py"):
                         (stage / "storage" / "tests" / name).unlink(missing_ok=True)
                 origin = destination / "primarykit-origin.json"
-                updated = _updated_origin(origin, order, stage, source)
+                updated = _updated_origin(origin, order, stage, source, policies)
                 if updated is not None:
                     staged_origin = stage / "primarykit-origin.json"
                     staged_origin.write_text(updated, encoding="utf-8")
@@ -228,9 +357,19 @@ class Command(BaseCommand):
             for path in reversed(created):
                 shutil.rmtree(path, ignore_errors=True)
             raise CommandError(f"Module installation failed: {exc}") from exc
-        self.stdout.write(
-            self.style.SUCCESS(
-                "Installed. Restart Django; run makemigrations for the new apps and migrate. "
-                "Commit generated migrations in your project."
+        client = [name for name in order if policies[name] == "client"]
+        bundled = [name for name in order if policies[name] == "bundled"]
+        steps = ["Installed: " + ", ".join(order) + ". Restart Django."]
+        if client:
+            steps.append(
+                f"Run makemigrations {' '.join(client)}; review and commit the generated "
+                "migrations in your project."
             )
-        )
+        if bundled:
+            steps.append(
+                f"Bundled history shipped for: {', '.join(bundled)}; "
+                "do not generate or edit migrations for them."
+            )
+        if client or bundled:
+            steps.append("Then run migrate.")
+        self.stdout.write(self.style.SUCCESS(" ".join(steps)))

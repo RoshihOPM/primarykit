@@ -103,6 +103,15 @@ python manage.py migrate
 
 Modules are detected by the presence of `apps/<name>/manifest.py`. No `INSTALLED_APPS` or `config/urls.py` edits are necessary. Source checkout must be trusted; never copy unreviewed code into a production server. The installer is an explicit filesystem operation; it does **not** perform migrations, deploy, install external pip dependencies or overwrite an existing module. Restart running Django processes after copying.
 
+Before anything is copied, the installer checks every selected module the way the generator does, and installs nothing if a check fails:
+
+- each `manifest.py` is validated statically by **this project's own** `apps/core`; a manifest using fields your `apps/core` does not know is refused — upgrade `apps/core` first;
+- symlinks inside the selected module folders are refused, never followed;
+- `migrations/` is copied only for `migration_policy="bundled"` modules (a bundled module without migration files is refused). For `client` modules the source migrations are skipped: run `makemigrations` and commit the result. The final message lists which modules need `makemigrations` and which ship their history;
+- `primarykit-origin.json`, when present, records the module's migration policy, and its source commit only if the source is a clean Git root whose committed files equal the copied bytes. A dirty or non-Git source still installs, but without a source ref, so later three-way upgrades of that module need manual review.
+
+Clients generated from an older kit keep their old installer: copy `apps/core/management/commands/install_kit_module.py` (and a matching `apps/core/doctor.py`) by hand to get these checks.
+
 **Schema boundary:** standalone Inventory and Catalog now have their own models and require no other business modules. The original tenant implementation still requires Catalog and Organizations when enabled; installing another app later does not silently flip the persisted model mode. See ADR 0005.
 
 For copied modules that already have historical migrations, preserve them. For source-catalog modules without migrations, generate migrations **once in the new project** and commit them. Never regenerate the initial migrations of a running client.
