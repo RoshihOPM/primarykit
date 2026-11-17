@@ -20,6 +20,7 @@ from apps.core.module_registry import (
     discover_modules,
     migration_apps,
     module_env_settings,
+    module_job_handlers,
     module_middleware,
     module_routes,
     module_throttle_rates,
@@ -138,12 +139,15 @@ def test_manifest_configuration_contributions_are_typed_and_scoped():
             env_settings=(EnvSetting("CHAT_RETENTION_DAYS", "int", 30),),
             middleware=("apps.chat.middleware.request_tracking",),
             throttle_rates=(("chat_read", "120/min"),),
+            job_handlers=(("chat.purge", "apps.chat.jobs.purge"),),
         )
     }
     result = module_env_settings(environ.Env(), entries)
     assert result["CHAT_RETENTION_DAYS"] == 30
     assert module_middleware(entries) == ("apps.chat.middleware.request_tracking",)
     assert module_throttle_rates(entries) == {"chat_read": "120/min"}
+    assert module_job_handlers(entries) == {"chat.purge": "apps.chat.jobs.purge"}
+    assert module_job_handlers({"a": Module("a")}) == {}
 
 
 @pytest.mark.parametrize(
@@ -153,11 +157,44 @@ def test_manifest_configuration_contributions_are_typed_and_scoped():
         Module("a", env_settings=(EnvSetting("A_PORT", "int", "bad"),)),
         Module("a", middleware=("apps.other.middleware.unsafe",)),
         Module("a", throttle_rates=(("bad key", "10/min"),)),
+        Module("a", job_handlers=(("a.run", "apps.other.jobs.run"),)),
+        Module("a", job_handlers=(("a.run", "apps.a_evil.jobs.run"),)),
+        Module("a", job_handlers=(("a.run", "apps.a.jobs:run"),)),
+        Module("a", job_handlers=(("Bad Code", "apps.a.jobs.run"),)),
+        Module("a", job_handlers=(("a.run", lambda payload: None),)),
+        Module("a", job_handlers=(("a.run", "apps.a.jobs.run"), ("a.run", "apps.a.jobs.other"))),
     ],
 )
 def test_manifest_configuration_rejects_invalid_declarations(definition):
     with pytest.raises(ModuleConfigurationError):
         module_middleware({"a": definition})
+
+
+def test_job_handler_codes_are_unique_across_modules():
+    entries = {
+        "a": Module("a", job_handlers=(("shared.run", "apps.a.jobs.run"),)),
+        "b": Module("b", job_handlers=(("shared.run", "apps.b.jobs.run"),)),
+    }
+    with pytest.raises(ModuleConfigurationError, match="shared.run"):
+        module_job_handlers(entries)
+
+
+def test_source_modules_own_their_job_handlers():
+    from django.conf import settings
+    from django.utils.module_loading import import_string
+
+    expected = {
+        "outbox.dispatch": "apps.outbox.services.dispatch",
+        "privacy.execute": "apps.privacy.services.process_retention_job",
+    }
+    declared = module_job_handlers()
+    assert expected.items() <= declared.items()
+    assert expected.items() <= settings.BACKGROUND_JOB_HANDLERS.items()
+    for path in declared.values():
+        assert callable(import_string(path))
+    # Each call returns a fresh dict, so client settings cannot mutate registry state.
+    declared["client.job"] = "apps.client.jobs.run"
+    assert "client.job" not in module_job_handlers()
 
 
 def test_bundled_migration_owner_does_not_generate_client_initial_migration():

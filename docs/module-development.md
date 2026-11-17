@@ -37,7 +37,16 @@ MODULE = Module(
 )
 ```
 
-Теперь `apps/reviews/` распознаётся автоматически. Root `INSTALLED_APPS` и `urls.py` редактировать не нужно. Не используйте `app.ready()` для неожиданных изменений БД.
+Теперь `apps/reviews/` распознаётся автоматически. Root `INSTALLED_APPS` и `urls.py` редактировать не нужно.
+
+Необязательные декларативные поля `Module` (только литералы, без исполняемых hooks; общий `config/settings/base.py` править не нужно):
+
+- `env_settings=(EnvSetting("REVIEWS_PAGE_LIMIT", "int", 50),)` — типизированные env-настройки с префиксом `<MODULE>_`;
+- `middleware=("apps.reviews.middleware.some_middleware",)` — только пути внутри `apps.<name>.`;
+- `throttle_rates=(("reviews_write", "30/min"),)` — DRF throttle scopes;
+- `job_handlers=(("reviews.digest", "apps.reviews.jobs.send_digest"),)` — код фонового задания Tasks → путь к handler внутри `apps.<name>.`; попадает в `BACKGROUND_JOB_HANDLERS`, коды уникальны среди всех модулей. Без установленного `tasks` запись ничего не выполняет, поэтому такой модуль обычно указывает `tasks` в `requires`.
+
+Ошибочное или повторяющееся значение останавливает запуск Django, а `python -m apps.core.doctor` проверяет те же поля статически. Структурные настройки (`CACHES`, `STORAGES`, `LOGGING`, Celery) намеренно остаются в `config/settings/base.py`. Не используйте `app.ready()` для неожиданных изменений БД.
 
 ## 3. Спроектируйте доменные правила
 

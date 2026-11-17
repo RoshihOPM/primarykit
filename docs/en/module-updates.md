@@ -45,6 +45,13 @@ Changes to models, manifests, permissions, business contracts, migrations,
 source deletions, unresolved textual conflicts and untrusted history require
 manual review. Git merge success does not imply semantic compatibility.
 
+A manifest that uses a newer `Module` field (for example `job_handlers`)
+requires the same or a newer `apps/core`: with an older core,
+`Module(...)` raises `TypeError` at startup and the doctor reports
+`invalid_manifest`. Upgrade `apps/core` before or together with the module.
+A client `config/settings/base.py` that still registers `outbox.dispatch` /
+`privacy.execute` explicitly keeps working unchanged.
+
 See [three-way plan and boundaries](three-way-upgrade-plan.md),
 [bundled migration contract](bundled-migration-contract.md),
 and [open lifecycle issue #89](https://github.com/RoshihOPM/primarykit/issues/89).

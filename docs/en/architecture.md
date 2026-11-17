@@ -24,6 +24,8 @@ Generated client repository
 
 The `apps/<name>/manifest.py` declares required modules, optional integrations and registration metadata. The generator resolves hard dependency closure and makes a detached copy. Copies automatically register installed app configs and root URLs when a module defines routes. A missing required dependency must fail rather than silently degrade.
 
+Modules also contribute configuration declaratively, as literals only (no executable hooks): `env_settings` (typed, `<MODULE>_`-prefixed env fields), `middleware`, `throttle_rates` and `job_handlers` (Tasks job code -> handler path inside `apps.<name>.`, merged into `BACKGROUND_JOB_HANDLERS`; codes are unique across modules). Invalid or duplicate declarations stop Django startup, and the offline doctor validates the same fields statically. Structural settings (`CACHES`, `STORAGES`, `LOGGING`, Celery) deliberately stay in `config/settings/base.py`.
+
 Implement **business decisions** in `domain.py` where non-trivial invariants exist, without Django/DRF/ORM imports. Use `services.py` for transaction orchestration and authorization; `models.py`, `views.py`, `serializers.py` and gateways are adapters. Avoid unused DDD scaffolding for basic CRUD.
 
 ## Security model

@@ -76,6 +76,7 @@ def _manifest(path: Path, name: str) -> tuple[str, ...]:
         "env_settings",
         "middleware",
         "throttle_rates",
+        "job_handlers",
     }
     if set(kwargs) - known or any(key is None for key in kwargs):
         raise ValueError("unknown or unpacked manifest configuration field")
@@ -103,6 +104,21 @@ def _manifest(path: Path, name: str) -> tuple[str, ...]:
             for item in value
         ) or len({item[0] for item in value}) != len(value):
             raise ValueError("invalid or duplicate throttle configuration")
+    if "job_handlers" in kwargs:
+        value = ast.literal_eval(kwargs["job_handlers"])
+        if not isinstance(value, tuple):
+            raise ValueError("job_handlers must be a literal tuple")
+        if any(
+            not isinstance(item, tuple)
+            or len(item) != 2
+            or not isinstance(item[0], str)
+            or not re.fullmatch(r"[a-z][a-z0-9_.-]{0,99}", item[0])
+            or not isinstance(item[1], str)
+            or not item[1].startswith(f"apps.{name}.")
+            or not re.fullmatch(r"[a-zA-Z_]\w*(?:\.[a-zA-Z_]\w*)+", item[1])
+            for item in value
+        ) or len({item[0] for item in value}) != len(value):
+            raise ValueError("invalid or duplicate job handler configuration")
     declared: set[str] = set()
     if "env_settings" in kwargs:
         values = kwargs["env_settings"]
