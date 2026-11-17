@@ -14,7 +14,7 @@
 
 - **Independence:** generated backends have no runtime import or service dependency on the PrimaryKit source repository.
 - **Composable Django/DRF modules:** a registry backed by `apps/<module>/manifest.py` resolves required dependencies and optional integrations.
-- **Explicit data ownership:** generated clients create, review, version and migrate their **own** Django migrations. The source catalog does not ship reusable migration histories.
+- **Explicit data ownership:** generated clients create, review, version and migrate their **own** Django migrations. Migrations are client-owned unless a module manifest declares `migration_policy="bundled"` (currently only `tasks`), whose reviewed history is copied as-is and must not be regenerated.
 - **Safety by design:** deny-by-default authorization, owner/tenant scoping, scoped commands, PostgreSQL transaction boundaries and tests for supported paths.
 - **Optional infrastructure:** PostgreSQL is the baseline; Redis, RabbitMQ, Celery, SeaweedFS/S3 and WebSockets are added only when needed.
 
@@ -109,7 +109,7 @@ The source catalog additionally supports project presets, a project dry-run, a r
 - [Architecture and ownership](docs/en/architecture.md)
 - [Module list, dependencies and routes](docs/en/modules.md)
 - [Getting started](docs/en/getting-started.md)
-- [Implemented features and limitations](docs/en/features.md) · [New module deep dives (#45–#52)](docs/en/README.md#newly-implemented-module-guides-45-52)
+- [Implemented features and limitations](docs/en/features.md) · [New module deep dives (#45–#52)](docs/en/README.md#newly-implemented-module-guides-4552)
 - [Production and security checklist](docs/en/operations.md)
 - [Current project status](docs/en/project-status.md)
 
