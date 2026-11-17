@@ -76,7 +76,7 @@ python manage.py makemigrations orders
 python manage.py migrate
 ```
 
-This command copies the required module closure from **trusted** source and does not overwrite an existing module. For generated clients with provenance metadata, it atomically records initial SHA-256 file snapshots for each newly installed module. Recheck the schema, routes, access policies and tests before deploying. **Add any new migration-owning app to the client's CI `makemigrations` steps and commit the generated migrations.** Installing into arbitrary third-party Django projects is not a supported promise.
+This command copies the required module closure from **trusted** source and does not overwrite an existing module. For generated clients with provenance metadata, it atomically records initial SHA-256 file snapshots for each newly installed module. Recheck the schema, routes, access policies and tests before deploying. **Commit the generated migrations: the client's CI only checks them (`makemigrations --check --dry-run`) and never generates them.** Installing into arbitrary third-party Django projects is not a supported promise.
 
 Before anything is copied, the installer checks every selected module the way the generator does, and installs nothing if a check fails:
 

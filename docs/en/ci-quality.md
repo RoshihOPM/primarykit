@@ -7,7 +7,11 @@ migrations and pytest. Every project runs `makemigrations --check --dry-run`
 after the initial schema generation. This catches divergent model states, but
 not production DDL lock hazards.
 
-The catalog-only CI runner and matrix job are stripped from generated projects.
+Generated projects do not inherit this catalog workflow. The generator writes a
+small dedicated client workflow from `scripts/templates/client-ci.yaml` (locked
+sync, doctor, Ruff, then `makemigrations --check --dry-run`, `manage.py check`
+and pytest on a PostgreSQL 17 service). It never generates migrations: a client
+without committed migrations fails with a "commit your migrations" message.
 After the PostgreSQL integration tests, the catalog uses a pinned Squawk CLI
 to lint SQL from **Git-tracked, non-initial, versioned source migrations only**.
 Transient `makemigrations` output (including multi-part `0002_initial`

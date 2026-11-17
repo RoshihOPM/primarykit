@@ -33,7 +33,10 @@ Always copied: `core`, `users`, `notifications`. Optional: см. [полный �
 
 - Copies the source template excluding `.git`, `.env`, caches, local media, venv, generated migrations and the generator itself.
 - Prunes omitted optional App directories, their `INSTALLED_APPS` entries and URL routes.
-- Adapts GitHub Actions migration setup, generated README and project name in both `pyproject.toml` and `uv.lock`.
+- Writes the generated README and the project name in both `pyproject.toml` and `uv.lock`.
+- Writes the client's `.github/workflows/ci.yaml` from the dedicated template `scripts/templates/client-ci.yaml` (not from the source workflow): `uv sync --locked --all-groups`, `python -m apps.core.doctor --strict`, Ruff lint/format, then on a PostgreSQL 17 service `makemigrations --check --dry-run`, `manage.py check` and `pytest --ds=config.settings.postgres_test`, with `permissions: contents: read`. The file names no optional module, so it is identical for every selection and is client-owned afterwards.
+- Client CI never generates migrations. Until the client commits its own migrations, the "Migrations are committed" step fails and prints the `makemigrations` command to run; this is intended.
+- Source-only files stay upstream: nothing else from `.github/`, no `README.ru.md`, policies or maintainer playbook. Relative Markdown links to files that were not copied are reduced to their link text, so the copied docs contain no broken relative links.
 - Writes `primarykit-origin.json` with copied modules and source version.
 - `--git-init` initializes local Git history on main; no GitHub remote is created and no push is performed.
 

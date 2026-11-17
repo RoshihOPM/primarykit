@@ -1,18 +1,20 @@
 import json
 import os
+import re
 import subprocess
 import sys
 import tomllib
 from pathlib import Path
 
 import pytest
+import yaml
 
 from apps.core.module_registry import (
     dependency_closure,
     discover_modules,
     migration_apps,
 )
-from scripts.new_project import SOURCE_ROOT, create_project, project_plan
+from scripts.new_project import OPTIONAL_APPS, SOURCE_ROOT, create_project, project_plan
 from scripts.presets import PRESETS
 
 
@@ -154,17 +156,15 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
     source_project = tomllib.loads((SOURCE_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     assert metadata["source_version"] == source_project["project"]["version"]
     assert ("Feature flags: configure FEATURE_FLAGS" in readme) == ("feature_flags" in apps)
-    workflows = (target / ".github/workflows/ci.yaml").read_text()
-    assert "generated-clients:" not in workflows
-    assert "scripts/lint_migration_sql.py" not in workflows
-    assert "scripts/ci_generated_client.py" not in workflows
+    # The client workflow is one dedicated file, identical for every selection.
+    assert (target / ".github/workflows/ci.yaml").read_bytes() == (
+        SOURCE_ROOT / "scripts/templates/client-ci.yaml"
+    ).read_bytes()
+    assert [p.name for p in (target / ".github").rglob("*") if p.is_file()] == ["ci.yaml"]
+    assert not (target / "README.ru.md").exists()
     assert project_plan(requested_apps=set(apps))["migrations"] == [
         name for name in migration_apps() if name in selected
     ]
-    assert (
-        workflows.count("makemigrations $(uv run python -m apps.core.migration_plan) --noinput")
-        == 2
-    )
     if "storage" in selected:
         assert (target / "apps/storage/tests/test_personal_storage.py").exists()
         assert (target / "apps/storage/tests/test_storage.py").exists()
@@ -297,6 +297,7 @@ def test_generated_client_keeps_license_not_upstream_governance(tmp_path):
         "CONTRIBUTING.md",
         "SECURITY.md",
         "CODE_OF_CONDUCT.md",
+        "README.ru.md",
         ".github/CODEOWNERS",
         ".github/dependabot.yml",
         ".github/workflows/quality-tools.yml",
@@ -468,6 +469,9 @@ def test_generator_copy_allowlist_rejects_unknown_root_and_maintainer_assets(tmp
     (source / "local-artifacts" / "credentials.txt").write_text(
         "PRIVATE CLIENT DATA\n", encoding="utf-8"
     )
+    # .github is not client material, so the copied tree has none of it.
+    assert not (source / ".github").exists()
+    (source / ".github" / "workflows").mkdir(parents=True)
     (source / ".github" / "workflows" / "maintainer-only.yml").write_text(
         "name: private\n", encoding="utf-8"
     )
@@ -502,3 +506,139 @@ def test_generator_copy_allowlist_rejects_unknown_root_and_maintainer_assets(tmp
     assert not (client / "scripts").exists()
     assert (client / ".github" / "workflows" / "ci.yaml").is_file()
     assert (client / "apps" / "core" / "manifest.py").is_file()
+
+
+CLIENT_CI_CASES = {
+    "minimal": {"preset": "minimal"},
+    "commerce": {"preset": "commerce"},
+    "all": {"optional_apps": set(OPTIONAL_APPS)},
+}
+_MD_LINK = re.compile(r"\[[^\]]*\]\(\s*<?([^)\s>]+)>?[^)]*\)")
+_MD_FENCE = re.compile(r"^(```|~~~).*?^\1", re.S | re.M)
+
+
+def _workflow_file_references(text: str) -> set[str]:
+    """Paths a workflow command needs on disk, including -m modules and settings."""
+    found = set(
+        re.findall(r"(?<![\w./-])(?:apps|config|docs|deploy|docker|scripts)/[\w./-]+", text)
+    )
+    found |= set(re.findall(r"(?<![\w./-])[\w.-]+\.(?:py|ya?ml|toml|json|lock|sh)\b", text))
+    for dotted in re.findall(r"(?:-m |--settings=|--ds=)((?:apps|config|scripts)(?:\.\w+)+)", text):
+        found.add(dotted.replace(".", "/") + ".py")
+    return found
+
+
+def _missing_markdown_targets(project: Path) -> list[str]:
+    missing = []
+    for document in sorted(project.rglob("*.md")):
+        text = _MD_FENCE.sub("", document.read_text(encoding="utf-8"))
+        for link in _MD_LINK.findall(re.sub(r"`[^`\n]*`", "", text)):
+            path = link.split("#")[0].split("?")[0]
+            if not path or re.match(r"[A-Za-z][A-Za-z0-9+.-]*:", path):
+                continue
+            base = project if path.startswith("/") else document.parent
+            if not (base / path.lstrip("/")).exists():
+                missing.append(f"{document.relative_to(project)} -> {link}")
+    return missing
+
+
+def test_markdown_link_checker_detects_copied_source_only_links(tmp_path):
+    """Guard the checker itself: the source tree minus its policies has broken links."""
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "index.md").write_text(
+        "[ok](index.md) [gone](../SECURITY.md) `[code](nope.md)`\n\n```\n[x](fenced.md)\n```\n",
+        encoding="utf-8",
+    )
+    assert _missing_markdown_targets(tmp_path) == ["docs/index.md -> ../SECURITY.md"]
+    assert _missing_markdown_targets(SOURCE_ROOT / "docs" / "adr") == []
+
+
+@pytest.mark.parametrize("case", sorted(CLIENT_CI_CASES))
+def test_generated_client_workflow_and_docs_are_self_contained(tmp_path, case):
+    target = create_project(tmp_path / case, name="client-api", **CLIENT_CI_CASES[case])
+    raw = (target / ".github/workflows/ci.yaml").read_text(encoding="utf-8")
+    workflow = yaml.safe_load(raw)
+
+    assert workflow["permissions"] == {"contents": "read"}
+    assert ": write" not in raw and "write-all" not in raw
+    assert "scripts/" not in raw and "PRIMARYKIT" not in raw
+    assert list(workflow["jobs"]) == ["test"]
+    job = workflow["jobs"]["test"]
+    assert "permissions" not in job
+    assert job["services"]["postgres"]["image"] == "postgres:17-alpine"
+    assert job["env"]["DATABASE_URL"].startswith("postgresql://")
+    assert [step["uses"].split("@")[0] for step in job["steps"] if "uses" in step] == [
+        "actions/checkout",
+        "astral-sh/setup-uv",
+    ]
+
+    commands = "\n".join(step["run"] for step in job["steps"] if "run" in step)
+    for expected in (
+        "uv sync --locked --all-groups",
+        "uv run python -m apps.core.doctor --strict",
+        "uv run ruff check .",
+        "uv run ruff format --check .",
+        "--check --dry-run --settings=config.settings.postgres_test",
+        "uv run python manage.py check --settings=config.settings.postgres_test",
+        "uv run pytest -q --ds=config.settings.postgres_test",
+    ):
+        assert expected in commands, expected
+    # A client owns its migration history: CI may only verify, never write it.
+    for line in commands.splitlines():
+        assert "makemigrations" not in line or "--check --dry-run" in line or "echo" in line, line
+    assert "migrate" not in commands.replace("makemigrations", "")
+    assert "docker" not in commands
+    migration_step = next(s for s in job["steps"] if "makemigrations" in s.get("run", ""))
+    assert "commit your migrations" in migration_step["name"]
+    assert "commit your migrations" in migration_step["run"]
+
+    references = _workflow_file_references(raw)
+    assert {"manage.py", "apps/core/doctor.py", "apps/core/migration_plan.py"} <= references
+    assert "config/settings/postgres_test.py" in references
+    for reference in sorted(references):
+        assert (target / reference).exists(), reference
+    # Only the always-copied core may be named: every selection gets the same file.
+    assert set(re.findall(r"apps[./](\w+)", raw)) == {"core"}
+    assert not re.findall(r"compose[\w.-]*\.ya?ml", raw)
+
+    assert _missing_markdown_targets(target) == []
+    assert (target / "docs" / "README.md").is_file()
+    assert not (target / "docs" / "maintainer-playbook.md").exists()
+
+
+def test_missing_link_targets_keep_text_and_leave_code_untouched(tmp_path):
+    from scripts import new_project
+
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "LICENSE").write_text("MIT\n", encoding="utf-8")
+    document = tmp_path / "docs" / "index.md"
+    document.write_text(
+        "See [policy](../SECURITY.md), [license](../LICENSE#mit), [web](https://example.test/a.md)"
+        " and `[code](../SECURITY.md)`.\n\n```bash\necho [x](../SECURITY.md)\n```\n"
+        "![image](missing.png) [anchor](#top)\n",
+        encoding="utf-8",
+    )
+    new_project._unlink_missing_markdown_targets(tmp_path)
+    assert document.read_text(encoding="utf-8") == (
+        "See policy, [license](../LICENSE#mit), [web](https://example.test/a.md)"
+        " and `[code](../SECURITY.md)`.\n\n```bash\necho [x](../SECURITY.md)\n```\n"
+        "![image](missing.png) [anchor](#top)\n"
+    )
+
+
+def test_generator_fails_closed_without_client_workflow_template(tmp_path, monkeypatch):
+    from scripts import new_project
+
+    monkeypatch.setattr(new_project, "CLIENT_WORKFLOW_TEMPLATE", tmp_path / "absent.yaml")
+    with pytest.raises(RuntimeError, match="workflow template missing"):
+        new_project.create_project(tmp_path / "client", name="client-api")
+    assert not (tmp_path / "client").exists()
+
+
+def test_source_workflow_has_no_client_subtraction_markers():
+    source = (SOURCE_ROOT / ".github/workflows/ci.yaml").read_text(encoding="utf-8")
+    assert "PRIMARYKIT-" not in source
+    assert "uv run pytest -q scripts/tests\n" in source
+    assert not re.findall(r"scripts/tests/test_\w+\.py", source)
+    generator = (SOURCE_ROOT / "scripts/new_project.py").read_text(encoding="utf-8")
+    assert "PRIMARYKIT-" not in generator
