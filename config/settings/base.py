@@ -7,6 +7,7 @@ from django.core.exceptions import ImproperlyConfigured
 from apps.core.module_registry import (
     installed_module_apps,
     module_env_settings,
+    module_job_handlers,
     module_middleware,
     module_throttle_rates,
 )
@@ -218,17 +219,14 @@ if "apps.celery_tasks" in INSTALLED_APPS:
     CELERY_TASK_TIME_LIMIT = 300
     CELERY_RESULT_EXPIRES = 3600
 
-BACKGROUND_JOB_HANDLERS = {}  # e.g. {"mail.send": "apps.myapp.jobs.send_email"}
+# Installed modules declare their own handlers in apps/<name>/manifest.py (job_handlers).
+# Add client handlers below, e.g. BACKGROUND_JOB_HANDLERS["mail.send"] = "apps.myapp.jobs.send".
+BACKGROUND_JOB_HANDLERS = module_job_handlers()
 # Client-owned event handlers; Outbox reuses Tasks rows and requires a worker.
 OUTBOX_EVENT_HANDLERS = {}  # e.g. {"lead.created": "apps.leads.events.publish_created"}
-if "apps.outbox" in INSTALLED_APPS:
-    BACKGROUND_JOB_HANDLERS["outbox.dispatch"] = "apps.outbox.services.dispatch"
 
-# Privacy is opt-in: no policy or automatic execution exists by default.
-if "apps.privacy" in INSTALLED_APPS:
-    PRIVACY_RETENTION_POLICIES = {}
-    PRIVACY_AUTO_EXECUTION_ENABLED = False
-    BACKGROUND_JOB_HANDLERS["privacy.execute"] = "apps.privacy.services.process_retention_job"
+# Privacy is opt-in: with these unset the module has no policy and never auto-executes.
+# Trusted client settings may define PRIVACY_RETENTION_POLICIES / PRIVACY_AUTO_EXECUTION_ENABLED.
 
 RBAC_ASSIGNABLE_PERMISSIONS = []  # Populate in the generated project.
 REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {

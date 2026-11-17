@@ -9,6 +9,10 @@ from dataclasses import dataclass
 from importlib import import_module
 from pathlib import Path
 
+# Same shape as apps.tasks.domain.JOB_CODE; core must not import an optional module.
+_JOB_CODE = re.compile(r"[a-z][a-z0-9_.-]{0,99}")
+_DOTTED_PATH = re.compile(r"[a-zA-Z_]\w*(?:\.[a-zA-Z_]\w*)+")
+
 
 class ModuleConfigurationError(ValueError):
     """Malformed module definition or missing/cyclic required dependencies."""
@@ -42,6 +46,8 @@ class Module:
     env_settings: tuple[EnvSetting, ...] = ()
     middleware: tuple[str, ...] = ()
     throttle_rates: tuple[tuple[str, str], ...] = ()
+    # (job code, "apps.<name>...." handler path) merged into BACKGROUND_JOB_HANDLERS.
+    job_handlers: tuple[tuple[str, str], ...] = ()
 
 
 def discover_modules(root: Path | None = None) -> dict[str, Module]:
@@ -167,6 +173,7 @@ def _module_configuration(modules: dict[str, Module] | None = None):
     fields: list[EnvSetting] = []
     middleware: list[str] = []
     throttles: dict[str, str] = {}
+    job_handlers: dict[str, str] = {}
     seen_fields: set[str] = set()
     for module in selected:
         for item in module.env_settings:
@@ -203,12 +210,26 @@ def _module_configuration(modules: dict[str, Module] | None = None):
             ):
                 raise ModuleConfigurationError(f"Invalid or duplicate throttle: {key}")
             throttles[key] = rate
-    return fields, tuple(middleware), throttles
+        for code, dotted_path in module.job_handlers:
+            # Declarative only: the Tasks worker imports the path when a job runs.
+            if (
+                not isinstance(code, str)
+                or not _JOB_CODE.fullmatch(code)
+                or not isinstance(dotted_path, str)
+                or not dotted_path.startswith(f"apps.{module.name}.")
+                or not _DOTTED_PATH.fullmatch(dotted_path)
+                or code in job_handlers
+            ):
+                raise ModuleConfigurationError(
+                    f"Invalid or duplicate job handler in {module.name}: {code}"
+                )
+            job_handlers[code] = dotted_path
+    return fields, tuple(middleware), throttles, job_handlers
 
 
 def module_env_settings(env, modules: dict[str, Module] | None = None) -> dict:
     """Read only declared configuration with django-environ's strict converters."""
-    fields, _, _ = _module_configuration(modules)
+    fields = _module_configuration(modules)[0]
     values = {}
     for item in fields:
         if item.kind == "bool":
@@ -229,6 +250,11 @@ def module_middleware(modules: dict[str, Module] | None = None) -> tuple[str, ..
 
 def module_throttle_rates(modules: dict[str, Module] | None = None) -> dict[str, str]:
     return _module_configuration(modules)[2]
+
+
+def module_job_handlers(modules: dict[str, Module] | None = None) -> dict[str, str]:
+    """Module-owned background job codes mapped to trusted in-module handler paths."""
+    return dict(_module_configuration(modules)[3])
 
 
 def bundled_migration_apps(modules: dict[str, Module] | None = None) -> tuple[str, ...]:

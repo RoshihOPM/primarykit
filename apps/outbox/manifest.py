@@ -2,4 +2,9 @@
 
 from apps.core.module_registry import Module
 
-MODULE = Module(name="outbox", requires=("core", "tasks"), priority=27)
+MODULE = Module(
+    name="outbox",
+    requires=("core", "tasks"),
+    priority=27,
+    job_handlers=(("outbox.dispatch", "apps.outbox.services.dispatch"),),
+)

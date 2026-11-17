@@ -37,9 +37,8 @@ def send_lead_notice(payload: dict):
 В настройках **этого проекта**:
 
 ```python
-BACKGROUND_JOB_HANDLERS = {
-    "leads.notice": "apps.leads.jobs.send_lead_notice",
-}
+# Дополняйте словарь, а не заменяйте: в нём уже есть handlers модулей из manifest.py.
+BACKGROUND_JOB_HANDLERS["leads.notice"] = "apps.leads.jobs.send_lead_notice"
 ```
 
 Внутренний сервис проекта вызывает:

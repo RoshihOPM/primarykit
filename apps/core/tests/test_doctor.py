@@ -138,6 +138,22 @@ def test_doctor_validates_typed_manifest_configuration_offline(tmp_path):
     chat_manifest.write_text(original.replace("priority=85,", "priority=85, dangerous=True,"))
     assert "invalid_manifest" in {item.code for item in inspect_project(target).findings}
 
+    for invalid in (
+        'job_handlers=(("chat.purge", "apps.other.jobs.purge"),)',
+        'job_handlers=(("Bad Code", "apps.chat.jobs.purge"),)',
+        'job_handlers=(("chat.purge", "apps.chat.jobs.purge"),) * 2',
+        'job_handlers=(("chat.purge", build_path()),)',
+        'job_handlers=[("chat.purge", "apps.chat.jobs.purge")]',
+    ):
+        chat_manifest.write_text(original.replace("priority=85,", f"priority=85, {invalid},"))
+        assert "invalid_manifest" in {item.code for item in inspect_project(target).findings}
+    chat_manifest.write_text(
+        original.replace(
+            "priority=85,", 'priority=85, job_handlers=(("chat.purge", "apps.chat.jobs.purge"),),'
+        )
+    )
+    assert not inspect_project(target).failed(strict=True)
+
     chat_manifest.write_text(original)
     observability = target / "apps/observability/manifest.py"
     content = observability.read_text()

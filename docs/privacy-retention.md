@@ -30,8 +30,7 @@ PRIVACY_RETENTION_POLICIES = {
     },
 }
 PRIVACY_AUTO_EXECUTION_ENABLED = False  # безопасное значение по умолчанию
-# При установке через генератор Tasks уже содержит:
-BACKGROUND_JOB_HANDLERS["privacy.execute"] = "apps.privacy.services.process_retention_job"
+# Handler `privacy.execute` модуль объявляет сам в apps/privacy/manifest.py (job_handlers).
 ```
 
 Каждая политика явная: разрешенные операции, subject kind, период ожидания от 0 до 3650 дней и доверенный путь к handler, выбранный **разработчиком клиента**. У каждой организации могут быть собственные scope и отдельные политики в клиентском коде, но сам `scope` не предоставляет права доступа.

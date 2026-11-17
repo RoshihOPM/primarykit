@@ -37,6 +37,7 @@ Release steps:
 - Run locked install, Ruff, Django checks, pytest and detached project smoke; test PostgreSQL transaction races for DB-dependent changes.
 - Confirm migrations, API breaking changes, third-party rights/history review, dependency advisories and security advisories.
 - Update version/changelog, create a tag and GitHub prerelease (e.g. `v0.1.0-alpha.1`) only after risk sign-off. **This source catalog is not production-certified.**
+- After tagging, append the released commit (full SHA, never a tag name alone) to `scripts/release_baselines.json` and add its id to the `release-upgrades` matrix in `.github/workflows/ci.yaml`. Keep at least three entries; every baseline must stay an ancestor of `main`. Run `uv run python scripts/ci_release_upgrade.py --baseline ID` against a disposable PostgreSQL database (`DATABASE_URL`). The current three entries are historical `main` commits, because nothing has been published yet. A green run is evidence with a scripted reviewer, not certification of client upgrades.
 - No releases or migrations should modify a customer environment automatically.
 
 ## Русский
@@ -56,3 +57,5 @@ Release steps:
 На `main` `df8282a` 22.10.2026 реально выполнены [Core CI](https://github.com/RoshihOPM/primarykit/actions/runs/39726369491) и [Full History Secrets Audit](https://github.com/RoshihOPM/primarykit/actions/runs/39726369481): оба успешны. [#99](https://github.com/RoshihOPM/primarykit/issues/99) закрыт.
 
 Для PR: строго зелёные обязательные checks, просмотр diff и миграций, отрицательные тесты IDOR/tenant и PostgreSQL-конкурентности по риску, RU/EN документация. Первичный порог aggregate coverage денежной логики — **75%**, его нужно повышать после замера; SQLite не проверяет транзакционные гонки. `pip-audit` проверяет production lockfile, но не динамически устанавливаемые Redis/Celery пакеты. Выборочные Ruff S-правила не заменяют полноценный security-аудит. Для релиза нужны подтверждённые права на код, версионированные изменения, теги и явные ограничения.
+
+Шаги релиза — в английском разделе выше. Дополнительно: после создания тега добавьте выпущенный коммит (полный SHA, не только имя тега) в `scripts/release_baselines.json` и его id — в матрицу `release-upgrades` в `.github/workflows/ci.yaml`. Сохраняйте не менее трёх записей; каждая базовая точка должна оставаться предком `main`. Запустите `uv run python scripts/ci_release_upgrade.py --baseline ID` на одноразовой БД PostgreSQL (`DATABASE_URL`). Сейчас три записи — исторические коммиты `main`, так как релизов ещё не было. Успешный прогон — свидетельство со скриптовым «ревьюером», а не сертификация обновлений клиентов.

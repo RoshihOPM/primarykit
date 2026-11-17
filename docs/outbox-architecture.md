@@ -39,7 +39,7 @@ def publish_lead_accepted(body, *, event_id):
     # Trusted task: celery_task.apply_async(kwargs={"lead_id": lead_id, "event_id": event_id})
 ```
 
-Dispatcher handler `outbox.dispatch` is registered in `BACKGROUND_JOB_HANDLERS` only when Outbox is installed. The user cannot submit arbitrary Python import paths. An absent handler fails and remains retryable. Handlers must not trust inbound body fields for authorization.
+Dispatcher handler `outbox.dispatch` is declared in `apps/outbox/manifest.py` (`job_handlers`) and therefore registered in `BACKGROUND_JOB_HANDLERS` only when Outbox is installed. The user cannot submit arbitrary Python import paths. An absent handler fails and remains retryable. Handlers must not trust inbound body fields for authorization.
 
 ### Delivery guarantees
 

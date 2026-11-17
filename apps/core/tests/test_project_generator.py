@@ -1,4 +1,7 @@
 import json
+import os
+import subprocess
+import sys
 import tomllib
 from pathlib import Path
 
@@ -175,6 +178,66 @@ def test_project_generator_scopes_apps_and_urls(tmp_path, apps):
     if "favorites" in selected:
         assert (target / "apps/listings").is_dir()
         assert (target / "apps/favorites/tests/test_favorites.py").exists()
+
+
+def _settings_job_handlers(project):
+    code = (
+        "import json, django; django.setup();"
+        "from django.conf import settings;"
+        "from apps.tasks.services import _handlers;"
+        "print(json.dumps([settings.BACKGROUND_JOB_HANDLERS, _handlers()]))"
+    )
+    env = {k: v for k, v in os.environ.items() if k != "PYTHONPATH"}
+    run = subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=project,
+        env={**env, "DJANGO_SETTINGS_MODULE": "config.settings.test"},
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert run.returncode == 0, run.stderr
+    return json.loads(run.stdout.splitlines()[-1])
+
+
+def test_generated_project_registers_module_owned_job_handlers(tmp_path):
+    target = create_project(
+        tmp_path / "jobs-api", name="jobs-api", optional_apps={"outbox", "privacy"}
+    )
+    base = target / "config/settings/base.py"
+    settings = base.read_text()
+    assert "BACKGROUND_JOB_HANDLERS = module_job_handlers()" in settings
+    assert '"apps.outbox" in INSTALLED_APPS' not in settings
+    assert '"apps.privacy" in INSTALLED_APPS' not in settings
+    expected = {
+        "outbox.dispatch": "apps.outbox.services.dispatch",
+        "privacy.execute": "apps.privacy.services.process_retention_job",
+    }
+    assert _settings_job_handlers(target) == [expected, expected]
+
+    # A client base.py generated before manifests owned handlers still works
+    # with upgraded core and manifests: the duplicated registration is a no-op.
+    legacy = (
+        "BACKGROUND_JOB_HANDLERS = {}\n"
+        'if "apps.outbox" in INSTALLED_APPS:\n'
+        '    BACKGROUND_JOB_HANDLERS["outbox.dispatch"] = "apps.outbox.services.dispatch"\n'
+        'if "apps.privacy" in INSTALLED_APPS:\n'
+        "    PRIVACY_RETENTION_POLICIES = {}\n"
+        "    PRIVACY_AUTO_EXECUTION_ENABLED = False\n"
+        '    BACKGROUND_JOB_HANDLERS["privacy.execute"] = (\n'
+        '        "apps.privacy.services.process_retention_job"\n'
+        "    )"
+    )
+    base.write_text(
+        settings.replace("BACKGROUND_JOB_HANDLERS = module_job_handlers()", legacy).replace(
+            "    module_job_handlers,\n", ""
+        )
+    )
+    assert "module_job_handlers" not in base.read_text()
+    assert _settings_job_handlers(target) == [expected, expected]
+
+    bare = create_project(tmp_path / "bare-api", name="bare-api", optional_apps={"tasks"})
+    assert _settings_job_handlers(bare) == [{}, {}]
 
 
 def test_generator_rejects_existing_directory_and_invalid_input(tmp_path):

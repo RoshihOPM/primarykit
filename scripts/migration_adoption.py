@@ -44,6 +44,17 @@ def _schema_modes(root: Path) -> dict:
     return modes
 
 
+def _pinned_policies(root: Path) -> dict:
+    """Reviewed per-module history decisions recorded by an explicit acceptance."""
+    data = json.loads((root / "primarykit-origin.json").read_text(encoding="utf-8"))
+    pinned = data.get("module_migration_policies", {})
+    if not isinstance(pinned, dict) or any(
+        value not in {"none", "client", "bundled"} for value in pinned.values()
+    ):
+        raise ValueError("Invalid pinned migration policies")
+    return pinned
+
+
 def _history(folder: Path) -> dict[str, str]:
     if folder.is_symlink():
         raise ValueError("Symlinked migration history is unsafe")
@@ -147,6 +158,7 @@ def adoption_plan(
     if source == project:
         raise ValueError("Source and client must differ")
     _schema_modes(project)
+    pinned = _pinned_policies(project)
     source_apps, client_apps = source / "apps", project / "apps"
     if source_apps.is_symlink() or client_apps.is_symlink():
         raise ValueError("Symlinked apps root is unsafe")
@@ -170,6 +182,10 @@ def adoption_plan(
             status = "not_installed"
         elif source_history == client_history:
             status = "same_file_history"
+        elif client_history and pinned.get(folder.name) == "client":
+            # Reviewed decision: this client keeps the history it already applied
+            # and generates its own follow-up migrations. Nothing is replaced or faked.
+            status = "client_owned_history"
         else:
             status = "manual_adoption_required"
         item = {

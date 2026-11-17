@@ -304,17 +304,52 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Opt-in non-schema merge in a clean client feature branch",
     )
+    parser.add_argument(
+        "--accept-reviewed",
+        nargs="+",
+        default=[],
+        metavar="MODULE",
+        help="With --apply-three-way: record contract/schema changes of these modules "
+        "that a human already reviewed and placed in the client",
+    )
+    parser.add_argument(
+        "--merged-path",
+        action="append",
+        default=[],
+        metavar="MODULE/PATH",
+        help="Hand-merged file of an accepted module that intentionally differs from source",
+    )
+    parser.add_argument(
+        "--keep-client-migrations",
+        nargs="+",
+        default=[],
+        metavar="MODULE",
+        help="Accepted modules that keep their applied client-generated migration history",
+    )
     args = parser.parse_args(argv)
     if args.apply_safe and args.apply_three_way:
         parser.error("Choose only one apply mode")
+    if (
+        args.accept_reviewed or args.merged_path or args.keep_client_migrations
+    ) and not args.apply_three_way:
+        parser.error("Reviewed acceptance options require --apply-three-way")
     if args.apply_three_way:
         from scripts.apply_module_upgrade import apply_three_way_updates
 
-        result = apply_three_way_updates(source=args.source, project=args.project)
+        result = apply_three_way_updates(
+            source=args.source,
+            project=args.project,
+            accept_reviewed=tuple(args.accept_reviewed),
+            merged_paths=tuple(args.merged_path),
+            keep_client_migrations=tuple(args.keep_client_migrations),
+        )
         if args.json:
             print(json.dumps(result, indent=2, ensure_ascii=False))
         else:
-            print(f"Applied {len(result['updated'])} non-schema changes to client branch.")
+            print(
+                f"Applied {len(result['updated'])} non-schema changes to client branch; "
+                f"accepted reviewed modules: {', '.join(result['accepted']) or 'none'}."
+            )
         return 0
     result = (
         apply_safe_updates(source=args.source, project=args.project)
