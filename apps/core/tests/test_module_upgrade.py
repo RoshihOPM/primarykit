@@ -1,5 +1,6 @@
 import hashlib
 import json
+import shutil
 import subprocess
 from io import StringIO
 
@@ -334,6 +335,9 @@ def _git(root, *args) -> str:
 
 
 def _commit_kit(root) -> str:
+    if shutil.which("git") is None:
+        # The runtime container image ships without Git; the host CI run covers these.
+        pytest.skip("Git is required to build a committed source checkout")
     _git(root, "init", "-q")
     _git(root, "add", "-A")
     identity = ("-c", "user.name=kit", "-c", "user.email=kit@example.invalid")
